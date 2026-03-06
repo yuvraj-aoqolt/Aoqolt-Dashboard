@@ -1,0 +1,523 @@
+{
+	"info": {
+		"_postman_id": "aoqolt-auth-api-2026",
+		"name": "Aoqolt Authentication API",
+		"description": "Complete authentication endpoints for Aoqolt Spiritual Services Platform with OTP verification, social login, and password management.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201 || pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.user_id) {",
+									"        pm.environment.set(\"user_id\", response.data.user_id);",
+									"    }",
+									"    if (response.data && response.data.phone_number) {",
+									"        pm.environment.set(\"phone_number\", response.data.phone_number);",
+									"    }",
+									"    if (response.data && response.data.otp_code) {",
+									"        pm.environment.set(\"otp_code\", response.data.otp_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"full_name\": \"John Doe\",\n    \"email\": \"[email protected]\",\n    \"country_code\": \"+1\",\n    \"phone_number\": \"1234567890\",\n    \"password\": \"SecurePass123!\",\n    \"confirm_password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register",
+								""
+							]
+						},
+						"description": "Register a new user account. Returns OTP for verification. If unverified account exists (same email or phone), allows updating ALL details including email, phone, name, and password before re-sending OTP."
+					},
+					"response": []
+				},
+				{
+					"name": "Verify OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set(\"access_token\", response.data.tokens.access);",
+									"        pm.environment.set(\"refresh_token\", response.data.tokens.refresh);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone_number\": \"{{phone_number}}\",\n    \"otp_code\": \"{{otp_code}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/verify-otp/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"verify-otp",
+								""
+							]
+						},
+						"description": "Verify OTP and activate account. Returns JWT tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Resend OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.otp_code) {",
+									"        pm.environment.set(\"otp_code\", response.data.otp_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"phone_number\": \"{{phone_number}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/resend-otp/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"resend-otp",
+								""
+							]
+						},
+						"description": "Resend OTP to phone number. Rate limited to 60 seconds."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set(\"access_token\", response.data.tokens.access);",
+									"        pm.environment.set(\"refresh_token\", response.data.tokens.refresh);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"[email protected]\",\n    \"password\": \"SecurePass123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login",
+								""
+							]
+						},
+						"description": "Login with email and password. Returns JWT tokens."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/logout/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"logout",
+								""
+							]
+						},
+						"description": "Logout and blacklist refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.access) {",
+									"        pm.environment.set(\"access_token\", response.access);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"token",
+								"refresh",
+								""
+							]
+						},
+						"description": "Get new access token using refresh token."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Password Management",
+			"item": [
+				{
+					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.otp_code) {",
+									"        pm.environment.set(\"reset_otp_code\", response.data.otp_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"[email protected]\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"forgot-password",
+								""
+							]
+						},
+						"description": "Request password reset. Sends OTP to user's phone."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"[email protected]\",\n    \"otp_code\": \"{{reset_otp_code}}\",\n    \"new_password\": \"NewSecurePass456!\",\n    \"confirm_password\": \"NewSecurePass456!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"reset-password",
+								""
+							]
+						},
+						"description": "Reset password with OTP verification."
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"old_password\": \"SecurePass123!\",\n    \"new_password\": \"NewSecurePass456!\",\n    \"confirm_password\": \"NewSecurePass456!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/change-password/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"change-password",
+								""
+							]
+						},
+						"description": "Change password for authenticated user."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Social Authentication",
+			"item": [
+				{
+					"name": "Social Login (Google/Apple/Yahoo)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set(\"access_token\", response.data.tokens.access);",
+									"        pm.environment.set(\"refresh_token\", response.data.tokens.refresh);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"provider\": \"google\",\n    \"access_token\": \"google_oauth_access_token_here\",\n    \"email\": \"[email protected]\",\n    \"full_name\": \"John Doe\",\n    \"social_id\": \"123456789\",\n    \"phone_number\": \"1234567890\",\n    \"country_code\": \"+1\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/social-login/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"social-login",
+								""
+							]
+						},
+						"description": "Login with Google, Apple, or Yahoo OAuth. Returns JWT tokens immediately - NO phone verification required."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Phone (Social Auth)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.otp_code) {",
+									"        pm.environment.set(\"otp_code\", response.data.otp_code);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"country_code\": \"+1\",\n    \"phone_number\": \"9876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/update-phone/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"update-phone",
+								""
+							]
+						},
+						"description": "Update phone number (optional). Social auth users can add phone number for notifications/security."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}
