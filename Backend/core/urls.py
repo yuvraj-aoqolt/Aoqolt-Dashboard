@@ -35,8 +35,8 @@ urlpatterns = [
     # API Routes
     path('api/v1/auth/', include('apps.authentication.urls')),
     path('api/v1/accounts/', include('apps.accounts.urls')),
-    # path('api/v1/services/', include('apps.services.urls')),
-    # path('api/v1/bookings/', include('apps.bookings.urls')),
+    path('api/v1/services/', include('apps.services.urls')),
+    path('api/v1/bookings/', include('apps.bookings.urls')),
     # path('api/v1/cases/', include('apps.cases.urls')),
     # path('api/v1/chat/', include('apps.chat.urls')),
     # path('api/v1/payments/', include('apps.payments.urls')),

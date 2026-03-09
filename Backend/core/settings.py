@@ -51,8 +51,8 @@ INSTALLED_APPS = [
     # Custom apps
     'apps.accounts',
     'apps.authentication',
-    # 'apps.services',
-    # 'apps.bookings',
+    'apps.services',
+    'apps.bookings',
     # 'apps.cases',
     # 'apps.chat',
     # 'apps.payments',
@@ -251,13 +251,20 @@ SERVICE_PRICES = {
 }
 
 # Cache Configuration
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
+
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
 }
 

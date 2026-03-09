@@ -1,0 +1,144 @@
+Roles
+
+SUPER ADMIN (Owner Level)
+Think of this person as:
+Business owner
+System owner
+Final decision maker
+
+What Super Admin Can Do:
+ See ALL clients
+ See ALL cases
+ Assign cases to Admin (Baba)
+ Change case status
+ Generate Sales Quote
+ Convert Quote → Sales Order
+ View reports (monthly, city, service, age)
+ See full database
+ Create / remove Admins
+
+Super Admin = Top Level Authority
+
+
+ADMIN (Baba)
+This is the person who actually works on the case.
+They do NOT control the system.
+They only:
+ See cases assigned to them
+ Chat with client
+ Upload analysis result
+ Mark case as completed
+
+They CANNOT:
+ See all clients
+ Generate sales quote
+ See financial reports
+ Assign cases
+
+Admin = Worker Level
+
+CLIENT (User)
+This is your customer.
+They:
+ Fill booking form
+ See their own case
+ Chat with admin
+ View result
+ Accept or reject sales quote
+
+They CANNOT:
+ See other clients
+ See other cases
+ Access dashboard
+ Generate anything
+Client = Customer Level
+
+
+
+
+
+
+🟢 STEP 1 — CLIENT BOOKS SERVICE
+
+API
+POST /api/bookings
+
+What happens:
+
+Client fills first form
+
+Case is created
+
+Status = RECEIVED
+
+Flow:
+Client → Booking → Case Created
+
+🟢 STEP 2 — SUPERADMIN ASSIGNS CASE
+
+API
+POST /api/cases/{case_id}/assign
+
+What happens:
+
+Assign admin (Baba)
+
+Status changes to WORKING
+
+Flow:
+Received → Working
+
+🟢 STEP 3 — ADMIN WORKS ON CASE
+
+APIs
+
+GET /api/cases/{case_id}
+POST /api/cases/{case_id}/chat
+POST /api/cases/{case_id}/upload-result
+
+What happens:
+
+Admin chats with client
+
+Uploads analysis
+
+Marks case as COMPLETED
+
+Flow:
+Working → Completed
+
+🟢 STEP 4 — SUPERADMIN GENERATES SALES QUOTE
+
+API
+POST /api/cases/{case_id}/sales-quote
+
+What happens:
+
+Create quote
+
+Quote linked to case
+
+🟢 STEP 5 — CLIENT ACCEPTS QUOTE
+
+API
+POST /api/sales-quote/{quote_id}/accept
+
+What happens:
+
+Quote becomes Sales Order
+
+Flow:
+Quote → Order
+
+🟢 STEP 6 — DASHBOARD REPORTS
+
+APIs
+
+GET /api/dashboard/summary
+GET /api/reports/monthly
+GET /api/reports/service
+GET /api/reports/city
+
+What happens:
+
+Superadmin sees stats
