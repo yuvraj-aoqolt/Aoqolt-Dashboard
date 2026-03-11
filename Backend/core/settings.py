@@ -53,9 +53,9 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.services',
     'apps.bookings',
-    # 'apps.cases',
+    'apps.cases',
     # 'apps.chat',
-    # 'apps.payments',
+    'apps.payments',
     # 'apps.sales',
     # 'apps.dashboard',
 ]
