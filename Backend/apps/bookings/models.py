@@ -117,11 +117,23 @@ class BookingDetail(models.Model):
     
     # Custom fields stored as JSON
     custom_data = models.JSONField(default=dict, blank=True)
-    
+
+    # ── Correction workflow ──────────────────────────────────────────────
+    # Field names flagged as incorrect by super admin
+    flagged_fields = models.JSONField(default=list, blank=True,
+                                      help_text="Field names flagged as incorrect by admin")
+    # Per-field notes from admin  {field_name: note_string}
+    flagged_field_notes = models.JSONField(default=dict, blank=True)
+    # Unique token for the correction link sent to user
+    correction_token = models.UUIDField(null=True, blank=True, unique=True)
+    correction_requested_at = models.DateTimeField(null=True, blank=True)
+    correction_completed = models.BooleanField(default=False)
+    correction_completed_at = models.DateTimeField(null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'booking_details'
         verbose_name = 'Booking Detail'

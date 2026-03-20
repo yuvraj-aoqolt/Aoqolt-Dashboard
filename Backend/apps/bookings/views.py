@@ -1,16 +1,19 @@
 """
 Views for Bookings
 """
+import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
+from django.utils import timezone
 from apps.accounts.permissions import IsSuperAdmin, IsOwnerOrSuperAdmin
 from .models import Booking, BookingDetail, BookingAttachment
 from .serializers import (
     BookingSerializer, BookingListSerializer, BookingCreateSerializer,
-    BookingDetailSerializer, BookingAttachmentSerializer
+    BookingDetailSerializer, BookingAttachmentSerializer, CorrectionRequestSerializer
 )
 
 
@@ -129,4 +132,133 @@ class BookingViewSet(viewsets.ModelViewSet):
             'success': True,
             'count': bookings.count(),
             'data': serializer.data
+        })
+
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
+    def request_correction(self, request, pk=None):
+        """
+        SuperAdmin flags incorrect fields on a BookingDetail and generates
+        a unique token-based correction link to send to the user.
+        """
+        booking = self.get_object()
+
+        serializer = CorrectionRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'success': False, 'error': serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        detail, _ = BookingDetail.objects.get_or_create(booking=booking)
+
+        detail.flagged_fields = serializer.validated_data['flagged_fields']
+        detail.flagged_field_notes = serializer.validated_data.get('flagged_field_notes', {})
+        detail.correction_token = uuid.uuid4()
+        detail.correction_requested_at = timezone.now()
+        detail.correction_completed = False
+        detail.correction_completed_at = None
+        detail.save()
+
+        correction_link = (
+            f"{request.data.get('frontend_base_url', 'https://aoqolt.com')}"
+            f"/form/{detail.correction_token}"
+        )
+
+        return Response({
+            'success': True,
+            'message': 'Correction request created successfully',
+            'data': {
+                'correction_link': correction_link,
+                'correction_token': str(detail.correction_token),
+                'flagged_fields': detail.flagged_fields,
+                'flagged_field_notes': detail.flagged_field_notes,
+                'booking_id': booking.booking_id,
+                'user_email': booking.user.email,
+                'user_phone': booking.user.phone_number or booking.phone_number,
+            }
+        })
+
+
+class CorrectionView(APIView):
+    """
+    Public token-based endpoint for users to retrieve and submit
+    form corrections requested by super admin.
+
+    GET  /api/v1/correction/<token>/        — returns form data + flagged fields
+    POST /api/v1/correction/<token>/submit/ — submit corrected data + attachments
+    """
+    permission_classes = [AllowAny]
+
+    def _get_detail(self, token):
+        try:
+            return BookingDetail.objects.select_related('booking__service').get(
+                correction_token=token
+            )
+        except BookingDetail.DoesNotExist:
+            return None
+
+    def get(self, request, token):
+        detail = self._get_detail(token)
+        if not detail:
+            return Response({'success': False, 'error': 'Invalid or expired correction link'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        booking = detail.booking
+        service_type = booking.service.service_type if booking.service else booking.selected_service
+
+        data = {
+            'booking_id': booking.booking_id,
+            'service_type': service_type,
+            'service_name': booking.service.name if booking.service else '',
+            'flagged_fields': detail.flagged_fields,
+            'flagged_field_notes': detail.flagged_field_notes,
+            'correction_completed': detail.correction_completed,
+            'current_data': BookingDetailSerializer(detail).data,
+            # Existing attachments
+            'attachments': BookingAttachmentSerializer(
+                booking.attachments.all(), many=True, context={'request': request}
+            ).data,
+        }
+        return Response({'success': True, 'data': data})
+
+    def post(self, request, token):
+        """Submit corrected form data (supports multipart for image re-uploads)."""
+        detail = self._get_detail(token)
+        if not detail:
+            return Response({'success': False, 'error': 'Invalid or expired correction link'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        if detail.correction_completed:
+            return Response({'success': False, 'error': 'Correction has already been submitted'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Update detail fields (partial)
+        fields_to_update = [
+            'birth_date', 'birth_time', 'birth_place',
+            'family_member_count', 'family_member_details', 'additional_notes', 'custom_data',
+        ]
+        for field in fields_to_update:
+            if field in request.data:
+                setattr(detail, field, request.data[field])
+
+        # Handle replacement image uploads
+        booking = detail.booking
+        for key, file in request.FILES.items():
+            # key can be a description like 'main_photo' or 'family_member:0'
+            # Delete old attachment with the same description, then re-create
+            booking.attachments.filter(description=key).delete()
+            BookingAttachment.objects.create(
+                booking=booking,
+                file=file,
+                file_type='image',
+                file_name=file.name,
+                file_size=file.size,
+                description=key,
+            )
+
+        detail.correction_completed = True
+        detail.correction_completed_at = timezone.now()
+        detail.save()
+
+        return Response({
+            'success': True,
+            'message': 'Correction submitted successfully. Our team will review your updated details.',
         })

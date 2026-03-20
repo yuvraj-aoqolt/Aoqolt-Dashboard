@@ -19,9 +19,24 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'additional_notes', 'family_member_count', 'family_member_details',
             'birth_date', 'birth_time', 'birth_place', 'custom_data',
+            'flagged_fields', 'flagged_field_notes',
+            'correction_token', 'correction_requested_at',
+            'correction_completed', 'correction_completed_at',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'correction_token', 'correction_requested_at',
+                            'correction_completed', 'correction_completed_at',
+                            'created_at', 'updated_at']
+
+
+class CorrectionRequestSerializer(serializers.Serializer):
+    """Used by superadmin to flag fields and trigger correction link."""
+    flagged_fields = serializers.ListField(
+        child=serializers.CharField(), allow_empty=False
+    )
+    flagged_field_notes = serializers.DictField(
+        child=serializers.CharField(allow_blank=True), required=False, default=dict
+    )
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
@@ -122,27 +137,62 @@ class BookingSerializer(serializers.ModelSerializer):
     attachments = BookingAttachmentSerializer(many=True, read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_name = serializers.CharField(source='user.full_name', read_only=True)
-    
+    case_id = serializers.SerializerMethodField()
+    case_number = serializers.SerializerMethodField()
+
+    def get_case_id(self, obj):
+        try:
+            return str(obj.case.id)
+        except Exception:
+            return None
+
+    def get_case_number(self, obj):
+        try:
+            return obj.case.case_number
+        except Exception:
+            return None
+
     class Meta:
         model = Booking
         fields = [
             'id', 'booking_id', 'user', 'user_email', 'user_name', 'service',
             'full_name', 'phone_number', 'email', 'address',
             'country', 'city', 'postal_code', 'special_note',
-            'selected_service', 'status', 'details', 'attachments',
+            'selected_service', 'status', 'case_id', 'case_number',
+            'details', 'attachments',
             'created_at', 'updated_at', 'completed_at'
         ]
         read_only_fields = ['id', 'booking_id', 'user', 'status', 'created_at', 'updated_at', 'completed_at']
 
 
 class BookingListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for listing bookings"""
+    """Serializer for listing bookings — includes details and attachments for superadmin."""
     service_name = serializers.CharField(source='service.name', read_only=True)
+    service_type = serializers.CharField(source='service.service_type', read_only=True)
     user_email = serializers.EmailField(source='user.email', read_only=True)
-    
+    case_id = serializers.SerializerMethodField()
+    case_number = serializers.SerializerMethodField()
+    details = BookingDetailSerializer(read_only=True)
+    attachments = BookingAttachmentSerializer(many=True, read_only=True)
+
+    def get_case_id(self, obj):
+        try:
+            return str(obj.case.id)
+        except Exception:
+            return None
+
+    def get_case_number(self, obj):
+        try:
+            return obj.case.case_number
+        except Exception:
+            return None
+
     class Meta:
         model = Booking
         fields = [
-            'id', 'booking_id', 'user_email', 'full_name', 'service_name',
-            'status', 'created_at'
+            'id', 'booking_id', 'user_email', 'full_name', 'phone_number',
+            'email', 'service_name', 'service_type', 'selected_service',
+            'status', 'case_id', 'case_number',
+            'details', 'attachments',
+            'created_at',
         ]

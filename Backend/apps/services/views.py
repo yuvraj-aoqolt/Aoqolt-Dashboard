@@ -19,7 +19,10 @@ class ServiceViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         """Set permissions based on action"""
-        if self.action in ['list', 'retrieve']:
+        # 'active' and 'details' are custom @action endpoints — must be listed
+        # here explicitly because overriding get_permissions() means DRF ignores
+        # the permission_classes= kwarg on @action decorators.
+        if self.action in ['list', 'retrieve', 'active', 'details']:
             return [AllowAny()]
         return [IsSuperAdmin()]
     

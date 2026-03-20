@@ -55,10 +55,10 @@ INSTALLED_APPS = [
     'apps.services',
     'apps.bookings',
     'apps.cases',
-    # 'apps.chat',
+    'apps.chat',
     'apps.payments',
-    # 'apps.sales',
-    # 'apps.dashboard',
+    'apps.sales',
+    'apps.dashboard',
 ]
 
 MIDDLEWARE = [
@@ -228,6 +228,13 @@ SOCIALACCOUNT_PROVIDERS = {
         'APP': {
             'client_id': os.getenv('APPLE_CLIENT_ID', ''),
             'secret': os.getenv('APPLE_CLIENT_SECRET', ''),
+        }
+    },
+    'yahoo': {
+        'SCOPE': ['openid', 'email', 'profile'],
+        'APP': {
+            'client_id': os.getenv('YAHOO_CLIENT_ID', ''),
+            'secret': os.getenv('YAHOO_CLIENT_SECRET', ''),
         }
     },
 }

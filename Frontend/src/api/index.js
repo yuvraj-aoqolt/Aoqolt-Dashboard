@@ -1,0 +1,168 @@
+import axios from 'axios'
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+const api = axios.create({
+  baseURL: `${BASE_URL}/api/v1`,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
+})
+
+// Attach access token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token')
+    if (token) config.headers.Authorization = `Bearer ${token}`
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
+// Handle 401 — try token refresh only for authenticated requests
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config
+
+    if (error.response?.status === 401 && !original._retry) {
+      // Only attempt refresh/redirect if this request was made with a token.
+      // Public endpoints (AllowAny) that receive an expired token still return
+      // 401 — we must NOT redirect to /login in that case.
+      const hadToken = !!(original.headers?.Authorization || original.headers?.authorization)
+      if (!hadToken) return Promise.reject(error)
+
+      original._retry = true
+      const refresh = localStorage.getItem('refresh_token')
+      if (refresh) {
+        try {
+          const { data } = await axios.post(
+            `${BASE_URL}/api/v1/auth/token/refresh/`,
+            { refresh }
+          )
+          localStorage.setItem('access_token', data.access)
+          original.headers.Authorization = `Bearer ${data.access}`
+          return api(original)
+        } catch {
+          // Refresh failed — clear tokens and retry the request WITHOUT a token.
+          // If the endpoint is public it will succeed; if protected the component
+          // should handle the resulting error and show a login prompt.
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          delete original.headers.Authorization
+          original._retry = true
+          return api(original)
+        }
+      } else {
+        // Had a stale access token but no refresh token — clear and retry without auth.
+        localStorage.removeItem('access_token')
+        delete original.headers.Authorization
+        return api(original)
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+export const authAPI = {
+  register: (data) => api.post('/auth/register/', data),
+  login: (data) => api.post('/auth/login/', data),
+  logout: () => api.post('/auth/logout/'),
+  verifyOtp: (data) => api.post('/auth/verify-otp/', data),
+  resendOtp: (data) => api.post('/auth/resend-otp/', data),
+  forgotPassword: (data) => api.post('/auth/forgot-password/', data),
+  resetPassword: (data) => api.post('/auth/reset-password/', data),
+  changePassword: (data) => api.post('/auth/change-password/', data),
+  refreshToken: (data) => api.post('/auth/token/refresh/', data),
+  socialLogin: (data) => api.post('/auth/social-login/', data),
+}
+
+// ── Accounts ──────────────────────────────────────────────────────────────
+export const accountsAPI = {
+  // Full user object (id, email, full_name, role, etc.)
+  me: () => api.get('/accounts/users/me/'),
+  // UserProfile fields (date_of_birth, gender, notifications, etc.)
+  getProfile: () => api.get('/accounts/profile/'),
+  updateProfile: (data) => api.patch('/accounts/profile/', data),
+  uploadAvatar: (formData) =>
+    api.post('/accounts/profile/avatar/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  // SuperAdmin
+  allUsers: () => api.get('/accounts/users/'),
+  adminUsers: () => api.get('/accounts/users/?role=admin'),
+  promoteToAdmin: (id) => api.post(`/accounts/users/${id}/promote/`),
+}
+
+// ── Services ─────────────────────────────────────────────────────────────
+export const servicesAPI = {
+  list: () => api.get('/services/active/'),
+  detail: (id) => api.get(`/services/${id}/details/`),
+}
+
+// ── Bookings ──────────────────────────────────────────────────────────────
+export const bookingsAPI = {
+  create: (data) => api.post('/bookings/', data),
+  myBookings: () => api.get('/bookings/my_bookings/'),
+  detail: (id) => api.get(`/bookings/${id}/`),
+  cancel: (id) => api.post(`/bookings/${id}/cancel/`),
+  addDetails: (id, data) => api.post(`/bookings/${id}/add_details/`, data),
+  uploadAttachment: (id, formData) =>
+    api.post(`/bookings/${id}/upload_attachment/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  requestCorrection: (id, data) => api.post(`/bookings/${id}/request_correction/`, data),
+  // SuperAdmin
+  allBookings: () => api.get('/bookings/'),
+}
+
+// ── Correction (public, token-based) ─────────────────────────────────────
+export const correctionAPI = {
+  get: (token) => api.get(`/bookings/correction/${token}/`),
+  submit: (token, formData) =>
+    api.post(`/bookings/correction/${token}/submit/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+}
+
+// ── Cases ─────────────────────────────────────────────────────────────────
+export const casesAPI = {
+  myCases: () => api.get('/cases/my_cases/'),
+  detail: (id) => api.get(`/cases/${id}/`),
+  submitRating: (id, data) => api.post(`/cases/${id}/submit_rating/`, data),
+  // Admin
+  allCases: () => api.get('/cases/'),
+  assign: (id, data) => api.post(`/cases/${id}/assign/`, data),
+  uploadResult: (id, formData) =>
+    api.post(`/cases/${id}/upload_result/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  updateStatus: (id, data) => api.patch(`/cases/${id}/`, data),
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────
+export const chatAPI = {
+  getMessages: (caseId) =>
+    api.get(`/chat/messages/case_messages/?case_id=${caseId}`),
+  sendMessage: (data) => api.post('/chat/messages/', data),
+  sendFile: (formData) =>
+    api.post('/chat/messages/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+}
+
+// ── Payments ──────────────────────────────────────────────────────────────
+export const paymentsAPI = {
+  createCheckout: (data) => api.post('/payments/create_checkout_session/', data),
+  myPayments: () => api.get('/payments/my_payments/'),
+  detail: (id) => api.get(`/payments/${id}/`),
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────
+export const dashboardAPI = {
+  superAdmin: () => api.get('/dashboard/superadmin/'),
+  client: () => api.get('/dashboard/client/'),
+  admin: () => api.get('/dashboard/admin/'),
+}
+
+export default api
