@@ -5,9 +5,10 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseU
 from django.db import models
 from django.utils import timezone
 from django.core.validators import RegexValidator
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import string
+import secrets
 
 
 def generate_user_id(name="USER"):
@@ -92,7 +93,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
     )
     country_code = models.CharField(max_length=5, default='+1')
-    phone_number = models.CharField(validators=[phone_regex], max_length=17, unique=True)
+    # null=True allows multiple invited users without phone numbers (PostgreSQL allows multiple NULLs in unique columns)
+    phone_number = models.CharField(validators=[phone_regex], max_length=17, unique=True, null=True, blank=True)
     
     # Role and permissions
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=CLIENT)
@@ -137,7 +139,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['full_name', 'phone_number']
+    REQUIRED_FIELDS = ['full_name']
     
     def save(self, *args, **kwargs):
         # Generate ID on first save if not set
@@ -219,3 +221,84 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"Profile: {self.user.full_name}"
+
+
+class InvitationToken(models.Model):
+    """
+    Secure one-time token for account activation (invite) and
+    admin-generated password resets.
+
+    Security properties:
+    - Cryptographically random (secrets.token_urlsafe, 288-bit entropy)
+    - Time-limited (default 24 hours)
+    - Single-use (is_used flag)
+    - Old tokens of same type are invalidated when a new one is issued
+    """
+
+    INVITE = 'invite'
+    RESET = 'reset'
+    TYPE_CHOICES = [
+        (INVITE, 'Account Invitation'),
+        (RESET, 'Admin Password Reset'),
+    ]
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='invitation_tokens'
+    )
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    token_type = models.CharField(
+        max_length=10, choices=TYPE_CHOICES, default=INVITE
+    )
+    is_used = models.BooleanField(default=False)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_invitation_tokens',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'invitation_tokens'
+        verbose_name = 'Invitation Token'
+        verbose_name_plural = 'Invitation Tokens'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['user', 'token_type', 'is_used']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_token_type_display()} for {self.user.email} ({'used' if self.is_used else 'active'})"
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def is_valid(self):
+        return not self.is_used and not self.is_expired()
+
+    @staticmethod
+    def generate_token():
+        """288-bit cryptographically random URL-safe token."""
+        return secrets.token_urlsafe(48)
+
+    @classmethod
+    def create_for_user(cls, user, token_type, created_by, expiry_hours=24):
+        """
+        Invalidate all existing active tokens of the same type for this user,
+        then create and return a fresh token.
+        """
+        cls.objects.filter(
+            user=user, token_type=token_type, is_used=False
+        ).update(is_used=True)
+
+        return cls.objects.create(
+            user=user,
+            token=cls.generate_token(),
+            token_type=token_type,
+            created_by=created_by,
+            expires_at=timezone.now() + timedelta(hours=expiry_hours),
+        )

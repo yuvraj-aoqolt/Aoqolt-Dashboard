@@ -190,6 +190,12 @@ BOOKING_TOKEN_EXPIRY_MINUTES = int(os.getenv('BOOKING_TOKEN_EXPIRY_MINUTES', '15
 # Hours a guest session JWT remains valid.
 GUEST_SESSION_EXPIRY_HOURS = int(os.getenv('GUEST_SESSION_EXPIRY_HOURS', '2'))
 
+# Frontend base URL used when building invitation / password-reset links
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+# Hours an admin-generated invitation or reset token remains valid
+INVITE_TOKEN_EXPIRY_HOURS = int(os.getenv('INVITE_TOKEN_EXPIRY_HOURS', '24'))
+
 # JWT Configuration
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=int(os.getenv('JWT_ACCESS_TOKEN_LIFETIME', '60'))),

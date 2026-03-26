@@ -3,17 +3,25 @@ import { motion } from 'framer-motion'
 import { accountsAPI } from '../../api'
 import SuperAdminLayout from './SuperAdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
+import CreateUserModal from './CreateUserModal'
+import ManageInviteModal from './ManageInviteModal'
 import toast from 'react-hot-toast'
-import { FiSearch, FiShield } from 'react-icons/fi'
+import { FiSearch, FiShield, FiUserPlus, FiLink } from 'react-icons/fi'
 
 export default function SuperAdminAdminsPage() {
-  const [admins, setAdmins]   = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
+  const [admins, setAdmins]         = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [manageUser, setManageUser] = useState(null) // user to manage invites for
 
   useEffect(() => {
     accountsAPI.adminUsers()
-      .then(({ data }) => setAdmins(Array.isArray(data) ? data : data.results || []))
+      .then(({ data }) => {
+        // /accounts/users/admins/ returns { success, count, data: [...] }
+        const list = Array.isArray(data) ? data : (data.data || data.results || [])
+        setAdmins(list)
+      })
       .catch(() => toast.error('Failed to load admins'))
       .finally(() => setLoading(false))
   }, [])
@@ -34,14 +42,23 @@ export default function SuperAdminAdminsPage() {
             <h1 className="text-2xl font-bold text-white">Admins</h1>
             <p className="text-white/35 text-sm mt-1">{admins.length} admin accounts</p>
           </div>
-          <div className="relative">
-            <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search admins…"
-              className="pl-9 pr-4 py-2 text-sm bg-white/5 border border-white/8 focus:border-white/20 rounded-xl text-white placeholder:text-white/25 outline-none transition-colors w-60"
-            />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search admins…"
+                className="pl-9 pr-4 py-2 text-sm bg-white/5 border border-white/8 focus:border-white/20 rounded-xl text-white placeholder:text-white/25 outline-none transition-colors w-52"
+              />
+            </div>
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-black text-sm font-semibold transition-colors"
+            >
+              <FiUserPlus size={14} />
+              Invite Admin
+            </button>
           </div>
         </div>
 
@@ -52,7 +69,7 @@ export default function SuperAdminAdminsPage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="rounded-2xl border border-white/5 p-4 hover:border-red-900/25 transition-colors glass"
+              className="rounded-2xl border border-white/5 p-4 hover:border-orange-900/25 transition-colors glass"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-600 to-orange-700 flex items-center justify-center text-white text-sm font-bold">
@@ -78,6 +95,14 @@ export default function SuperAdminAdminsPage() {
                   </div>
                 </div>
               )}
+              {/* Manage invite / reset */}
+              <button
+                onClick={() => setManageUser(a)}
+                className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-white/35 hover:text-white/60 py-1.5 rounded-lg hover:bg-white/5 transition-all border border-transparent hover:border-white/8"
+              >
+                <FiLink size={11} />
+                {a.is_active ? 'Reset Password Link' : 'Manage Invite'}
+              </button>
             </motion.div>
           ))}
           {filtered.length === 0 && (
@@ -85,6 +110,19 @@ export default function SuperAdminAdminsPage() {
           )}
         </div>
       </motion.div>
+
+      {/* Modals */}
+      <CreateUserModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        defaultRole="admin"
+        onUserCreated={(u) => setAdmins((prev) => [u, ...prev])}
+      />
+      <ManageInviteModal
+        open={!!manageUser}
+        onClose={() => setManageUser(null)}
+        user={manageUser}
+      />
     </SuperAdminLayout>
   )
 }

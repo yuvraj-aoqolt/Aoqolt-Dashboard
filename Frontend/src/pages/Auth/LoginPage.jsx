@@ -47,13 +47,6 @@ export default function LoginPage() {
     : (fromState?.pathname || '/services')
   const serviceId = location.state?.serviceId || null
 
-  // Already logged in — redirect away, but only when we are NOT in the middle of
-  // a login flow. During login, navigateAfterLogin handles routing itself.
-  if (!isLoggingIn.current && isAuthenticated) {
-    const dest = isSuperAdmin ? '/superadmin' : isAdmin ? '/admin' : from
-    return <Navigate to={dest} replace />
-  }
-
   // Determine where to send the user based on their role after login
   // API envelope: { success, message, data: { user: { role }, tokens } }
   const getDestination = (responseData) => {
@@ -105,6 +98,10 @@ export default function LoginPage() {
     }
   }
 
+  // ── Guard: already logged in ────────────────────────────────────────────
+  // Placed HERE — after all hook calls — so the hook count never changes
+  // between renders regardless of auth state (Rules of Hooks).
+  // useGoogleLogin below MUST be called before any early return.
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       isLoggingIn.current = true
@@ -197,6 +194,12 @@ export default function LoginPage() {
       toast.error('Yahoo sign-in failed.')
       setYahooLoading(false)
     }
+  }
+
+  // All hooks have been called above — now safe to do an early redirect.
+  if (!isLoggingIn.current && isAuthenticated) {
+    const dest = isSuperAdmin ? '/superadmin' : isAdmin ? '/admin' : from
+    return <Navigate to={dest} replace />
   }
 
   return (

@@ -3,8 +3,10 @@ import { motion } from 'framer-motion'
 import { accountsAPI } from '../../api'
 import SuperAdminLayout from './SuperAdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
+import CreateUserModal from './CreateUserModal'
+import ManageInviteModal from './ManageInviteModal'
 import toast from 'react-hot-toast'
-import { FiSearch } from 'react-icons/fi'
+import { FiSearch, FiUserPlus, FiLink } from 'react-icons/fi'
 
 const AVATAR_COLORS = [
   'var(--color-avatar-1)',
@@ -21,12 +23,14 @@ function initials(name = '') {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?'
 }
 
-const COLUMNS = ['#', 'Client', 'Email', 'Phone', 'Status']
+const COLUMNS = ['#', 'Client', 'Email', 'Phone', 'Status', 'Actions']
 
 export default function SuperAdminClientsPage() {
-  const [users, setUsers]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
+  const [users, setUsers]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [manageUser, setManageUser] = useState(null)
 
   useEffect(() => {
     accountsAPI.allUsers()
@@ -61,14 +65,23 @@ export default function SuperAdminClientsPage() {
             <h1 className="text-2xl font-bold text-white">Clients</h1>
             <p className="text-white/35 text-sm mt-1">{users.length} registered clients</p>
           </div>
-          <div className="relative">
-            <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, email, phone…"
-              className="pl-9 pr-4 py-2 text-sm bg-white/5 border border-white/8 focus:border-white/20 rounded-xl text-white placeholder:text-white/25 outline-none transition-colors w-64"
-            />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, email, phone…"
+                className="pl-9 pr-4 py-2 text-sm bg-white/5 border border-white/8 focus:border-white/20 rounded-xl text-white placeholder:text-white/25 outline-none transition-colors w-56"
+              />
+            </div>
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-600 hover:bg-yellow-500 text-black text-sm font-semibold transition-colors"
+            >
+              <FiUserPlus size={14} />
+              Invite Client
+            </button>
           </div>
         </div>
 
@@ -131,6 +144,17 @@ export default function SuperAdminClientsPage() {
                           {u.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
+
+                      {/* Actions */}
+                      <td className="py-3 px-4">
+                        <button
+                          onClick={() => setManageUser(u)}
+                          className="flex items-center gap-1 text-xs text-white/35 hover:text-white/70 px-2 py-1 rounded-lg hover:bg-white/5 transition-all border border-transparent hover:border-white/8"
+                        >
+                          <FiLink size={11} />
+                          {u.is_active ? 'Reset Link' : 'Invite Link'}
+                        </button>
+                      </td>
                     </motion.tr>
                   )
                 })}
@@ -144,6 +168,19 @@ export default function SuperAdminClientsPage() {
         </div>
 
       </motion.div>
+
+      {/* Modals */}
+      <CreateUserModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        defaultRole="client"
+        onUserCreated={(u) => setUsers((prev) => [u, ...prev])}
+      />
+      <ManageInviteModal
+        open={!!manageUser}
+        onClose={() => setManageUser(null)}
+        user={manageUser}
+      />
     </SuperAdminLayout>
   )
 }

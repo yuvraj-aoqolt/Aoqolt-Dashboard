@@ -4,7 +4,7 @@ Admin configuration for Accounts app
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
-from .models import User, UserProfile
+from .models import User, UserProfile, InvitationToken
 
 
 @admin.register(User)
@@ -83,3 +83,48 @@ class UserProfileAdmin(admin.ModelAdmin):
     def get_role(self, obj):
         return obj.user.get_role_display()
     get_role.short_description = 'Role'
+
+
+@admin.register(InvitationToken)
+class InvitationTokenAdmin(admin.ModelAdmin):
+    """Admin panel for InvitationToken management."""
+
+    list_display = [
+        'user', 'token_type', 'short_token', 'is_used',
+        'token_status', 'created_by', 'created_at', 'expires_at',
+    ]
+    list_filter = ['token_type', 'is_used', 'created_at']
+    search_fields = ['user__email', 'user__full_name', 'token']
+    ordering = ['-created_at']
+    readonly_fields = [
+        'token', 'created_at', 'expires_at', 'used_at',
+        'created_by', 'user',
+    ]
+
+    fieldsets = (
+        ('Token Info', {
+            'fields': ('token', 'token_type', 'is_used', 'used_at'),
+        }),
+        ('Linked User', {
+            'fields': ('user', 'created_by'),
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'expires_at'),
+        }),
+    )
+
+    def short_token(self, obj):
+        return f"{obj.token[:12]}…"
+    short_token.short_description = 'Token (preview)'
+
+    def token_status(self, obj):
+        if obj.is_used:
+            return format_html('<span style="color:grey;">Used</span>')
+        if obj.is_expired():
+            return format_html('<span style="color:red;">Expired</span>')
+        return format_html('<span style="color:green;">Active</span>')
+    token_status.short_description = 'Status'
+
+    def has_add_permission(self, request):
+        # Tokens are only created via the API, not the admin panel
+        return False

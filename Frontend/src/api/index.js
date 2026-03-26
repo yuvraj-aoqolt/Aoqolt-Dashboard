@@ -93,8 +93,24 @@ export const accountsAPI = {
     }),
   // SuperAdmin
   allUsers: () => api.get('/accounts/users/'),
-  adminUsers: () => api.get('/accounts/users/?role=admin'),
+  adminUsers: () => api.get('/accounts/users/admins/'),
   promoteToAdmin: (id) => api.post(`/accounts/users/${id}/promote/`),
+}
+
+// ── Invite / Account-Setup ────────────────────────────────────────────────
+export const inviteAPI = {
+  /** SuperAdmin: create a new user (no password) and get back an invite link */
+  createUser: (data) => api.post('/accounts/admin/create-user/', data),
+  /** SuperAdmin: regenerate an invite link for an existing inactive user */
+  generateInvite: (data) => api.post('/accounts/admin/generate-invite/', data),
+  /** SuperAdmin: generate an admin-controlled password-reset link */
+  generateReset: (data) => api.post('/accounts/admin/generate-reset/', data),
+  /** SuperAdmin: view invite/reset token history for a user */
+  inviteStatus: (userId) => api.get(`/accounts/admin/invite-status/${userId}/`),
+  /** Public: validate token before showing the set-password form */
+  validateToken: (token) => api.get(`/accounts/validate-token/${token}/`),
+  /** Public: set password via invite or reset token */
+  setPassword: (data) => api.post('/accounts/set-password/', data),
 }
 
 // ── Services ─────────────────────────────────────────────────────────────

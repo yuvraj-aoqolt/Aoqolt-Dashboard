@@ -23,6 +23,7 @@ import RegisterPage from './pages/Auth/RegisterPage'
 import VerifyOtpPage from './pages/Auth/VerifyOtpPage'
 import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage'
+import SetPasswordPage from './pages/Auth/SetPasswordPage'
 import YahooCallbackPage from './pages/Auth/YahooCallbackPage'
 
 // Admin pages
@@ -80,6 +81,9 @@ export default function App() {
             <Route path="/verify-otp" element={<VerifyOtpPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            {/* Admin-invitation routes — public, token-protected by the backend */}
+            <Route path="/invite/:token" element={<SetPasswordPage />} />
+            <Route path="/admin-reset/:token" element={<SetPasswordPage />} />
             <Route path="/oauth/yahoo/callback" element={<YahooCallbackPage />} />
 
             {/* Protected — requires auth */}
