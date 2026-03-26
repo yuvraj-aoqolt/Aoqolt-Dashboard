@@ -32,17 +32,26 @@ class Booking(models.Model):
     
     # Booking Form Fields (First Form)
     full_name = models.CharField(max_length=255)
+    phone_country_code = models.CharField(max_length=5, default='+1')
     phone_number = models.CharField(max_length=20)
     email = models.EmailField()
     address = models.TextField()
     country = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
     special_note = models.TextField(max_length=900, blank=True)
     
     # Selected service (stored from landing page)
     selected_service = models.CharField(max_length=50, blank=True)
-    
+
+    # Guest flag — always False for authenticated users; kept for DB compatibility
+    is_guest = models.BooleanField(default=False)
+
+    # Form 2 single-use token (generated at payment, consumed on submission)
+    form2_token = models.UUIDField(default=uuid.uuid4, editable=False, null=True, blank=True)
+    form2_submitted = models.BooleanField(default=False)
+
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     
@@ -118,18 +127,6 @@ class BookingDetail(models.Model):
     # Custom fields stored as JSON
     custom_data = models.JSONField(default=dict, blank=True)
 
-    # ── Correction workflow ──────────────────────────────────────────────
-    # Field names flagged as incorrect by super admin
-    flagged_fields = models.JSONField(default=list, blank=True,
-                                      help_text="Field names flagged as incorrect by admin")
-    # Per-field notes from admin  {field_name: note_string}
-    flagged_field_notes = models.JSONField(default=dict, blank=True)
-    # Unique token for the correction link sent to user
-    correction_token = models.UUIDField(null=True, blank=True, unique=True)
-    correction_requested_at = models.DateTimeField(null=True, blank=True)
-    correction_completed = models.BooleanField(default=False)
-    correction_completed_at = models.DateTimeField(null=True, blank=True)
-
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -167,3 +164,38 @@ class BookingAttachment(models.Model):
     
     def __str__(self):
         return f"{self.file_name} - {self.booking.id}"
+
+
+class BookingToken(models.Model):
+    """
+    Single-use, time-limited token for initiating Booking Form 1.
+    Generated when a user clicks 'Book Now' on a service page.
+    Consumed (marked used) when the booking is successfully created.
+    """
+    token = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='booking_tokens')
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='booking_tokens')
+    is_used = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    booking = models.OneToOneField(
+        Booking, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='initiation_token'
+    )
+
+    class Meta:
+        db_table = 'booking_tokens'
+        verbose_name = 'Booking Token'
+        verbose_name_plural = 'Booking Tokens'
+        indexes = [
+            models.Index(fields=['user', 'is_used']),
+            models.Index(fields=['expires_at']),
+        ]
+
+    @property
+    def is_valid(self):
+        from django.utils import timezone
+        return not self.is_used and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"BookingToken {self.token} - {self.user.email}"

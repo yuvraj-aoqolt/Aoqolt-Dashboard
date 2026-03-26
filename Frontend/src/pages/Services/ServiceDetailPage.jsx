@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FiArrowLeft, FiArrowRight, FiCheck, FiClock } from 'react-icons/fi'
+import { FiArrowLeft, FiArrowRight, FiCheck, FiClock, FiLoader } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
-import { servicesAPI } from '../../api'
+import { servicesAPI, bookingsAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import LoadingScreen from '../../components/LoadingScreen'
+import toast from 'react-hot-toast'
 
 export default function ServiceDetailPage() {
   const { id } = useParams()
@@ -13,6 +14,7 @@ export default function ServiceDetailPage() {
   const { isAuthenticated } = useAuth()
   const [service, setService] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [bookingLoading, setBookingLoading] = useState(false)
 
   useEffect(() => {
     servicesAPI.detail(id)
@@ -26,16 +28,30 @@ export default function ServiceDetailPage() {
 
   const priceDisplay = service.price_display || `$${(service.price / 100).toFixed(2)}`
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: `/booking/${service.id}` } })
-    } else {
-      navigate(`/booking/${service.id}`)
+      navigate('/login', { state: { from: `/services/${service.id}`, serviceId: service.id } })
+      return
+    }
+    setBookingLoading(true)
+    try {
+      const { data } = await bookingsAPI.initiate(service.id)
+      const payload = data.data || data
+      if (!payload.token) {
+        toast.error('Failed to generate booking link. Please try again.')
+        return
+      }
+      navigate(`/booking/${payload.token}`)
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.error || 'Failed to start booking. Please try again.'
+      toast.error(typeof msg === 'string' ? msg : 'Failed to start booking. Please try again.')
+    } finally {
+      setBookingLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] pt-24 pb-20">
+    <div className="min-h-screen bg-dark pt-24 pb-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <motion.button
           onClick={() => navigate('/services')}
@@ -102,12 +118,22 @@ export default function ServiceDetailPage() {
             </div>
             <motion.button
               onClick={handleBook}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-semibold px-10 py-4 rounded-xl shadow-lg shadow-red-900/40 transition-all duration-300 text-base"
+              disabled={bookingLoading}
+              whileHover={!bookingLoading ? { scale: 1.04 } : {}}
+              whileTap={!bookingLoading ? { scale: 0.97 } : {}}
+              className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white font-semibold px-10 py-4 rounded-xl shadow-lg shadow-red-900/40 transition-all duration-300 text-base disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Book This Service
-              <FiArrowRight size={18} />
+              {bookingLoading ? (
+                <>
+                  <FiLoader size={18} className="animate-spin" />
+                  Preparing...
+                </>
+              ) : (
+                <>
+                  Book This Service
+                  <FiArrowRight size={18} />
+                </>
+              )}
             </motion.button>
           </div>
         </motion.div>

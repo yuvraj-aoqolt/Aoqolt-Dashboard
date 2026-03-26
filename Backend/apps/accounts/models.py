@@ -102,6 +102,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)  # Phone/email verified
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    is_guest = models.BooleanField(default=False)  # Temporary guest session
     requires_phone_verification = models.BooleanField(default=False)  # For social auth
     
     # Authentication method

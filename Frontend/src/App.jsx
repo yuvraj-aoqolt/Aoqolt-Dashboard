@@ -14,7 +14,6 @@ import ServiceDetailPage from './pages/Services/ServiceDetailPage'
 import BookingPage from './pages/Booking/BookingPage'
 import DetailsFormPage from './pages/Booking/DetailsFormPage'
 import BookingSuccessPage from './pages/Booking/BookingSuccessPage'
-import CorrectionFormPage from './pages/Booking/CorrectionFormPage'
 import PaymentSuccessPage from './pages/Payment/PaymentSuccessPage'
 import PaymentCancelPage from './pages/Payment/PaymentCancelPage'
 
@@ -26,13 +25,6 @@ import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage'
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage'
 import YahooCallbackPage from './pages/Auth/YahooCallbackPage'
 
-// Dashboard pages (kept for future use)
-import ClientDashboardPage from './pages/Dashboard/ClientDashboardPage'
-import MyBookingsPage from './pages/Dashboard/MyBookingsPage'
-import MyCasesPage from './pages/Dashboard/MyCasesPage'
-import CaseDetailPage from './pages/Dashboard/CaseDetailPage'
-import ProfilePage from './pages/Dashboard/ProfilePage'
-
 // Admin pages
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage'
 import AdminCasesPage from './pages/Admin/AdminCasesPage'
@@ -43,6 +35,15 @@ import SuperAdminDashboardPage from './pages/SuperAdmin/SuperAdminDashboardPage'
 import SuperAdminCasesPage from './pages/SuperAdmin/SuperAdminCasesPage'
 import SuperAdminUsersPage from './pages/SuperAdmin/SuperAdminUsersPage'
 import SuperAdminBookingsPage from './pages/SuperAdmin/SuperAdminBookingsPage'
+import SuperAdminClientsPage from './pages/SuperAdmin/SuperAdminClientsPage'
+import SuperAdminAuraAssignmentsPage from './pages/SuperAdmin/SuperAdminAuraAssignmentsPage'
+import SuperAdminChatPage from './pages/SuperAdmin/SuperAdminChatPage'
+import SuperAdminSalesQuotesPage from './pages/SuperAdmin/SuperAdminSalesQuotesPage'
+import SuperAdminSalesOrdersPage from './pages/SuperAdmin/SuperAdminSalesOrdersPage'
+import SuperAdminInvoicePage from './pages/SuperAdmin/SuperAdminInvoicePage'
+import SuperAdminReportsPage from './pages/SuperAdmin/SuperAdminReportsPage'
+import SuperAdminAdminsPage from './pages/SuperAdmin/SuperAdminAdminsPage'
+import SuperAdminSettingsPage from './pages/SuperAdmin/SuperAdminSettingsPage'
 
 // Route guards
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -57,12 +58,12 @@ export default function App() {
             position="top-right"
             toastOptions={{
               style: {
-                background: '#1a1a1a',
+                background: 'var(--color-dark-3)',
                 color: '#fff',
-                border: '1px solid rgba(220,38,38,0.3)',
+                border: '1px solid var(--color-primary-dim)',
               },
-              success: { iconTheme: { primary: '#dc2626', secondary: '#fff' } },
-              error:   { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+              success: { iconTheme: { primary: 'var(--color-primary)', secondary: '#fff' } },
+              error:   { iconTheme: { primary: 'var(--color-accent)',  secondary: '#fff' } },
             }}
           />
           <Routes>
@@ -81,26 +82,14 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/oauth/yahoo/callback" element={<YahooCallbackPage />} />
 
-            {/* Public correction form — token-based, no login required */}
-            <Route path="/form/:token" element={<CorrectionFormPage />} />
-
             {/* Protected — requires auth */}
             <Route element={<ProtectedRoute />}>
               {/* ── Core booking flow ── */}
-              <Route path="/booking/:serviceId" element={<BookingPage />} />
+              <Route path="/booking/:token" element={<BookingPage />} />
               <Route path="/payment/success" element={<PaymentSuccessPage />} />
               <Route path="/payment/cancel" element={<PaymentCancelPage />} />
-              <Route path="/booking-form/:bookingId" element={<DetailsFormPage />} />
+              <Route path="/booking-form/:form2Token" element={<DetailsFormPage />} />
               <Route path="/booking/success" element={<BookingSuccessPage />} />
-
-              {/* ── Client dashboard (kept for future use) ── */}
-              <Route element={<RoleRoute allowedRoles={['client', 'admin', 'superadmin']} />}>
-                <Route path="/dashboard" element={<ClientDashboardPage />} />
-                <Route path="/dashboard/bookings" element={<MyBookingsPage />} />
-                <Route path="/dashboard/cases" element={<MyCasesPage />} />
-                <Route path="/dashboard/cases/:id" element={<CaseDetailPage />} />
-                <Route path="/dashboard/profile" element={<ProfilePage />} />
-              </Route>
 
               {/* ── Admin dashboard ── */}
               <Route element={<RoleRoute allowedRoles={['admin', 'superadmin']} />}>
@@ -111,10 +100,19 @@ export default function App() {
 
               {/* ── SuperAdmin dashboard ── */}
               <Route element={<RoleRoute allowedRoles={['superadmin']} />}>
-                <Route path="/superadmin" element={<SuperAdminDashboardPage />} />
-                <Route path="/superadmin/bookings" element={<SuperAdminBookingsPage />} />
-                <Route path="/superadmin/cases" element={<SuperAdminCasesPage />} />
-                <Route path="/superadmin/users" element={<SuperAdminUsersPage />} />
+                <Route path="/superadmin"                       element={<SuperAdminDashboardPage />} />
+                <Route path="/superadmin/bookings"              element={<SuperAdminBookingsPage />} />
+                <Route path="/superadmin/cases"                 element={<SuperAdminCasesPage />} />
+                <Route path="/superadmin/users"                 element={<SuperAdminUsersPage />} />
+                <Route path="/superadmin/clients"               element={<SuperAdminClientsPage />} />
+                <Route path="/superadmin/aura-assignments"      element={<SuperAdminAuraAssignmentsPage />} />
+                <Route path="/superadmin/chat"                  element={<SuperAdminChatPage />} />
+                <Route path="/superadmin/sales-quotes"          element={<SuperAdminSalesQuotesPage />} />
+                <Route path="/superadmin/sales-orders"          element={<SuperAdminSalesOrdersPage />} />
+                <Route path="/superadmin/invoice"               element={<SuperAdminInvoicePage />} />
+                <Route path="/superadmin/reports"               element={<SuperAdminReportsPage />} />
+                <Route path="/superadmin/admins"                element={<SuperAdminAdminsPage />} />
+                <Route path="/superadmin/settings"              element={<SuperAdminSettingsPage />} />
               </Route>
             </Route>
 

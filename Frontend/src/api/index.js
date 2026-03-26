@@ -5,7 +5,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const api = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000,
+  timeout: 10000,
 })
 
 // Attach access token to every request
@@ -54,6 +54,7 @@ api.interceptors.response.use(
         }
       } else {
         // Had a stale access token but no refresh token — clear and retry without auth.
+        original._retry = true
         localStorage.removeItem('access_token')
         delete original.headers.Authorization
         return api(original)
@@ -67,7 +68,8 @@ api.interceptors.response.use(
 export const authAPI = {
   register: (data) => api.post('/auth/register/', data),
   login: (data) => api.post('/auth/login/', data),
-  logout: () => api.post('/auth/logout/'),
+  logout: (data) => api.post('/auth/logout/', data),
+  guestLogin: () => api.post('/auth/guest/'),
   verifyOtp: (data) => api.post('/auth/verify-otp/', data),
   resendOtp: (data) => api.post('/auth/resend-otp/', data),
   forgotPassword: (data) => api.post('/auth/forgot-password/', data),
@@ -87,6 +89,7 @@ export const accountsAPI = {
   uploadAvatar: (formData) =>
     api.post('/accounts/profile/avatar/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     }),
   // SuperAdmin
   allUsers: () => api.get('/accounts/users/'),
@@ -102,6 +105,12 @@ export const servicesAPI = {
 
 // ── Bookings ──────────────────────────────────────────────────────────────
 export const bookingsAPI = {
+  // Generate a single-use token before navigating to the booking form
+  initiate: (serviceId) => api.post('/bookings/initiate/', { service_id: serviceId }),
+  // Validate a booking token and retrieve its associated service details
+  validateBookingToken: (token) => api.get(`/bookings/token/${token}/`),
+  // Retrieve booking info using the form2 token (for the Details Form page)
+  getByForm2Token: (token) => api.get(`/bookings/form2/${token}/`),
   create: (data) => api.post('/bookings/', data),
   myBookings: () => api.get('/bookings/my_bookings/'),
   detail: (id) => api.get(`/bookings/${id}/`),
@@ -110,6 +119,7 @@ export const bookingsAPI = {
   uploadAttachment: (id, formData) =>
     api.post(`/bookings/${id}/upload_attachment/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     }),
   requestCorrection: (id, data) => api.post(`/bookings/${id}/request_correction/`, data),
   // SuperAdmin
@@ -122,6 +132,7 @@ export const correctionAPI = {
   submit: (token, formData) =>
     api.post(`/bookings/correction/${token}/submit/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     }),
 }
 
@@ -136,6 +147,7 @@ export const casesAPI = {
   uploadResult: (id, formData) =>
     api.post(`/cases/${id}/upload_result/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     }),
   updateStatus: (id, data) => api.patch(`/cases/${id}/`, data),
 }
@@ -148,6 +160,7 @@ export const chatAPI = {
   sendFile: (formData) =>
     api.post('/chat/messages/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     }),
 }
 

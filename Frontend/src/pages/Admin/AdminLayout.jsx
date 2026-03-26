@@ -8,7 +8,7 @@ import { FiArrowLeft } from 'react-icons/fi'
 const ADMIN_NAV = [
   { to: '/admin', icon: <MdDashboard size={20} />, label: 'Overview' },
   { to: '/admin/cases', icon: <MdFolder size={20} />, label: 'Cases' },
-  { to: '/dashboard/profile', icon: <MdPerson size={20} />, label: 'Profile' },
+  { to: '/admin', icon: <MdPerson size={20} />, label: 'Profile' },
 ]
 
 export default function AdminLayout({ children }) {
@@ -69,22 +69,22 @@ export default function AdminLayout({ children }) {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#0d0d0d] border-r border-white/5">
+    <div className="min-h-screen bg-dark flex">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-sidebar border-r border-white/5">
         <SidebarContent />
       </aside>
       <AnimatePresence>
         {sidebarOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-black/60 z-40 lg:hidden" />
-            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="fixed inset-y-0 left-0 w-72 bg-[#0d0d0d] border-r border-white/5 z-50 lg:hidden">
+            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-white/5 z-50 lg:hidden">
               <SidebarContent />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d0d] border-b border-white/5 sticky top-0 z-30">
+          <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-sidebar border-b border-white/5 sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white transition-colors"><MdMenu size={24} /></button>
           <span className="text-white font-display font-bold tracking-wider">AO<span className="text-red-500">QOLT</span> <span className="text-orange-400 text-xs">Admin</span></span>
           <div className="w-8 h-8 bg-gradient-to-br from-orange-700 to-red-900 rounded-full flex items-center justify-center text-white font-bold text-sm">

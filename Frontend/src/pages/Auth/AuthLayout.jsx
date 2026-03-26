@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 
 export default function AuthLayout({ children, title, subtitle }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
+    <div className="min-h-screen bg-dark flex">
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[#0d0000] to-[#0a0a0a] items-center justify-center overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[var(--color-bg-auth-from)] to-dark items-center justify-center overflow-hidden">
         {/* Grid */}
         <div
           className="absolute inset-0 opacity-5"
           style={{
-            backgroundImage: `linear-gradient(rgba(220,38,38,0.4) 1px, transparent 1px),linear-gradient(90deg, rgba(220,38,38,0.4) 1px, transparent 1px)`,
+            backgroundImage: `linear-gradient(var(--color-auth-grid) 1px, transparent 1px),linear-gradient(90deg, var(--color-auth-grid) 1px, transparent 1px)`,
             backgroundSize: '50px 50px',
           }}
         />

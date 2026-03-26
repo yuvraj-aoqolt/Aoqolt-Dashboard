@@ -1,10 +1,13 @@
 """
 Authentication Views
 """
+from datetime import timedelta
+
 from rest_framework import status, generics
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import logout
 from django.conf import settings
@@ -20,6 +23,11 @@ from .models import SocialAuthToken
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class GuestLoginThrottle(AnonRateThrottle):
+    """Prevent mass guest account creation — 10 guest sessions per hour per IP."""
+    scope = 'guest_login'
 
 
 def get_tokens_for_user(user):
@@ -603,8 +611,70 @@ def reset_password_view(request):
     # Update password
     user.set_password(new_password)
     user.save()
-    
+
     return Response({
         'success': True,
         'message': 'Password has been reset successfully. You can now login with your new password.'
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([GuestLoginThrottle])
+def guest_login_view(request):
+    """
+    Create a temporary guest session.
+    POST /api/v1/auth/guest/
+
+    No request body required.
+    Returns short-lived JWT tokens for a temporary anonymous user.
+    The guest account is single-use — tokens expire after
+    GUEST_SESSION_EXPIRY_HOURS (default 2 h) and cannot be refreshed
+    for a new session without calling this endpoint again.
+    """
+    import uuid as _uuid
+
+    expiry_hours = getattr(settings, 'GUEST_SESSION_EXPIRY_HOURS', 2)
+    guest_uuid = _uuid.uuid4()
+
+    # Build a unique, internally-recognisable email (not a real address)
+    guest_email = f'guest_{guest_uuid.hex}@aoqolt.guest'
+
+    # 15-digit numeric string derived from the UUID — passes the phone regex,
+    # is unique with overwhelming probability, and cannot be guessed.
+    guest_phone = str(guest_uuid.int)[-15:]
+
+    user = User(
+        email=guest_email,
+        full_name='Guest',
+        phone_number=guest_phone,
+        country_code='+1',
+        role=User.CLIENT,
+        auth_provider=User.AUTH_MANUAL,
+        is_active=True,
+        is_verified=True,
+        is_guest=True,
+    )
+    user.set_unusable_password()
+    user.save()
+
+    # Issue tokens with a custom (short) expiry for the guest session
+    refresh = RefreshToken.for_user(user)
+    lifetime = timedelta(hours=expiry_hours)
+    refresh.set_exp(lifetime=lifetime)
+    refresh.access_token.set_exp(lifetime=lifetime)
+
+    logger.info(f"Guest session created: {user.id}")
+
+    return Response({
+        'success': True,
+        'message': 'Guest session started',
+        'data': {
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            'session_expires_in_hours': expiry_hours,
+        },
+    }, status=status.HTTP_201_CREATED)

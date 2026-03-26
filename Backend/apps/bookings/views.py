@@ -1,20 +1,45 @@
 """
 Views for Bookings
 """
-import uuid
+import logging
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
-from django.utils import timezone
+
 from apps.accounts.permissions import IsSuperAdmin, IsOwnerOrSuperAdmin
-from .models import Booking, BookingDetail, BookingAttachment
+from .models import Booking, BookingDetail, BookingAttachment, BookingToken
 from .serializers import (
     BookingSerializer, BookingListSerializer, BookingCreateSerializer,
-    BookingDetailSerializer, BookingAttachmentSerializer, CorrectionRequestSerializer
+    BookingDetailSerializer, BookingAttachmentSerializer,
+    BookingEditForm1Serializer, BookingEditForm2Serializer
 )
+from apps.services.serializers import ServiceSerializer
+
+
+# ---------------------------------------------------------------------------
+# Custom throttle classes
+# ---------------------------------------------------------------------------
+
+class BookingInitiateThrottle(UserRateThrottle):
+    """Limit booking token generation to prevent spamming."""
+    scope = 'booking_initiate'
+
+
+class BookingCreateThrottle(UserRateThrottle):
+    """Limit booking creation."""
+    scope = 'booking_create'
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -22,7 +47,14 @@ class BookingViewSet(viewsets.ModelViewSet):
     ViewSet for managing bookings
     """
     permission_classes = [IsAuthenticated]
-    
+
+    def get_throttles(self):
+        if self.action == 'initiate':
+            return [BookingInitiateThrottle()]
+        if self.action == 'create':
+            return [BookingCreateThrottle()]
+        return super().get_throttles()
+
     def get_queryset(self):
         """Filter bookings based on user role"""
         user = self.request.user
@@ -60,31 +92,47 @@ class BookingViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def add_details(self, request, pk=None):
-        """Add second form details after payment"""
+        """Add second form details after payment. Blocked once already submitted."""
         booking = self.get_object()
-        
-        # Check if booking belongs to user or user is superadmin
+
         if booking.user != request.user and not request.user.is_superadmin:
             return Response({
                 'success': False,
-                'error': 'You do not have permission to modify this booking'
+                'error': 'You do not have permission to modify this booking',
             }, status=status.HTTP_403_FORBIDDEN)
-        
-        # Create or update booking details
-        detail, created = BookingDetail.objects.get_or_create(booking=booking)
+
+        # Prevent resubmission
+        if booking.form2_submitted and not request.user.is_superadmin:
+            return Response({
+                'success': False,
+                'error': 'Form 2 has already been submitted for this booking.',
+                'code': 'ALREADY_SUBMITTED',
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        detail, _ = BookingDetail.objects.get_or_create(booking=booking)
         serializer = BookingDetailSerializer(detail, data=request.data, partial=True)
-        
+
         if serializer.is_valid():
             serializer.save()
+            # Mark form2 as permanently submitted
+            booking.form2_submitted = True
+            booking.save(update_fields=['form2_submitted'])
+            try:
+                _send_booking_confirmation_email(booking)
+            except Exception as exc:
+                logger.warning(
+                    'Confirmation email failed for booking %s: %s',
+                    booking.booking_id, exc
+                )
             return Response({
                 'success': True,
                 'message': 'Booking details added successfully',
-                'data': serializer.data
+                'data': serializer.data,
             }, status=status.HTTP_200_OK)
-        
+
         return Response({
             'success': False,
-            'error': serializer.errors
+            'error': serializer.errors,
         }, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
@@ -134,131 +182,198 @@ class BookingViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         })
 
-    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
-    def request_correction(self, request, pk=None):
-        """
-        SuperAdmin flags incorrect fields on a BookingDetail and generates
-        a unique token-based correction link to send to the user.
-        """
+    # -----------------------------------------------------------------------
+    # Token-based security endpoints are handled by dedicated APIView classes
+    # below (BookingInitiateView, BookingTokenValidateView, BookingForm2InfoView).
+    # -----------------------------------------------------------------------
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsSuperAdmin])
+    def edit_form1(self, request, pk=None):
+        """SuperAdmin directly edits Form 1 (personal/contact details) of a booking."""
         booking = self.get_object()
+        serializer = BookingEditForm1Serializer(booking, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Booking details updated successfully',
+                'data': serializer.data
+            })
+        return Response({'success': False, 'error': serializer.errors},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = CorrectionRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response({'success': False, 'error': serializer.errors},
-                            status=status.HTTP_400_BAD_REQUEST)
-
+    @action(detail=True, methods=['patch'], permission_classes=[IsSuperAdmin])
+    def edit_form2(self, request, pk=None):
+        """SuperAdmin directly edits Form 2 (service-specific details) of a booking."""
+        booking = self.get_object()
         detail, _ = BookingDetail.objects.get_or_create(booking=booking)
+        serializer = BookingEditForm2Serializer(detail, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Form 2 updated successfully',
+                'data': serializer.data
+            })
+        return Response({'success': False, 'error': serializer.errors},
+                        status=status.HTTP_400_BAD_REQUEST)
 
-        detail.flagged_fields = serializer.validated_data['flagged_fields']
-        detail.flagged_field_notes = serializer.validated_data.get('flagged_field_notes', {})
-        detail.correction_token = uuid.uuid4()
-        detail.correction_requested_at = timezone.now()
-        detail.correction_completed = False
-        detail.correction_completed_at = None
-        detail.save()
 
-        correction_link = (
-            f"{request.data.get('frontend_base_url', 'https://aoqolt.com')}"
-            f"/form/{detail.correction_token}"
+# ---------------------------------------------------------------------------
+# Standalone APIViews for the token-based booking security endpoints.
+# Registered explicitly with path() in urls.py to avoid router URL conflicts.
+# ---------------------------------------------------------------------------
+
+class BookingInitiateView(APIView):
+    """
+    POST /api/v1/bookings/initiate/
+    Generate a single-use, time-limited BookingToken for Form 1.
+    Called by the frontend before navigating to the booking page.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [BookingInitiateThrottle]
+
+    def post(self, request):
+        from apps.services.models import Service
+
+        service_id = request.data.get('service_id')
+        if not service_id:
+            return Response(
+                {'success': False, 'error': 'service_id is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            service = Service.objects.get(id=service_id, is_active=True)
+        except (Service.DoesNotExist, ValueError):
+            return Response(
+                {'success': False, 'error': 'Service not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        expiry_minutes = getattr(settings, 'BOOKING_TOKEN_EXPIRY_MINUTES', 15)
+        token = BookingToken.objects.create(
+            user=request.user,
+            service=service,
+            expires_at=timezone.now() + timedelta(minutes=expiry_minutes),
         )
 
         return Response({
             'success': True,
-            'message': 'Correction request created successfully',
-            'data': {
-                'correction_link': correction_link,
-                'correction_token': str(detail.correction_token),
-                'flagged_fields': detail.flagged_fields,
-                'flagged_field_notes': detail.flagged_field_notes,
-                'booking_id': booking.booking_id,
-                'user_email': booking.user.email,
-                'user_phone': booking.user.phone_number or booking.phone_number,
-            }
-        })
+            'token': str(token.token),
+            'expires_at': token.expires_at.isoformat(),
+            'expiry_minutes': expiry_minutes,
+        }, status=status.HTTP_201_CREATED)
 
 
-class CorrectionView(APIView):
+class BookingTokenValidateView(APIView):
     """
-    Public token-based endpoint for users to retrieve and submit
-    form corrections requested by super admin.
-
-    GET  /api/v1/correction/<token>/        — returns form data + flagged fields
-    POST /api/v1/correction/<token>/submit/ — submit corrected data + attachments
+    GET /api/v1/bookings/token/<token>/
+    Validate a booking token and return the associated service details.
     """
-    permission_classes = [AllowAny]
-
-    def _get_detail(self, token):
-        try:
-            return BookingDetail.objects.select_related('booking__service').get(
-                correction_token=token
-            )
-        except BookingDetail.DoesNotExist:
-            return None
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, token):
-        detail = self._get_detail(token)
-        if not detail:
-            return Response({'success': False, 'error': 'Invalid or expired correction link'},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        booking = detail.booking
-        service_type = booking.service.service_type if booking.service else booking.selected_service
-
-        data = {
-            'booking_id': booking.booking_id,
-            'service_type': service_type,
-            'service_name': booking.service.name if booking.service else '',
-            'flagged_fields': detail.flagged_fields,
-            'flagged_field_notes': detail.flagged_field_notes,
-            'correction_completed': detail.correction_completed,
-            'current_data': BookingDetailSerializer(detail).data,
-            # Existing attachments
-            'attachments': BookingAttachmentSerializer(
-                booking.attachments.all(), many=True, context={'request': request}
-            ).data,
-        }
-        return Response({'success': True, 'data': data})
-
-    def post(self, request, token):
-        """Submit corrected form data (supports multipart for image re-uploads)."""
-        detail = self._get_detail(token)
-        if not detail:
-            return Response({'success': False, 'error': 'Invalid or expired correction link'},
-                            status=status.HTTP_404_NOT_FOUND)
-
-        if detail.correction_completed:
-            return Response({'success': False, 'error': 'Correction has already been submitted'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Update detail fields (partial)
-        fields_to_update = [
-            'birth_date', 'birth_time', 'birth_place',
-            'family_member_count', 'family_member_details', 'additional_notes', 'custom_data',
-        ]
-        for field in fields_to_update:
-            if field in request.data:
-                setattr(detail, field, request.data[field])
-
-        # Handle replacement image uploads
-        booking = detail.booking
-        for key, file in request.FILES.items():
-            # key can be a description like 'main_photo' or 'family_member:0'
-            # Delete old attachment with the same description, then re-create
-            booking.attachments.filter(description=key).delete()
-            BookingAttachment.objects.create(
-                booking=booking,
-                file=file,
-                file_type='image',
-                file_name=file.name,
-                file_size=file.size,
-                description=key,
+        try:
+            booking_token = BookingToken.objects.select_related('service', 'user').get(
+                token=token
+            )
+        except (BookingToken.DoesNotExist, ValueError):
+            return Response(
+                {'success': False, 'error': 'Invalid booking link.', 'code': 'INVALID'},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
-        detail.correction_completed = True
-        detail.correction_completed_at = timezone.now()
-        detail.save()
+        if booking_token.user_id != request.user.id:
+            return Response(
+                {'success': False, 'error': 'This link does not belong to your account.', 'code': 'FORBIDDEN'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
+        if booking_token.is_used:
+            return Response(
+                {'success': False, 'error': 'This booking link has already been used.', 'code': 'USED'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if booking_token.expires_at < timezone.now():
+            return Response(
+                {
+                    'success': False,
+                    'error': 'This booking link has expired. Please start a new booking.',
+                    'code': 'EXPIRED',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        service_data = ServiceSerializer(booking_token.service).data
         return Response({
             'success': True,
-            'message': 'Correction submitted successfully. Our team will review your updated details.',
+            'service': service_data,
+            'expires_at': booking_token.expires_at.isoformat(),
         })
+
+
+# ---------------------------------------------------------------------------
+# Email helper
+# ---------------------------------------------------------------------------
+
+def _send_booking_confirmation_email(booking):
+    """
+    Send a booking confirmation to the email address the client entered in
+    Form 1.  Failures are intentionally swallowed by the caller so that a
+    broken SMTP config never blocks a successful booking.
+    """
+    recipient = getattr(booking, 'email', None)
+    if not recipient:
+        return
+
+    service_name = getattr(booking.service, 'name', 'the requested service')
+    subject = f'Booking Confirmed \u2013 {service_name}'
+    client_name = booking.full_name or 'valued client'
+    body = (
+        f'Dear {client_name},\n\n'
+        f'Thank you for booking {service_name} with us.  '
+        f'Your booking reference is {booking.booking_id}.\n\n'
+        f'We will be in touch shortly to confirm the appointment details.\n\n'
+        f'Thank you,\nThe Aoqolt Team'
+    )
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@aoqolt.com')
+    send_mail(subject, body, from_email, [recipient], fail_silently=False)
+
+
+class BookingForm2InfoView(APIView):
+    """
+    GET /api/v1/bookings/form2/<token>/
+    Validate a form2 token and return booking info for the Details Form page.
+    Rejects the request if the form has already been submitted.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, token):
+        try:
+            booking = Booking.objects.select_related('service').get(form2_token=token)
+        except (Booking.DoesNotExist, ValueError):
+            return Response(
+                {'success': False, 'error': 'Invalid form link.', 'code': 'INVALID'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if booking.user_id != request.user.id:
+            return Response(
+                {'success': False, 'error': 'Forbidden.', 'code': 'FORBIDDEN'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if booking.form2_submitted:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'This form has already been submitted.',
+                    'code': 'ALREADY_SUBMITTED',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = BookingSerializer(booking, context={'request': request})
+        return Response({'success': True, 'data': serializer.data})

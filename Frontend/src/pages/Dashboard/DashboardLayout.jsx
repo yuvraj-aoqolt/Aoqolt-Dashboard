@@ -95,9 +95,9 @@ export default function DashboardLayout({ children }) {
   )
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex">
+    <div className="min-h-screen bg-dark flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-[#0d0d0d] border-r border-white/5">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-sidebar border-r border-white/5">
         <SidebarContent />
       </aside>
 
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }) {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 w-72 bg-[#0d0d0d] border-r border-white/5 z-50 lg:hidden"
+              className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-white/5 z-50 lg:hidden"
             >
               <SidebarContent />
             </motion.aside>
@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }) {
       {/* Main */}
       <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
         {/* Mobile Topbar */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#0d0d0d] border-b border-white/5 sticky top-0 z-30">
+          <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-sidebar border-b border-white/5 sticky top-0 z-30">
           <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white transition-colors">
             <MdMenu size={24} />
           </button>

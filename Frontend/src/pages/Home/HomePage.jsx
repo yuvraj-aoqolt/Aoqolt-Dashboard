@@ -6,6 +6,7 @@ import { GiCrystalBall } from 'react-icons/gi'
 import { MdAutoAwesome } from 'react-icons/md'
 import { useServices } from '../../context/ServicesContext'
 import { useAuth } from '../../context/AuthContext'
+import { bookingsAPI } from '../../api'
 
 const PARTICLES = Array.from({ length: 30 }, (_, i) => ({
   id: i,
@@ -64,23 +65,31 @@ export default function HomePage() {
   const { services } = useServices()
   const { isAuthenticated } = useAuth()
 
-  const handleServiceClick = (serviceType) => {
+  const handleServiceClick = async (serviceType) => {
     const service = services.find((s) => s.service_type === serviceType)
     if (!service) {
-      // Services not loaded yet — fall back to the services page
       navigate('/services')
       return
     }
-    const dest = `/booking/${service.id}`
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: dest } })
-    } else {
-      navigate(dest)
+      navigate('/login', { state: { from: `/services/${service.id}`, serviceId: service.id } })
+      return
+    }
+    try {
+      const { data } = await bookingsAPI.initiate(service.id)
+      const payload = data.data || data
+      if (!payload.token) {
+        navigate('/services')
+        return
+      }
+      navigate(`/booking/${payload.token}`)
+    } catch {
+      navigate('/services')
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-dark">
       {/* ── HERO ───────────────────────────────────────────────── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Animated background */}
@@ -107,8 +116,8 @@ export default function HomePage() {
             className="absolute inset-0 opacity-5"
             style={{
               backgroundImage: `
-                linear-gradient(rgba(220,38,38,0.3) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(220,38,38,0.3) 1px, transparent 1px)
+                linear-gradient(var(--color-grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px)
               `,
               backgroundSize: '60px 60px',
             }}
@@ -364,7 +373,7 @@ export default function HomePage() {
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────── */}
-      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-[#0d0d0d]">
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-sidebar">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -463,7 +472,7 @@ export default function HomePage() {
             className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-950/60 to-[#1a0000] border border-red-900/40 p-12 sm:p-16 text-center"
           >
             {/* BG glow */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(220,38,38,0.15),transparent_70%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,var(--color-glass-border),transparent_70%)]" />
 
             <div className="relative z-10">
               <motion.div

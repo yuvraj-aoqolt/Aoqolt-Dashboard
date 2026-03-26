@@ -24,10 +24,14 @@ export default function PaymentSuccessPage() {
         if (booking.status && booking.status !== 'payment_pending') {
           if (!isCancelled.value) {
             setStatus('confirmed')
-            // Give user a moment to see the confirmation, then go to details form
+            // Navigate using the form2 token so the URL is single-use and secure
+            const form2Token = booking.form2_token
+            const destination = form2Token
+              ? `/booking-form/${form2Token}`
+              : `/booking-form/${bookingId}`
             setTimeout(() => {
               if (!isCancelled.value) {
-                navigate(`/booking-form/${bookingId}`, { replace: true })
+                navigate(destination, { replace: true })
               }
             }, 2000)
           }
@@ -43,10 +47,10 @@ export default function PaymentSuccessPage() {
         if (i > 0) await new Promise((r) => setTimeout(r, 2000))
         if (await tryFetch()) break
         if (i === 5 && !isCancelled.value) {
-          // After all retries just proceed to details form anyway
+          // After all retries, fall back to services so the user can try again
           setStatus('confirmed')
           setTimeout(() => {
-            if (!isCancelled.value) navigate(`/booking-form/${bookingId}`, { replace: true })
+            if (!isCancelled.value) navigate('/services', { replace: true })
           }, 1500)
         }
       }
@@ -56,7 +60,7 @@ export default function PaymentSuccessPage() {
   }, [bookingId, navigate])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-dark">
       <Navbar />
       <div className="pt-24 flex items-center justify-center min-h-screen px-4">
         <motion.div

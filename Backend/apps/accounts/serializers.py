@@ -29,11 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'full_name', 'country_code', 'phone_number',
-            'role', 'is_active', 'is_verified', 'auth_provider',
+            'role', 'is_active', 'is_verified', 'is_guest', 'auth_provider',
             'avatar', 'address', 'city', 'country', 'postal_code',
             'date_joined', 'last_login', 'profile'
         ]
-        read_only_fields = ['id', 'role', 'is_verified', 'auth_provider', 
+        read_only_fields = ['id', 'role', 'is_verified', 'is_guest', 'auth_provider',
                            'date_joined', 'last_login']
 
 

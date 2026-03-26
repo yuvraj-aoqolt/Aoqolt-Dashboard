@@ -3,27 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import {
-  FiSearch, FiChevronDown, FiChevronUp, FiAlertTriangle, FiCheck,
-  FiCopy, FiUser, FiUsers, FiCalendar, FiClock, FiMapPin, FiImage,
-  FiSend, FiX, FiExternalLink
+  FiSearch, FiChevronDown, FiChevronUp, FiCheck,
+  FiEdit2, FiSave, FiUser, FiUsers, FiCalendar, FiClock, FiMapPin, FiImage,
+  FiPhone, FiMail, FiGlobe, FiX, FiExternalLink
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { bookingsAPI } from '../../api'
 import SuperAdminLayout from './SuperAdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
 
-const BASE_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin
-
-// ── All fields that can be flagged ───────────────────────────────────────
-const FLAGGABLE_FIELDS = [
-  { key: 'birth_date',   label: 'Date of Birth' },
-  { key: 'birth_time',   label: 'Time of Birth' },
-  { key: 'birth_place',  label: 'Place of Birth' },
-  { key: 'main_photo',   label: 'Photo / Aura Image' },
-]
-const FAMILY_FLAGGABLE = (index) => [
-  { key: `family_member:${index}`, label: `Member ${index + 1} (all info)` },
-]
 
 const statusBadge = (s) => ({
   pending:         'bg-white/5 text-white/40',
@@ -42,12 +30,12 @@ export default function SuperAdminBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
-  const [expanded, setExpanded] = useState(null)   // booking id
-  const [correctionModal, setCorrectionModal] = useState(null) // booking object
-  const [flaggedFields, setFlaggedFields]     = useState([])
-  const [fieldNotes, setFieldNotes]           = useState({})   // {field_key: note}
-  const [sending, setSending]                 = useState(false)
-  const [generatedLink, setGeneratedLink]     = useState(null)
+  const [expanded, setExpanded] = useState(null)
+  const [editForm1Modal, setEditForm1Modal] = useState(null)
+  const [editForm2Modal, setEditForm2Modal] = useState(null)
+  const [form1Data, setForm1Data] = useState({})
+  const [form2Data, setForm2Data] = useState({})
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     bookingsAPI.allBookings()
@@ -69,47 +57,66 @@ export default function SuperAdminBookingsPage() {
 
   const toggleExpand = (id) => setExpanded((prev) => (prev === id ? null : id))
 
-  const openCorrectionModal = (booking) => {
-    setCorrectionModal(booking)
-    setFlaggedFields([])
-    setFieldNotes({})
-    setGeneratedLink(null)
+  const openEditForm1 = (booking) => {
+    setEditForm1Modal(booking)
+    setForm1Data({
+      full_name: booking.full_name || '',
+      email: booking.email || '',
+      phone_country_code: booking.phone_country_code || '+1',
+      phone_number: booking.phone_number || '',
+      address: booking.address || '',
+      country: booking.country || '',
+      state: booking.state || '',
+      city: booking.city || '',
+      postal_code: booking.postal_code || '',
+      special_note: booking.special_note || '',
+    })
   }
 
-  const toggleFlag = (key) => {
-    setFlaggedFields((prev) =>
-      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]
-    )
+  const openEditForm2 = (booking) => {
+    setEditForm2Modal(booking)
+    const d = booking.details || {}
+    setForm2Data({
+      birth_date: d.birth_date || '',
+      birth_time: d.birth_time || '',
+      birth_place: d.birth_place || '',
+      additional_notes: d.additional_notes || '',
+      family_member_count: d.family_member_count ?? '',
+      family_member_details: d.family_member_details ? JSON.stringify(d.family_member_details, null, 2) : '',
+      custom_data: d.custom_data ? JSON.stringify(d.custom_data, null, 2) : '',
+    })
   }
 
-  const handleSendCorrection = async () => {
-    if (flaggedFields.length === 0) { toast.error('Select at least one field to flag'); return }
-    setSending(true)
+  const handleSaveForm1 = async () => {
+    setSaving(true)
     try {
-      const { data } = await bookingsAPI.requestCorrection(correctionModal.id, {
-        flagged_fields: flaggedFields,
-        flagged_field_notes: fieldNotes,
-        frontend_base_url: BASE_URL,
-      })
-      const link = data.data?.correction_link || `${BASE_URL}/form/${data.data?.correction_token}`
-      setGeneratedLink(link)
-      toast.success('Correction request created')
+      await bookingsAPI.editForm1(editForm1Modal.id, form1Data)
+      setBookings(prev => prev.map(b => b.id === editForm1Modal.id ? { ...b, ...form1Data } : b))
+      toast.success('Booking details updated')
+      setEditForm1Modal(null)
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to create correction request')
+      toast.error(err.response?.data?.error || 'Failed to save changes')
     } finally {
-      setSending(false)
+      setSaving(false)
     }
   }
 
-  const copyLink = (link) => {
-    navigator.clipboard.writeText(link)
-    toast.success('Link copied!')
+  const handleSaveForm2 = async () => {
+    setSaving(true)
+    try {
+      const payload = { ...form2Data }
+      try { payload.family_member_details = form2Data.family_member_details ? JSON.parse(form2Data.family_member_details) : null } catch { /* keep raw */ }
+      try { payload.custom_data = form2Data.custom_data ? JSON.parse(form2Data.custom_data) : {} } catch { /* keep raw */ }
+      await bookingsAPI.editForm2(editForm2Modal.id, payload)
+      setBookings(prev => prev.map(b => b.id === editForm2Modal.id ? { ...b, details: { ...b.details, ...payload } } : b))
+      toast.success('Form 2 updated')
+      setEditForm2Modal(null)
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to save changes')
+    } finally {
+      setSaving(false)
+    }
   }
-
-  const whatsappLink = (link, booking) =>
-    `https://wa.me/${encodeURIComponent(booking.phone_number || '')}?text=${encodeURIComponent(
-      `Hi ${booking.full_name}, please update your Aoqolt booking details here: ${link}`
-    )}`
 
   if (loading) return <LoadingScreen />
 
@@ -142,12 +149,6 @@ export default function SuperAdminBookingsPage() {
             const details = booking.details
             const isOpen = expanded === booking.id
             const hasFamilyMembers = details?.family_member_details?.length > 0
-            const allFlaggable = [
-              ...FLAGGABLE_FIELDS,
-              ...(hasFamilyMembers
-                ? details.family_member_details.map((_, idx) => FAMILY_FLAGGABLE(idx)[0])
-                : []),
-            ]
 
             return (
               <motion.div
@@ -182,24 +183,20 @@ export default function SuperAdminBookingsPage() {
                         Form 2 submitted
                       </span>
                     )}
-                    {details?.flagged_fields?.length > 0 && !details.correction_completed && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-900/30 text-red-400 border border-red-900/20 flex items-center gap-1">
-                        <FiAlertTriangle size={10} /> Correction pending
-                      </span>
-                    )}
-                    {details?.correction_completed && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-900/20 text-blue-400 border border-blue-900/20 flex items-center gap-1">
-                        <FiCheck size={10} /> Correction received
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEditForm1(booking) }}
+                      className="px-3 py-1.5 text-xs text-blue-400/70 hover:text-blue-400 border border-blue-900/20 hover:border-blue-700/40 rounded-xl transition-all flex items-center gap-1"
+                    >
+                      <FiEdit2 size={11} /> Edit Form 1
+                    </button>
                     {details && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); openCorrectionModal(booking) }}
-                        className="px-3 py-1.5 text-xs text-red-400/70 hover:text-red-400 border border-red-900/20 hover:border-red-700/40 rounded-xl transition-all"
+                        onClick={(e) => { e.stopPropagation(); openEditForm2(booking) }}
+                        className="px-3 py-1.5 text-xs text-purple-400/70 hover:text-purple-400 border border-purple-900/20 hover:border-purple-700/40 rounded-xl transition-all flex items-center gap-1"
                       >
-                        Flag Fields
+                        <FiEdit2 size={11} /> Edit Form 2
                       </button>
                     )}
                     {isOpen ? <FiChevronUp size={16} className="text-white/30" /> : <FiChevronDown size={16} className="text-white/30" />}
@@ -240,19 +237,16 @@ export default function SuperAdminBookingsPage() {
                                 icon={<FiCalendar size={13} />}
                                 label="Date of Birth"
                                 value={details.birth_date}
-                                flagged={details.flagged_fields?.includes('birth_date')}
                               />
                               <DetailCell
                                 icon={<FiClock size={13} />}
                                 label="Time of Birth"
                                 value={details.birth_time}
-                                flagged={details.flagged_fields?.includes('birth_time')}
                               />
                               <DetailCell
                                 icon={<FiMapPin size={13} />}
                                 label="Place of Birth"
                                 value={details.birth_place}
-                                flagged={details.flagged_fields?.includes('birth_place')}
                               />
                             </div>
 
@@ -269,11 +263,7 @@ export default function SuperAdminBookingsPage() {
                                       href={att.file}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all hover:bg-white/10 ${
-                                        details.flagged_fields?.includes(att.description)
-                                          ? 'border-red-600/50 bg-red-950/20 text-red-300'
-                                          : 'border-white/10 bg-white/5 text-white/60'
-                                      }`}
+                                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border transition-all hover:bg-white/10 border-white/10 bg-white/5 text-white/60"
                                     >
                                       <FiImage size={12} />
                                       {att.description || att.file_name}
@@ -293,22 +283,9 @@ export default function SuperAdminBookingsPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   {details.family_member_details.map((m, idx) => {
                                     const memberKey = `family_member:${idx}`
-                                    const isMemberFlagged = details.flagged_fields?.includes(memberKey)
                                     const memberPhoto = booking.attachments?.find((a) => a.description === memberKey)
                                     return (
-                                      <div
-                                        key={idx}
-                                        className={`rounded-xl p-4 border text-sm ${
-                                          isMemberFlagged
-                                            ? 'border-red-600/40 bg-red-950/20'
-                                            : 'border-white/5 bg-white/[0.02]'
-                                        }`}
-                                      >
-                                        {isMemberFlagged && (
-                                          <span className="inline-flex items-center gap-1 text-red-400 text-xs mb-2">
-                                            <FiAlertTriangle size={10} /> Flagged
-                                          </span>
-                                        )}
+                                      <div key={idx} className="rounded-xl p-4 border text-sm border-white/5 bg-white/[0.02]">
                                         <p className="text-white font-medium">{m.name}</p>
                                         <p className="text-white/40 text-xs">{m.relation}</p>
                                         {m.dob && <p className="text-white/30 text-xs mt-1">DOB: {m.dob}</p>}
@@ -329,19 +306,6 @@ export default function SuperAdminBookingsPage() {
                               </div>
                             )}
 
-                            {/* Previous correction status */}
-                            {details.correction_requested_at && (
-                              <div className="flex items-center gap-3 text-xs text-white/30 border border-white/5 rounded-xl px-4 py-3">
-                                <FiAlertTriangle size={12} className="text-yellow-500/60 shrink-0" />
-                                <span>
-                                  Correction requested{' '}
-                                  {format(new Date(details.correction_requested_at), 'dd MMM yyyy HH:mm')}
-                                  {details.correction_completed && (
-                                    <span className="text-green-400 ml-2">— User submitted correction</span>
-                                  )}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         ) : (
                           <div className="py-6 text-center text-white/20 text-sm border border-dashed border-white/5 rounded-xl">
@@ -358,115 +322,139 @@ export default function SuperAdminBookingsPage() {
         </div>
       </motion.div>
 
-      {/* ── Correction / Flag Fields Modal ─────────────────────────────── */}
+      {/* ── Edit Form 1 Modal ─────────────────────────────────────────── */}
       <AnimatePresence>
-        {correctionModal && (
+        {editForm1Modal && (
           <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="glass rounded-2xl border border-white/10 p-7 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              className="glass rounded-2xl border border-white/10 p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-white font-bold text-lg">Flag Fields for Correction</h3>
-                <button onClick={() => { setCorrectionModal(null); setGeneratedLink(null) }}
-                  className="text-white/30 hover:text-white/60 transition-colors">
+                <h3 className="text-white font-bold text-lg">Edit Booking Details (Form 1)</h3>
+                <button onClick={() => setEditForm1Modal(null)} className="text-white/30 hover:text-white/60 transition-colors">
                   <FiX size={20} />
                 </button>
               </div>
-
               <p className="text-white/40 text-sm mb-5">
-                Booking <span className="text-white/70 font-mono">{correctionModal.booking_id}</span> —{' '}
-                {correctionModal.full_name}
+                Booking <span className="text-white/70 font-mono">{editForm1Modal.booking_id}</span> — {editForm1Modal.full_name}
               </p>
 
-              {!generatedLink ? (
-                <>
-                  {/* Field selector */}
-                  <div className="space-y-2 mb-6">
-                    {[
-                      ...FLAGGABLE_FIELDS,
-                      ...(correctionModal.details?.family_member_details?.map((_, idx) => FAMILY_FLAGGABLE(idx)[0]) || []),
-                    ].map(({ key, label }) => (
-                      <div key={key} className="space-y-1">
-                        <label
-                          className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                            flaggedFields.includes(key)
-                              ? 'border-red-600/50 bg-red-950/20'
-                              : 'border-white/5 hover:border-white/15 bg-white/[0.02]'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={flaggedFields.includes(key)}
-                            onChange={() => toggleFlag(key)}
-                            className="accent-red-500"
-                          />
-                          <span className={`text-sm ${flaggedFields.includes(key) ? 'text-red-300' : 'text-white/60'}`}>
-                            {label}
-                          </span>
-                        </label>
-                        {flaggedFields.includes(key) && (
-                          <input
-                            value={fieldNotes[key] || ''}
-                            onChange={(e) => setFieldNotes((prev) => ({ ...prev, [key]: e.target.value }))}
-                            placeholder={`Note for "${label}" (optional)`}
-                            className="w-full text-xs bg-white/5 border border-white/10 focus:border-red-700/40 rounded-xl px-3 py-2 text-white/70 placeholder:text-white/20 outline-none"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <ModalField label="Full Name" icon={<FiUser size={13} />}>
+                  <input value={form1Data.full_name || ''} onChange={e => setForm1Data(p => ({ ...p, full_name: e.target.value }))} className="modal-input" placeholder="Full name" />
+                </ModalField>
+                <ModalField label="Email" icon={<FiMail size={13} />}>
+                  <input type="email" value={form1Data.email || ''} onChange={e => setForm1Data(p => ({ ...p, email: e.target.value }))} className="modal-input" placeholder="Email" />
+                </ModalField>
 
-                  <button
-                    onClick={handleSendCorrection}
-                    disabled={sending || flaggedFields.length === 0}
-                    className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {sending ? (
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <FiSend size={15} />
-                    )}
-                    Generate Correction Link
-                  </button>
-                </>
-              ) : (
-                /* Generated link panel */
-                <div className="space-y-4">
-                  <div className="bg-green-900/20 border border-green-800/30 rounded-xl p-4">
-                    <p className="text-green-400 text-sm font-medium mb-2 flex items-center gap-2">
-                      <FiCheck size={14} /> Correction link generated
-                    </p>
-                    <p className="text-white/60 text-xs break-all font-mono">{generatedLink}</p>
+                <div className="sm:col-span-2">
+                  <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Phone Number</label>
+                  <div className="flex">
+                    <div className="relative shrink-0">
+                      <FiPhone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                      <input value={form1Data.phone_country_code || ''} onChange={e => setForm1Data(p => ({ ...p, phone_country_code: e.target.value }))} className="modal-input !w-20 !pl-8 !rounded-r-none !border-r-0" placeholder="+1" />
+                    </div>
+                    <input value={form1Data.phone_number || ''} onChange={e => setForm1Data(p => ({ ...p, phone_number: e.target.value }))} className="modal-input flex-1 min-w-0 !rounded-l-none" placeholder="Phone number" />
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      onClick={() => copyLink(generatedLink)}
-                      className="flex items-center justify-center gap-2 py-2.5 text-sm border border-white/10 hover:border-white/20 text-white/60 hover:text-white rounded-xl transition-all"
-                    >
-                      <FiCopy size={14} /> Copy Link
-                    </button>
-                    <a
-                      href={whatsappLink(generatedLink, correctionModal)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 py-2.5 text-sm bg-green-700/20 border border-green-800/30 hover:bg-green-700/30 text-green-400 rounded-xl transition-all"
-                    >
-                      <FiSend size={14} /> Send via WhatsApp
-                    </a>
-                  </div>
-
-                  <button
-                    onClick={() => { setFlaggedFields([]); setFieldNotes({}); setGeneratedLink(null) }}
-                    className="w-full text-white/30 hover:text-white/60 text-sm py-2 transition-colors"
-                  >
-                    Flag different fields
-                  </button>
                 </div>
-              )}
+
+                <div className="sm:col-span-2">
+                  <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Address</label>
+                  <textarea value={form1Data.address || ''} onChange={e => setForm1Data(p => ({ ...p, address: e.target.value }))} className="modal-input resize-none" rows={2} placeholder="Street address" />
+                </div>
+
+                <ModalField label="Country" icon={<FiGlobe size={13} />}>
+                  <input value={form1Data.country || ''} onChange={e => setForm1Data(p => ({ ...p, country: e.target.value }))} className="modal-input" placeholder="Country" />
+                </ModalField>
+                <ModalField label="State / Province" icon={<FiMapPin size={13} />}>
+                  <input value={form1Data.state || ''} onChange={e => setForm1Data(p => ({ ...p, state: e.target.value }))} className="modal-input" placeholder="State" />
+                </ModalField>
+                <ModalField label="City" icon={<FiMapPin size={13} />}>
+                  <input value={form1Data.city || ''} onChange={e => setForm1Data(p => ({ ...p, city: e.target.value }))} className="modal-input" placeholder="City" />
+                </ModalField>
+                <ModalField label="Postal Code" icon={<FiMapPin size={13} />}>
+                  <input value={form1Data.postal_code || ''} onChange={e => setForm1Data(p => ({ ...p, postal_code: e.target.value }))} className="modal-input" placeholder="Postal code" />
+                </ModalField>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Special Note</label>
+                  <textarea value={form1Data.special_note || ''} onChange={e => setForm1Data(p => ({ ...p, special_note: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Special notes…" />
+                </div>
+              </div>
+
+              <button
+                onClick={handleSaveForm1}
+                disabled={saving}
+                className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FiSave size={15} />}
+                Save Changes
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Edit Form 2 Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {editForm2Modal && (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass rounded-2xl border border-white/10 p-7 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-white font-bold text-lg">Edit Submitted Details (Form 2)</h3>
+                <button onClick={() => setEditForm2Modal(null)} className="text-white/30 hover:text-white/60 transition-colors">
+                  <FiX size={20} />
+                </button>
+              </div>
+              <p className="text-white/40 text-sm mb-5">
+                Booking <span className="text-white/70 font-mono">{editForm2Modal.booking_id}</span> — {editForm2Modal.full_name}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <ModalField label="Date of Birth" icon={<FiCalendar size={13} />}>
+                  <input type="date" value={form2Data.birth_date || ''} onChange={e => setForm2Data(p => ({ ...p, birth_date: e.target.value }))} className="modal-input" />
+                </ModalField>
+                <ModalField label="Time of Birth" icon={<FiClock size={13} />}>
+                  <input type="time" value={form2Data.birth_time || ''} onChange={e => setForm2Data(p => ({ ...p, birth_time: e.target.value }))} className="modal-input" />
+                </ModalField>
+                <ModalField label="Place of Birth" icon={<FiMapPin size={13} />}>
+                  <input value={form2Data.birth_place || ''} onChange={e => setForm2Data(p => ({ ...p, birth_place: e.target.value }))} className="modal-input" placeholder="City, Country" />
+                </ModalField>
+
+                <div className="sm:col-span-3">
+                  <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
+                  <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
+                </div>
+
+                {form2Data.family_member_details !== '' && (
+                  <>
+                    <ModalField label="Family Member Count" icon={<FiUsers size={13} />}>
+                      <input type="number" value={form2Data.family_member_count ?? ''} onChange={e => setForm2Data(p => ({ ...p, family_member_count: e.target.value }))} className="modal-input" placeholder="0" />
+                    </ModalField>
+                    <div className="sm:col-span-3">
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Family Member Details (JSON)</label>
+                      <textarea value={form2Data.family_member_details || ''} onChange={e => setForm2Data(p => ({ ...p, family_member_details: e.target.value }))} className="modal-input resize-none font-mono text-xs" rows={6} placeholder='[{"name":"...","relation":"...","dob":"..."}]' />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={handleSaveForm2}
+                disabled={saving}
+                className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <FiSave size={15} />}
+                Save Changes
+              </button>
             </motion.div>
           </div>
         )}
@@ -486,13 +474,24 @@ function InfoCell({ label, value, mono }) {
   )
 }
 
-function DetailCell({ icon, label, value, flagged }) {
+function DetailCell({ icon, label, value }) {
   return (
-    <div className={`rounded-xl p-3 border ${flagged ? 'border-red-600/50 bg-red-950/20' : 'border-white/5 bg-white/[0.02]'}`}>
-      <p className={`text-xs uppercase tracking-wider mb-1 flex items-center gap-1 ${flagged ? 'text-red-400' : 'text-white/30'}`}>
-        {flagged && <FiAlertTriangle size={10} />}{icon} {label}
+    <div className="rounded-xl p-3 border border-white/5 bg-white/[0.02]">
+      <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1 text-white/30">
+        {icon} {label}
       </p>
-      <p className={`text-sm font-medium ${flagged ? 'text-red-200' : 'text-white/70'}`}>{value || '—'}</p>
+      <p className="text-sm font-medium text-white/70">{value || '—'}</p>
+    </div>
+  )
+}
+
+function ModalField({ label, icon, children }) {
+  return (
+    <div>
+      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        {icon && <span className="text-white/20">{icon}</span>}{label}
+      </label>
+      {children}
     </div>
   )
 }

@@ -173,7 +173,22 @@ REST_FRAMEWORK = {
     ],
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '1000/day',
+        'booking_initiate': '20/hour',
+        'booking_create': '10/hour',
+        'guest_login': '10/hour',
+    },
 }
+
+# Minutes a booking initiation token (Form 1 link) remains valid after generation.
+BOOKING_TOKEN_EXPIRY_MINUTES = int(os.getenv('BOOKING_TOKEN_EXPIRY_MINUTES', '15'))
+
+# Hours a guest session JWT remains valid.
+GUEST_SESSION_EXPIRY_HOURS = int(os.getenv('GUEST_SESSION_EXPIRY_HOURS', '2'))
 
 # JWT Configuration
 SIMPLE_JWT = {

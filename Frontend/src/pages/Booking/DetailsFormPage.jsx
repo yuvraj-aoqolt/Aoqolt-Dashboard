@@ -12,10 +12,11 @@ import LoadingScreen from '../../components/LoadingScreen'
 import Navbar from '../../components/Navbar'
 
 export default function DetailsFormPage() {
-  const { bookingId } = useParams()
+  const { form2Token } = useParams()
   const navigate = useNavigate()
 
   const [booking, setBooking] = useState(null)
+  const [bookingId, setBookingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [mainImage, setMainImage] = useState(null)
@@ -35,15 +36,29 @@ export default function DetailsFormPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'family_members' })
 
   useEffect(() => {
+    if (!form2Token) {
+      navigate('/')
+      return
+    }
     bookingsAPI
-      .detail(bookingId)
-      .then(({ data }) => setBooking(data.data || data))
-      .catch(() => {
-        toast.error('Booking not found')
-        navigate('/')
+      .getByForm2Token(form2Token)
+      .then(({ data }) => {
+        const b = data.data || data
+        setBooking(b)
+        setBookingId(b.id)
+      })
+      .catch((err) => {
+        const code = err.response?.data?.code
+        if (code === 'ALREADY_SUBMITTED') {
+          toast.success('Your details have already been submitted.')
+          navigate('/dashboard/bookings', { replace: true })
+        } else {
+          toast.error('Form link is invalid or has expired.')
+          navigate('/', { replace: true })
+        }
       })
       .finally(() => setLoading(false))
-  }, [bookingId, navigate])
+  }, [form2Token, navigate])
 
   if (loading) return <LoadingScreen />
   if (!booking) return null
@@ -116,7 +131,7 @@ export default function DetailsFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-dark">
       <Navbar />
       <div className="pt-24 pb-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">

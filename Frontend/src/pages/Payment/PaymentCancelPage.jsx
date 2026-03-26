@@ -8,7 +8,7 @@ export default function PaymentCancelPage() {
   const bookingId = params.get('booking')
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-dark">
       <Navbar />
       <div className="pt-24 flex items-center justify-center min-h-screen px-4">
         <motion.div

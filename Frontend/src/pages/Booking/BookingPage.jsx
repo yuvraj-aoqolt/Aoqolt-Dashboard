@@ -8,38 +8,68 @@ import {
   FiArrowRight, FiArrowLeft, FiCheck, FiClock
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
-import { servicesAPI, bookingsAPI, paymentsAPI } from '../../api'
+import { bookingsAPI, paymentsAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import LoadingScreen from '../../components/LoadingScreen'
 import Navbar from '../../components/Navbar'
 import Footer from '../../components/Footer'
 
 export default function BookingPage() {
-  const { serviceId } = useParams()
+  const { token } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
 
   const [service, setService] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [tokenError, setTokenError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
   const { register, handleSubmit, formState: { errors }, setValue } = useForm()
 
+  // Validate token and load service details
   useEffect(() => {
-    servicesAPI.detail(serviceId)
-      .then(({ data }) => setService(data.data || data))
-      .catch(() => { toast.error('Service not found'); navigate('/services') })
+    if (!token) {
+      navigate('/services')
+      return
+    }
+    bookingsAPI.validateBookingToken(token)
+      .then(({ data }) => {
+        if (data.success) {
+          setService(data.service)
+        } else {
+          const code = data.code
+          if (code === 'USED') {
+            setTokenError('This booking link has already been used.')
+          } else if (code === 'EXPIRED') {
+            setTokenError('This booking link has expired. Please start a new booking.')
+          } else {
+            setTokenError('This booking link is invalid.')
+          }
+        }
+      })
+      .catch((err) => {
+        const code = err.response?.data?.code
+        if (code === 'USED') {
+          setTokenError('This booking link has already been used.')
+        } else if (code === 'EXPIRED') {
+          setTokenError('This booking link has expired. Please start a new booking.')
+        } else {
+          setTokenError('This booking link is invalid.')
+        }
+      })
       .finally(() => setLoading(false))
-  }, [serviceId])
+  }, [token])
 
   // Pre-fill from user profile
   useEffect(() => {
     if (user) {
       setValue('full_name', user.full_name || '')
       setValue('email', user.email || '')
+      setValue('phone_country_code', user.country_code || '+1')
       setValue('phone_number', user.phone_number || '')
       setValue('address', user.address || '')
       setValue('city', user.city || '')
+      setValue('state', user.state || '')
       setValue('country', user.country || '')
       setValue('postal_code', user.postal_code || '')
     }
@@ -47,17 +77,44 @@ export default function BookingPage() {
 
   if (loading) return <LoadingScreen />
 
+  // Show a clear, user-friendly message for invalid/used/expired tokens
+  if (tokenError) {
+    return (
+      <div className="min-h-screen bg-dark">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 bg-red-950/40 border border-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FiArrowLeft size={28} className="text-red-400" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-white mb-3">Booking Link Unavailable</h2>
+            <p className="text-white/50 mb-8">{tokenError}</p>
+            <button
+              onClick={() => navigate('/services')}
+              className="btn-primary px-8 py-3"
+            >
+              Browse Services
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
   const onSubmit = async (values) => {
     setSubmitting(true)
     try {
-      // 1. Create booking
+      // 1. Create booking — token is consumed server-side on success
       const { data: bookingRes } = await bookingsAPI.create({
-        service: serviceId,
+        booking_token: token,
         full_name: values.full_name,
         email: values.email,
+        phone_country_code: values.phone_country_code || '+1',
         phone_number: values.phone_number,
         address: values.address,
         city: values.city,
+        state: values.state || '',
         country: values.country,
         postal_code: values.postal_code,
         special_note: values.special_note || '',
@@ -108,7 +165,7 @@ export default function BookingPage() {
   const priceDisplay = service?.price_display || `$${((service?.price || 0) / 100).toFixed(2)}`
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen bg-dark">
       <Navbar />
       <div className="pt-24 pb-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -147,9 +204,29 @@ export default function BookingPage() {
                     <input {...register('email', { required: 'Required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })} type="email" placeholder="you@example.com" className="input-field pl-9" />
                   </Field>
 
-                  <Field label="Phone Number" error={errors.phone_number?.message} icon={<FiPhone size={15} />}>
-                    <input {...register('phone_number', { required: 'Required' })} placeholder="Phone number" className="input-field pl-9" />
-                  </Field>
+                  <div>
+                    <label className="block text-white/60 text-xs uppercase tracking-wider mb-1.5">Phone Number</label>
+                    <div className="flex">
+                      <div className="relative shrink-0">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"><FiPhone size={15} /></span>
+                        <input
+                          {...register('phone_country_code', { required: 'Required' })}
+                          placeholder="+1"
+                          className="input-field pl-9 !w-20 !rounded-r-none !border-r-0"
+                        />
+                      </div>
+                      <input
+                        {...register('phone_number', { required: 'Required' })}
+                        placeholder="Phone number"
+                        className="input-field flex-1 min-w-0 !rounded-l-none"
+                      />
+                    </div>
+                    {(errors.phone_country_code || errors.phone_number) && (
+                      <p className="text-red-400 text-xs mt-1">
+                        {errors.phone_country_code?.message || errors.phone_number?.message}
+                      </p>
+                    )}
+                  </div>
 
                   <Field label="Country" error={errors.country?.message} icon={<FiGlobe size={15} />}>
                     <input {...register('country', { required: 'Required' })} placeholder="Your country" className="input-field pl-9" />
@@ -157,6 +234,10 @@ export default function BookingPage() {
 
                   <Field label="City" error={errors.city?.message} icon={<FiMapPin size={15} />}>
                     <input {...register('city', { required: 'Required' })} placeholder="Your city" className="input-field pl-9" />
+                  </Field>
+
+                  <Field label="State / Province" error={errors.state?.message} icon={<FiMapPin size={15} />}>
+                    <input {...register('state')} placeholder="State or province" className="input-field pl-9" />
                   </Field>
 
                   <Field label="Postal Code" error={errors.postal_code?.message} icon={<FiMapPin size={15} />}>

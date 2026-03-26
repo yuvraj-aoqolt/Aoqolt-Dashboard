@@ -16,6 +16,10 @@ export function AuthProvider({ children }) {
     } else {
       setLoading(false)
     }
+    // Safety fallback: never let the app stay on a loading screen forever.
+    // The axios timeout (10s) is the primary guard; this is a last-resort backstop.
+    const timer = setTimeout(() => setLoading(false), 12000)
+    return () => clearTimeout(timer)
   }, [])
 
   const fetchProfile = useCallback(async () => {
@@ -142,7 +146,17 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  const guestLogin = async () => {
+    const { data } = await authAPI.guestLogin()
+    const payload = data.data || data
+    localStorage.setItem('access_token', payload.tokens?.access || payload.access)
+    localStorage.setItem('refresh_token', payload.tokens?.refresh || payload.refresh)
+    await fetchProfile()
+    return data
+  }
+
   const isAuthenticated = !!user
+  const isGuest      = !!user?.is_guest
   const isClient     = user?.role === 'client'
   const isAdmin      = user?.role === 'admin'
   const isSuperAdmin = user?.role === 'superadmin'
@@ -154,10 +168,12 @@ export function AuthProvider({ children }) {
         loading,
         pendingPhone,
         isAuthenticated,
+        isGuest,
         isClient,
         isAdmin,
         isSuperAdmin,
         login,
+        guestLogin,
         register,
         verifyOtp,
         resendOtp,

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext'
+import { bookingsAPI } from '../../api'
 
 /**
  * Yahoo OAuth2 PKCE callback handler.
@@ -42,10 +43,12 @@ export default function YahooCallbackPage() {
     const storedState    = sessionStorage.getItem('yahoo_oauth_state')
     const codeVerifier   = sessionStorage.getItem('yahoo_code_verifier')
     const redirectTo     = sessionStorage.getItem('yahoo_redirect_to') || '/dashboard'
+    const yahooServiceId = sessionStorage.getItem('yahoo_service_id') || null
 
     sessionStorage.removeItem('yahoo_oauth_state')
     sessionStorage.removeItem('yahoo_code_verifier')
     sessionStorage.removeItem('yahoo_redirect_to')
+    sessionStorage.removeItem('yahoo_service_id')
 
     if (state !== storedState) {
       toast.error('OAuth state mismatch. Please try again.')
@@ -77,7 +80,17 @@ export default function YahooCallbackPage() {
       .then(async (tokens) => {
         await socialLogin('yahoo', { access_token: tokens.access_token })
         toast.success('Welcome!')
-        navigate(redirectTo, { replace: true })
+        if (yahooServiceId) {
+          try {
+            const { data } = await bookingsAPI.initiate(yahooServiceId)
+            const bookingToken = data.data?.token || data.token
+            navigate(`/booking/${bookingToken}`, { replace: true })
+          } catch {
+            navigate(redirectTo, { replace: true })
+          }
+        } else {
+          navigate(redirectTo, { replace: true })
+        }
       })
       .catch((err) => {
         console.error('Yahoo OAuth error:', err)

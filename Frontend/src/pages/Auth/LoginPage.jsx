@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { motion } from 'framer-motion'
@@ -7,6 +7,7 @@ import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import { FcGoogle } from 'react-icons/fc'
 import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
+import { bookingsAPI } from '../../api'
 import AuthLayout from './AuthLayout'
 
 // ── PKCE helpers ────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ async function sha256Base64url(plain) {
 }
 
 export default function LoginPage() {
-  const { login, socialLogin, isAuthenticated, isAdmin, isSuperAdmin } = useAuth()
+  const { login, socialLogin, guestLogin, isAuthenticated, isAdmin, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [showPassword, setShowPassword] = useState(false)
@@ -29,8 +30,14 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [appleLoading, setAppleLoading]   = useState(false)
   const [yahooLoading, setYahooLoading]   = useState(false)
+  const [guestLoading, setGuestLoading]   = useState(false)
 
   const { register, handleSubmit, formState: { errors } } = useForm()
+  // Prevents the auth guard below from firing mid-login while navigateAfterLogin
+  // is still awaiting the initiate API call. Without this, React re-renders
+  // LoginPage with isAuthenticated=true during the await, which triggers <Navigate
+  // to={from}> and causes an intermediate route flash (black screen) before /booking/:token.
+  const isLoggingIn = useRef(false)
 
   // Compute `from` FIRST — before the auth guard.
   // `from` can be a string (ServicesPage/HomePage) or a Location object (ProtectedRoute).
@@ -38,21 +45,59 @@ export default function LoginPage() {
   const from = typeof fromState === 'string'
     ? fromState
     : (fromState?.pathname || '/services')
+  const serviceId = location.state?.serviceId || null
 
-  // Already logged in — use <Navigate> (not navigate()) to avoid render-time side-effects
-  // that would override the post-login navigate(from) call in the handlers below.
-  if (isAuthenticated) {
+  // Already logged in — redirect away, but only when we are NOT in the middle of
+  // a login flow. During login, navigateAfterLogin handles routing itself.
+  if (!isLoggingIn.current && isAuthenticated) {
     const dest = isSuperAdmin ? '/superadmin' : isAdmin ? '/admin' : from
     return <Navigate to={dest} replace />
   }
 
+  // Determine where to send the user based on their role after login
+  // API envelope: { success, message, data: { user: { role }, tokens } }
+  const getDestination = (responseData) => {
+    const role =
+      responseData?.data?.user?.role ||
+      responseData?.user?.role ||
+      responseData?.role
+    if (role === 'superadmin') return '/superadmin'
+    if (role === 'admin') return '/admin'
+    return from
+  }
+
+  // After login: if a serviceId was passed in state, skip the detail page and
+  // go straight to the booking form; otherwise use the normal destination.
+  const navigateAfterLogin = async (responseData) => {
+    const dest = getDestination(responseData)
+    if (dest !== from) {
+      // admin / superadmin — always go to their dashboard
+      navigate(dest, { replace: true })
+      return
+    }
+    if (serviceId) {
+      try {
+        const { data } = await bookingsAPI.initiate(serviceId)
+        const bookingToken = data.data?.token || data.token
+        navigate(`/booking/${bookingToken}`, { replace: true })
+      } catch {
+        // fallback to the service page if initiation fails
+        navigate(from, { replace: true })
+      }
+    } else {
+      navigate(dest, { replace: true })
+    }
+  }
+
   const onSubmit = async ({ email, password }) => {
+    isLoggingIn.current = true
     setLoading(true)
     try {
       const data = await login(email, password)
       toast.success('Welcome back!')
-      navigate(from, { replace: true })
+      await navigateAfterLogin(data)
     } catch (err) {
+      isLoggingIn.current = false
       const msg = err.response?.data?.detail || err.response?.data?.error || 'Login failed. Check your credentials.'
       toast.error(msg)
     } finally {
@@ -62,12 +107,14 @@ export default function LoginPage() {
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      isLoggingIn.current = true
       setGoogleLoading(true)
       try {
-        await socialLogin('google', tokenResponse)
+        const data = await socialLogin('google', tokenResponse)
         toast.success('Welcome back!')
-        navigate(from, { replace: true })
+        await navigateAfterLogin(data)
       } catch (err) {
+        isLoggingIn.current = false
         const msg = err.response?.data?.detail || err.response?.data?.error || 'Google sign-in failed.'
         toast.error(msg)
       } finally {
@@ -78,6 +125,7 @@ export default function LoginPage() {
   })
 
   const handleAppleLogin = async () => {
+    isLoggingIn.current = true
     setAppleLoading(true)
     try {
       window.AppleID.auth.init({
@@ -87,16 +135,39 @@ export default function LoginPage() {
         usePopup:    true,
       })
       const result = await window.AppleID.auth.signIn()
-      await socialLogin('apple', result)
+      const data = await socialLogin('apple', result)
       toast.success('Welcome back!')
-      navigate(from, { replace: true })
+      await navigateAfterLogin(data)
     } catch (err) {
+      isLoggingIn.current = false
       if (err?.error !== 'popup_closed_by_user') {
         const msg = err.response?.data?.error || 'Apple sign-in failed.'
         toast.error(msg)
       }
     } finally {
       setAppleLoading(false)
+    }
+  }
+
+  const handleGuestLogin = async () => {
+    isLoggingIn.current = true
+    setGuestLoading(true)
+    try {
+      await guestLogin()
+      toast.success('Continuing as guest')
+      if (serviceId) {
+        const { data } = await bookingsAPI.initiate(serviceId)
+        const token = data.data?.token || data.token
+        navigate(`/booking/${token}`, { replace: true })
+      } else {
+        navigate(from, { replace: true })
+      }
+    } catch (err) {
+      isLoggingIn.current = false
+      const msg = err.response?.data?.error || 'Could not start guest session.'
+      toast.error(msg)
+    } finally {
+      setGuestLoading(false)
     }
   }
 
@@ -109,7 +180,8 @@ export default function LoginPage() {
 
       sessionStorage.setItem('yahoo_oauth_state',    state)
       sessionStorage.setItem('yahoo_code_verifier',  codeVerifier)
-sessionStorage.setItem('yahoo_redirect_to', from)
+      sessionStorage.setItem('yahoo_redirect_to', from)
+      if (serviceId) sessionStorage.setItem('yahoo_service_id', serviceId)
 
       const params = new URLSearchParams({
         client_id:             import.meta.env.VITE_YAHOO_CLIENT_ID,
@@ -255,6 +327,29 @@ sessionStorage.setItem('yahoo_redirect_to', from)
               : <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#6001D2]" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 2l5.5 8.5L3 18h3.5l3.25-5.25L13 18h3.5l-5.5-7.5L16.5 2H13l-3.25 5.25L6.5 2zm13.5 11c0 2.21 1.79 4 4 4s4-1.79 4-4-1.79-4-4-4-4 1.79-4 4z"/></svg>}
           </motion.button>
         </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-white/10" />
+          <span className="text-white/30 text-xs">or</span>
+          <div className="flex-1 h-px bg-white/10" />
+        </div>
+
+        {/* Guest access */}
+        <motion.button
+          type="button"
+          onClick={handleGuestLogin}
+          disabled={guestLoading || loading}
+          whileHover={!guestLoading && !loading ? { scale: 1.02 } : {}}
+          whileTap={!guestLoading && !loading ? { scale: 0.98 } : {}}
+          className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {guestLoading ? (
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+          ) : (
+            'Continue as Guest'
+          )}
+        </motion.button>
       </form>
     </AuthLayout>
   )

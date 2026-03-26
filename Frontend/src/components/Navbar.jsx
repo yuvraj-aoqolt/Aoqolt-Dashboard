@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { FiMenu, FiX, FiUser, FiLogOut, FiSettings } from 'react-icons/fi'
+import { FiMenu, FiX, FiUser, FiLogOut } from 'react-icons/fi'
 import { MdDashboard } from 'react-icons/md'
 
 export default function Navbar() {
-  const { isAuthenticated, user, logout, isAdmin, isSuperAdmin } = useAuth()
+  const { isAuthenticated, user, logout, isAdmin, isSuperAdmin, isGuest } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
@@ -27,7 +27,7 @@ export default function Navbar() {
     navigate('/')
   }
 
-  const dashboardPath = isSuperAdmin ? '/superadmin' : isAdmin ? '/admin' : '/dashboard'
+  const dashboardPath = isSuperAdmin ? '/superadmin' : '/admin'
 
   const navLinks = [
     { to: '/', label: 'Home' },
@@ -41,7 +41,7 @@ export default function Navbar() {
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-red-900/20 shadow-lg shadow-red-950/20'
+          ? 'bg-[var(--color-bg-navbar)] backdrop-blur-xl border-b border-red-900/20 shadow-lg shadow-red-950/20'
           : 'bg-transparent'
       }`}
     >
@@ -104,28 +104,22 @@ export default function Navbar() {
                       >
                         <div className="p-3 border-b border-white/5">
                           <p className="text-xs text-white/40 uppercase tracking-wider">Signed in as</p>
-                          <p className="text-white text-sm font-medium truncate">{user?.full_name}</p>
+                          <p className="text-white text-sm font-medium truncate">{isGuest ? 'Guest' : user?.full_name}</p>
                           <span className="inline-block mt-1 text-xs bg-red-900/40 text-red-400 border border-red-900/50 px-2 py-0.5 rounded-full capitalize">
-                            {user?.role}
+                            {isGuest ? 'guest' : user?.role}
                           </span>
                         </div>
                         <div className="p-1">
-                          <Link
-                            to={dashboardPath}
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
-                          >
-                            <MdDashboard size={16} />
-                            Dashboard
-                          </Link>
-                          <Link
-                            to="/dashboard/profile"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
-                          >
-                            <FiSettings size={15} />
-                            Profile Settings
-                          </Link>
+                          {!isGuest && (isAdmin || isSuperAdmin) && (
+                            <Link
+                              to={dashboardPath}
+                              onClick={() => setDropdownOpen(false)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                            >
+                              <MdDashboard size={16} />
+                              Dashboard
+                            </Link>
+                          )}
                           <button
                             onClick={handleLogout}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/20 text-sm transition-all"
@@ -177,7 +171,7 @@ export default function Navbar() {
             transition={{ duration: 0.3 }}
             className="md:hidden overflow-hidden"
           >
-            <div className="bg-[#0a0a0a]/98 backdrop-blur-xl border-t border-red-900/20 px-4 py-4 space-y-2">
+            <div className="bg-[var(--color-bg-navbar-mobile)] backdrop-blur-xl border-t border-red-900/20 px-4 py-4 space-y-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.to}
@@ -194,12 +188,14 @@ export default function Navbar() {
               <div className="pt-2 border-t border-white/5">
                 {isAuthenticated ? (
                   <>
-                    <Link
-                      to={dashboardPath}
-                      className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
-                    >
-                      Dashboard
-                    </Link>
+                    {!isGuest && (isAdmin || isSuperAdmin) && (
+                      <Link
+                        to={dashboardPath}
+                        className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                      >
+                        Dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-900/20 transition-all"
