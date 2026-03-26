@@ -5,7 +5,7 @@ import {
   FiMenu, FiX, FiLogOut, FiBell, FiSearch,
   FiGrid, FiUsers, FiCalendar, FiMessageSquare,
   FiFileText, FiShoppingBag, FiDollarSign, FiBarChart2,
-  FiShield, FiSettings, FiChevronDown, FiUser, FiList,
+  FiShield, FiSettings, FiChevronDown, FiUser, FiList, FiBookOpen,
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { useAuth } from '../../context/AuthContext'
@@ -20,11 +20,13 @@ const MAIN_NAV = [
   { to: '/superadmin/sales-orders',      icon: FiShoppingBag,  label: 'Sales Orders' },
   { to: '/superadmin/invoice',           icon: FiDollarSign,   label: 'Invoice' },
   { to: '/superadmin/reports',           icon: FiBarChart2,    label: 'Reports' },
+  { to: '/superadmin/blogs',             icon: FiBookOpen,     label: 'Blog' },
 ]
 
 const BOTTOM_NAV = [
-  { to: '/superadmin/admins',   icon: FiShield,   label: 'Admins' },
-  { to: '/superadmin/settings', icon: FiSettings, label: 'Settings' },
+  { to: '/superadmin/admins',            icon: FiShield,       label: 'Admins' },
+  { to: '/superadmin/blog-permissions',  icon: FiShield,       label: 'Blog Perms' },
+  { to: '/superadmin/settings',          icon: FiSettings,     label: 'Settings' },
 ]
 
 const MOCK_NOTIFS = [

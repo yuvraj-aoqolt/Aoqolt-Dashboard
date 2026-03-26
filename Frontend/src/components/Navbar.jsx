@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { FiMenu, FiX, FiUser, FiLogOut } from 'react-icons/fi'
+import { FiMenu, FiX, FiUser, FiLogOut, FiEdit2, FiList } from 'react-icons/fi'
 import { MdDashboard } from 'react-icons/md'
 
 export default function Navbar() {
@@ -32,6 +32,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/services', label: 'Services' },
+    { to: '/blogs', label: 'Blog' },
   ]
 
   return (
@@ -120,6 +121,26 @@ export default function Navbar() {
                               Dashboard
                             </Link>
                           )}
+                          {!isGuest && (isSuperAdmin || user?.can_manage_blogs) && (
+                            <>
+                              <Link
+                                to="/blogs/my"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                              >
+                                <FiList size={15} />
+                                My Blogs
+                              </Link>
+                              <Link
+                                to="/blogs/create"
+                                onClick={() => setDropdownOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                              >
+                                <FiEdit2 size={15} />
+                                Write Post
+                              </Link>
+                            </>
+                          )}
                           <button
                             onClick={handleLogout}
                             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/20 text-sm transition-all"
@@ -195,6 +216,22 @@ export default function Navbar() {
                       >
                         Dashboard
                       </Link>
+                    )}
+                    {!isGuest && (isSuperAdmin || user?.can_manage_blogs) && (
+                      <>
+                        <Link
+                          to="/blogs/my"
+                          className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          My Blogs
+                        </Link>
+                        <Link
+                          to="/blogs/create"
+                          className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                        >
+                          Write Post
+                        </Link>
+                      </>
                     )}
                     <button
                       onClick={handleLogout}

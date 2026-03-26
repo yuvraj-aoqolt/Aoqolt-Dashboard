@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
+import { useAuth } from './context/AuthContext'
 import { ServicesProvider } from './context/ServicesContext'
 
 // Layout
@@ -45,6 +46,14 @@ import SuperAdminInvoicePage from './pages/SuperAdmin/SuperAdminInvoicePage'
 import SuperAdminReportsPage from './pages/SuperAdmin/SuperAdminReportsPage'
 import SuperAdminAdminsPage from './pages/SuperAdmin/SuperAdminAdminsPage'
 import SuperAdminSettingsPage from './pages/SuperAdmin/SuperAdminSettingsPage'
+import SuperAdminBlogsPage from './pages/SuperAdmin/SuperAdminBlogsPage'
+import SuperAdminBlogPermissionsPage from './pages/SuperAdmin/SuperAdminBlogPermissionsPage'
+
+// Blog pages
+import BlogsPage from './pages/Blog/BlogsPage'
+import BlogDetailPage from './pages/Blog/BlogDetailPage'
+import CreateEditBlogPage from './pages/Blog/CreateEditBlogPage'
+import MyBlogsPage from './pages/Blog/MyBlogsPage'
 
 // Route guards
 import ProtectedRoute from './routes/ProtectedRoute'
@@ -73,6 +82,8 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/services" element={<ServicesPage />} />
               <Route path="/services/:id" element={<ServiceDetailPage />} />
+              <Route path="/blogs" element={<BlogsPage />} />
+              <Route path="/blogs/:slug" element={<BlogDetailPage />} />
             </Route>
 
             {/* Auth pages — no navbar */}
@@ -102,6 +113,13 @@ export default function App() {
                 <Route path="/admin/cases/:id" element={<AdminCaseDetailPage />} />
               </Route>
 
+              {/* ── Blog manager routes ── */}
+              <Route element={<BlogManagerRoute />}>
+                <Route path="/blogs/create"   element={<CreateEditBlogPage />} />
+                <Route path="/blogs/edit/:id" element={<CreateEditBlogPage />} />
+                <Route path="/blogs/my"       element={<MyBlogsPage />} />
+              </Route>
+
               {/* ── SuperAdmin dashboard ── */}
               <Route element={<RoleRoute allowedRoles={['superadmin']} />}>
                 <Route path="/superadmin"                       element={<SuperAdminDashboardPage />} />
@@ -117,6 +135,8 @@ export default function App() {
                 <Route path="/superadmin/reports"               element={<SuperAdminReportsPage />} />
                 <Route path="/superadmin/admins"                element={<SuperAdminAdminsPage />} />
                 <Route path="/superadmin/settings"              element={<SuperAdminSettingsPage />} />
+                <Route path="/superadmin/blogs"                 element={<SuperAdminBlogsPage />} />
+                <Route path="/superadmin/blog-permissions"      element={<SuperAdminBlogPermissionsPage />} />
               </Route>
             </Route>
 
@@ -126,6 +146,14 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   )
+}
+
+// Blog manager guard — requires can_manage_blogs OR superadmin
+function BlogManagerRoute() {
+  const { isSuperAdmin, isAuthenticated, user } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (isSuperAdmin || user?.can_manage_blogs) return <Outlet />
+  return <Navigate to="/" replace />
 }
 
 // Layout wrapper that includes Navbar and Footer

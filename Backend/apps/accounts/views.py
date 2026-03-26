@@ -38,18 +38,24 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filter users based on role"""
         user = self.request.user
-        
+
         if user.is_superadmin:
-            # SuperAdmin can see all users
-            return User.objects.all()
+            qs = User.objects.all()
         elif user.is_admin:
-            # Admin can only see clients and themselves
-            return User.objects.filter(
+            qs = User.objects.filter(
                 Q(role=User.CLIENT) | Q(id=user.id)
             )
         else:
-            # Clients can only see themselves
-            return User.objects.filter(id=user.id)
+            qs = User.objects.filter(id=user.id)
+
+        # Search by name or email
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(full_name__icontains=search) | Q(email__icontains=search)
+            )
+
+        return qs
     
     def get_permissions(self):
         """Set permissions based on action"""

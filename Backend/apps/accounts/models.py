@@ -98,6 +98,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Role and permissions
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=CLIENT)
+
+    # Blog management permission
+    can_manage_blogs = models.BooleanField(
+        default=False,
+        help_text='Grants permission to create and manage blog posts.',
+    )
     
     # Account status
     is_active = models.BooleanField(default=False)  # Activated after verification

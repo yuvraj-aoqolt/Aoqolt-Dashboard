@@ -194,4 +194,40 @@ export const dashboardAPI = {
   admin: () => api.get('/dashboard/admin/'),
 }
 
+// ── Blogs ─────────────────────────────────────────────────────────────────
+export const blogsAPI = {
+  /** Public: paginated published blogs */
+  list: (params = {}) => api.get('/blogs/', { params }),
+  /** Public: single blog by slug */
+  detail: (slug) => api.get(`/blogs/${slug}/`),
+  /** Blog manager / superadmin: all owned blogs */
+  myBlogs: () => api.get('/blogs/my/'),
+  /** Blog manager / superadmin: create a blog — accepts FormData */
+  create: (formData) =>
+    api.post('/blogs/create/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    }),
+  /** Author / superadmin: update blog (PATCH for partial) */
+  update: (id, formData) =>
+    api.patch(`/blogs/update/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    }),
+  /** Author / superadmin: delete blog */
+  delete: (id) => api.delete(`/blogs/delete/${id}/`),
+  /** Author / superadmin: upload gallery image */
+  uploadGallery: (id, formData) =>
+    api.post(`/blogs/${id}/gallery/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
+    }),
+  /** SuperAdmin: assign or revoke blog-manager role */
+  assignRole: (data) => api.post('/blogs/admin/assign-blog-role/', data),
+  /** SuperAdmin: list all blog managers */
+  blogManagers: () => api.get('/blogs/admin/blog-managers/'),
+  /** SuperAdmin: search users by name/email to grant blog role */
+  searchUsers: (q) => api.get('/accounts/users/', { params: { search: q, page_size: 20 } }),
+}
+
 export default api

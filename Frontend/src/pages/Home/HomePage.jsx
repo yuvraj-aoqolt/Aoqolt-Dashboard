@@ -1,12 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { FiArrowRight, FiStar, FiZap, FiEye, FiUsers } from 'react-icons/fi'
+import { FiArrowRight, FiStar, FiZap, FiEye, FiUsers, FiBookOpen, FiCalendar } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { MdAutoAwesome } from 'react-icons/md'
+import { format } from 'date-fns'
 import { useServices } from '../../context/ServicesContext'
 import { useAuth } from '../../context/AuthContext'
-import { bookingsAPI } from '../../api'
+import { bookingsAPI, blogsAPI } from '../../api'
 
 const PARTICLES = Array.from({ length: 30 }, (_, i) => ({
   id: i,
@@ -64,6 +65,13 @@ export default function HomePage() {
   const navigate = useNavigate()
   const { services } = useServices()
   const { isAuthenticated } = useAuth()
+  const [latestBlogs, setLatestBlogs] = useState([])
+
+  useEffect(() => {
+    blogsAPI.list({ page: 1, page_size: 3 })
+      .then(({ data }) => setLatestBlogs(data.results || []))
+      .catch(() => {})
+  }, [])
 
   const handleServiceClick = async (serviceType) => {
     const service = services.find((s) => s.service_type === serviceType)
@@ -461,6 +469,95 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── BLOG PREVIEW ─────────────────────────────────────── */}
+      {latestBlogs.length > 0 && (
+        <section className="py-24 px-4">
+          <div className="max-w-6xl mx-auto">
+            {/* Heading */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-14"
+            >
+              <span className="text-xs text-red-400 uppercase tracking-widest font-medium">From Our Blog</span>
+              <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3 mb-4">
+                Insights &amp; Wisdom
+              </h2>
+              <p className="text-white/40 max-w-lg mx-auto">
+                Explore articles on aura reading, spiritual growth, and energetic well-being.
+              </p>
+            </motion.div>
+
+            {/* Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {latestBlogs.map((blog, i) => (
+                <motion.div
+                  key={blog.id}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Link
+                    to={`/blogs/${blog.slug}`}
+                    className="group flex flex-col h-full rounded-2xl overflow-hidden border border-white/5 bg-white/3 hover:border-red-900/40 hover:bg-white/5 transition-all duration-300"
+                  >
+                    {/* Poster */}
+                    <div className="aspect-video overflow-hidden bg-white/5">
+                      {blog.poster_image_url ? (
+                        <img
+                          src={blog.poster_image_url}
+                          alt={blog.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/10">
+                          <FiBookOpen size={32} />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Body */}
+                    <div className="flex flex-col flex-1 p-5">
+                      <div className="flex items-center gap-2 text-white/30 text-xs mb-3">
+                        <FiCalendar size={11} />
+                        <span>{format(new Date(blog.created_at), 'MMM d, yyyy')}</span>
+                        {blog.author && (
+                          <>
+                            <span className="mx-1">·</span>
+                            <span>{blog.author.full_name}</span>
+                          </>
+                        )}
+                      </div>
+                      <h3 className="text-white font-semibold text-base leading-snug mb-2 group-hover:text-red-400 transition-colors line-clamp-2">
+                        {blog.title}
+                      </h3>
+                      {blog.description && (
+                        <p className="text-white/35 text-sm line-clamp-3 flex-1">{blog.description}</p>
+                      )}
+                      <span className="mt-4 text-red-400 text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                        Read More <FiArrowRight size={12} />
+                      </span>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* View all */}
+            <div className="text-center mt-10">
+              <Link
+                to="/blogs"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-red-900/40 text-red-400 hover:bg-red-900/10 transition-colors text-sm font-medium"
+              >
+                View All Articles <FiArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── CTA BANNER ───────────────────────────────────────── */}
       <section className="py-24 px-4">

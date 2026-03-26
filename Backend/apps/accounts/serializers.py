@@ -32,10 +32,10 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'email', 'full_name', 'country_code', 'phone_number',
             'role', 'is_active', 'is_verified', 'is_guest', 'auth_provider',
             'avatar', 'address', 'city', 'country', 'postal_code',
-            'date_joined', 'last_login', 'profile'
+            'date_joined', 'last_login', 'profile', 'can_manage_blogs'
         ]
         read_only_fields = ['id', 'role', 'is_verified', 'is_guest', 'auth_provider',
-                           'date_joined', 'last_login']
+                           'date_joined', 'last_login', 'can_manage_blogs']
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
