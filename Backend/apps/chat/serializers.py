@@ -10,18 +10,24 @@ class CaseMessageSerializer(serializers.ModelSerializer):
     sender = UserListSerializer(read_only=True)
     sender_name = serializers.CharField(source='sender.full_name', read_only=True)
     sender_role = serializers.CharField(source='sender.role', read_only=True)
-    
+    is_edited = serializers.SerializerMethodField()
+
+    def get_is_edited(self, obj):
+        return (obj.updated_at - obj.created_at).total_seconds() > 5
+
     class Meta:
         model = CaseMessage
         fields = [
             'id', 'case', 'sender', 'sender_name', 'sender_role',
-            'message_type', 'message', 'file_url', 'is_read',
+            'message_type', 'message', 'file_url', 'is_read', 'is_edited',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'sender', 'is_read', 'created_at', 'updated_at']
 
 
 class MessageCreateSerializer(serializers.ModelSerializer):
+    message = serializers.CharField(required=False, allow_blank=True, default='')
+
     class Meta:
         model = CaseMessage
         fields = ['case', 'message_type', 'message', 'file_url']

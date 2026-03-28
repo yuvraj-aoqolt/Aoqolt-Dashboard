@@ -89,7 +89,7 @@ class CaseListSerializer(serializers.ModelSerializer):
 
 class CaseAssignSerializer(serializers.Serializer):
     """Serializer for assigning case to admin"""
-    admin_id = serializers.UUIDField()
+    admin_id = serializers.CharField()
     notes = serializers.CharField(required=False, allow_blank=True)
 
 

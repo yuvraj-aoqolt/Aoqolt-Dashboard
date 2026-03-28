@@ -4,14 +4,55 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0a" />
     <title>Aoqolt — Spiritual Services</title>
+
+    <!-- Preconnect to font CDNs as early as possible -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Cinzel:wght@400;600;700;900&display=swap" rel="stylesheet" />
-    <!-- Apple Sign In SDK -->
-    <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+
+    <!--
+      Load Google Fonts asynchronously (non-render-blocking).
+      Uses only the exact weights the app needs instead of a full variable font range.
+      The media="print" trick: browser fetches it without blocking paint,
+      then onload flips it to 'all' so it applies normally.
+    -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&family=Cinzel:wght@400;700&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&family=Cinzel:wght@400;700&display=swap" />
+    </noscript>
+
+    <!-- Apple Sign In SDK — deferred so it never blocks page rendering -->
+    <script defer src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+
+    <!-- Inline critical styles: prevents FOUC and shows a spinner before React loads -->
+    <style>
+      body { margin: 0; background: #0a0a0a; }
+      #app-loading {
+        position: fixed; inset: 0; background: #0a0a0a;
+        display: flex; align-items: center; justify-content: center; z-index: 9999;
+      }
+      #app-loading-spinner {
+        width: 48px; height: 48px;
+        border: 3px solid #222;
+        border-top-color: #dc2626;
+        border-radius: 50%;
+        animation: _spin 0.9s linear infinite;
+      }
+      @keyframes _spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <!-- Visible immediately — replaced once React mounts -->
+    <div id="app-loading" aria-hidden="true">
+      <div id="app-loading-spinner"></div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

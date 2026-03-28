@@ -110,6 +110,24 @@
   50%       { background-size: 200% 200%; background-position: right center; }
 }
 
+/* Navbar entrance — same visual as framer-motion y:-100→0, 0.5s easeOut */
+@keyframes nav-slide-down {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+.nav-entrance {
+  animation: nav-slide-down 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* Dropdown pop-in — matches framer-motion opacity+scale+y, 0.15s */
+@keyframes dropdown-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0); }
+}
+.dropdown-enter {
+  animation: dropdown-in 0.15s ease-out both;
+}
+
 * {
   box-sizing: border-box;
 }

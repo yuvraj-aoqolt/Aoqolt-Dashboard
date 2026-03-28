@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 
 const MAIN_NAV = [
   { to: '/superadmin',                   icon: FiGrid,         label: 'Dashboard',        end: true },
@@ -27,13 +28,6 @@ const BOTTOM_NAV = [
   { to: '/superadmin/admins',            icon: FiShield,       label: 'Admins' },
   { to: '/superadmin/blog-permissions',  icon: FiShield,       label: 'Blog Perms' },
   { to: '/superadmin/settings',          icon: FiSettings,     label: 'Settings' },
-]
-
-const MOCK_NOTIFS = [
-  { title: 'New booking received',  body: 'Julian Anderson — Deep Aura Mapping',      time: '2m ago',  dot: 'bg-yellow-400' },
-  { title: 'Payment confirmed',     body: 'Sarah Chen — Family Aura Cleansing',       time: '15m ago', dot: 'bg-green-400' },
-  { title: 'New message',           body: 'Elena Rodriguez sent a message',           time: '1h ago',  dot: 'bg-blue-400' },
-  { title: 'Case assigned',         body: 'Admin Priya assigned case #C-1042',        time: '3h ago',  dot: 'bg-purple-400' },
 ]
 
 function NavItem({ to, icon: Icon, label, end, onNav }) {
@@ -65,6 +59,7 @@ function NavItem({ to, icon: Icon, label, end, onNav }) {
 export default function SuperAdminLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { notifications, totalUnread, clearNewPayments } = useNotifications() || {}
   const [sideOpen, setSideOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -181,7 +176,11 @@ export default function SuperAdminLayout({ children }) {
               style={{ backgroundColor: 'var(--color-input-bg)' }}
             >
               <FiBell size={17} className="text-white/60" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50" />
+              {totalUnread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center shadow shadow-red-500/50">
+                  {totalUnread > 9 ? '9+' : totalUnread}
+                </span>
+              )}
             </button>
 
             <AnimatePresence>
@@ -194,28 +193,64 @@ export default function SuperAdminLayout({ children }) {
                   className="absolute right-0 top-11 w-80 rounded-2xl border border-white/8 shadow-2xl overflow-hidden z-50"
                   style={{ backgroundColor: 'var(--color-dark-2)' }}
                 >
-                  <div className="px-4 py-3 border-b border-white/6">
-                    <p className="text-white text-sm font-semibold">Notifications</p>
-                    <p className="text-white/30 text-xs mt-0.5">{MOCK_NOTIFS.length} unread</p>
-                  </div>
-                  {MOCK_NOTIFS.map((n, i) => (
-                    <div
-                      key={i}
-                      className="px-4 py-3 border-b border-white/4 cursor-pointer transition-colors hover:bg-white/4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${n.dot}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white/80 text-xs font-medium">{n.title}</p>
-                          <p className="text-white/40 text-xs truncate mt-0.5">{n.body}</p>
-                        </div>
-                        <span className="text-white/25 text-xs flex-shrink-0 mt-0.5">{n.time}</span>
-                      </div>
+                  <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between">
+                    <div>
+                      <p className="text-white text-sm font-semibold">Notifications</p>
+                      <p className="text-white/30 text-xs mt-0.5">
+                        {totalUnread > 0 ? `${totalUnread} unread` : 'All caught up'}
+                      </p>
                     </div>
-                  ))}
+                    {totalUnread > 0 && (
+                      <button
+                        onClick={clearNewPayments}
+                        className="text-white/30 hover:text-white/60 text-xs transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-[360px] overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+                    {(!notifications || notifications.length === 0) ? (
+                      <div className="px-4 py-8 text-center text-white/25 text-xs">
+                        No new notifications
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.key}
+                          onClick={() => {
+                            if (n.type === 'chat') {
+                              setNotifOpen(false)
+                              navigate('/superadmin/chat', { state: { openCaseId: n.case_id } })
+                            }
+                          }}
+                          className={`px-4 py-3 border-b border-white/4 transition-colors ${
+                            n.type === 'chat' ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${n.dot}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white/85 text-xs font-medium">{n.title}</p>
+                              <p className="text-white/40 text-xs truncate mt-0.5">{n.body}</p>
+                              {n.amount && (
+                                <p className="text-green-400 text-xs font-semibold mt-0.5">{n.amount}</p>
+                              )}
+                            </div>
+                            <span className="text-white/25 text-xs flex-shrink-0 mt-0.5">{n.time}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
                   <div className="px-4 py-2.5 text-center">
-                    <button className="text-red-400 text-xs hover:text-red-300 transition-colors font-medium">
-                      View all notifications
+                    <button
+                      onClick={() => { setNotifOpen(false); navigate('/superadmin/notifications') }}
+                      className="text-red-400 text-xs hover:text-red-300 transition-colors font-medium"
+                    >
+                      View all notifications →
                     </button>
                   </div>
                 </motion.div>

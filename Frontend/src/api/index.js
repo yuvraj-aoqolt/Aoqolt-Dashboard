@@ -165,7 +165,7 @@ export const casesAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     }),
-  updateStatus: (id, data) => api.patch(`/cases/${id}/`, data),
+  updateStatus: (id, data) => api.post(`/cases/${id}/update_status/`, data),
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────
@@ -178,6 +178,11 @@ export const chatAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     }),
+  getConversations: () => api.get('/chat/messages/conversations/'),
+  markConversationRead: (caseId) =>
+    api.post('/chat/messages/mark_conversation_read/', { case_id: caseId }),
+  editMessage: (id, message) => api.patch(`/chat/messages/${id}/`, { message }),
+  deleteMessage: (id) => api.delete(`/chat/messages/${id}/`),
 }
 
 // ── Payments ──────────────────────────────────────────────────────────────
@@ -185,6 +190,7 @@ export const paymentsAPI = {
   createCheckout: (data) => api.post('/payments/create_checkout_session/', data),
   myPayments: () => api.get('/payments/my_payments/'),
   detail: (id) => api.get(`/payments/${id}/`),
+  recentPayments: (limit = 20) => api.get(`/payments/recent_payments/?limit=${limit}`),
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -228,6 +234,22 @@ export const blogsAPI = {
   blogManagers: () => api.get('/blogs/admin/blog-managers/'),
   /** SuperAdmin: search users by name/email to grant blog role */
   searchUsers: (q) => api.get('/accounts/users/', { params: { search: q, page_size: 20 } }),
+}
+
+// ── Sales ─────────────────────────────────────────────────────────────────
+export const salesAPI = {
+  // Quotes
+  listQuotes: () => api.get('/sales/quotes/'),
+  getQuote: (id) => api.get(`/sales/quotes/${id}/`),
+  saveItems: (id, data) => api.post(`/sales/quotes/${id}/save_items/`, data),
+  sendQuote: (id) => api.post(`/sales/quotes/${id}/send_quote/`),
+  publicQuote: (token) => api.get(`/sales/quotes/public/${token}/`),
+  quotePayment: (token, data) => api.post(`/sales/quotes/pay/${token}/`, data),
+  confirmPayment: (data) => api.post(`/sales/quotes/confirm_payment/`, data),
+  // Orders
+  listOrders: () => api.get('/sales/orders/'),
+  getOrder: (id) => api.get(`/sales/orders/${id}/`),
+  markOrderCompleted: (id) => api.post(`/sales/orders/${id}/mark_completed/`),
 }
 
 export default api

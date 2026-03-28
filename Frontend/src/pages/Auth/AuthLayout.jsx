@@ -27,21 +27,14 @@ export default function AuthLayout({ children, title, subtitle }) {
         />
 
         <div className="relative z-10 text-center px-12">
-          {/* <Link to="/" className="flex items-center gap-2 justify-center mb-12">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-600 to-red-900 rounded-xl flex items-center justify-center">
-              <span className="text-white font-display font-bold">A</span>
-            </div>
-            <span className="text-white font-display font-bold text-2xl tracking-wider">
-              AO<span className="text-red-500">QOLT</span>
-            </span>
-          </Link> */}
-
           <img
             src="/Aoqolt logo 1-01-02.png"
             alt="Aoqolt"
+            width="400"
+            height="320"
             className="w-100 h-80 mx-auto -mt-30 mb-5 object-contain drop-shadow-2xl"
+            fetchpriority="high"
           />
-
           <h2 className="font-display text-3xl font-bold text-white mb-3">
             Unlock Your Energy
           </h2>

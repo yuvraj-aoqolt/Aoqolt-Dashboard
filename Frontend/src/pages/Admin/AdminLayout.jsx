@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
-import { MdDashboard, MdFolder, MdPerson, MdLogout, MdMenu } from 'react-icons/md'
-import { FiArrowLeft } from 'react-icons/fi'
+import { MdDashboard, MdFolder, MdLogout, MdMenu } from 'react-icons/md'
+import { FiArrowLeft, FiMessageSquare } from 'react-icons/fi'
 
 const ADMIN_NAV = [
   { to: '/admin', icon: <MdDashboard size={20} />, label: 'Overview' },
   { to: '/admin/cases', icon: <MdFolder size={20} />, label: 'Cases' },
-  { to: '/admin', icon: <MdPerson size={20} />, label: 'Profile' },
+  { to: '/admin/chat', icon: <FiMessageSquare size={18} />, label: 'Chat' },
 ]
 
 export default function AdminLayout({ children }) {

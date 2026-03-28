@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import { FcGoogle } from 'react-icons/fc'
-import { useGoogleLogin } from '@react-oauth/google'
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
 import { bookingsAPI } from '../../api'
 import AuthLayout from './AuthLayout'
@@ -21,7 +21,7 @@ async function sha256Base64url(plain) {
   return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-export default function LoginPage() {
+function LoginPageInner() {
   const { login, socialLogin, guestLogin, isAuthenticated, isAdmin, isSuperAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -355,5 +355,15 @@ export default function LoginPage() {
         </motion.button>
       </form>
     </AuthLayout>
+  )
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
+export default function LoginPage() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <LoginPageInner />
+    </GoogleOAuthProvider>
   )
 }

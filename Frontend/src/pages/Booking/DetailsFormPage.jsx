@@ -21,6 +21,7 @@ export default function DetailsFormPage() {
   const [submitting, setSubmitting] = useState(false)
   const [mainImage, setMainImage] = useState(null)
   const [memberImages, setMemberImages] = useState({})
+  const [photoError, setPhotoError] = useState(null)
 
   const {
     register,
@@ -69,22 +70,39 @@ export default function DetailsFormPage() {
   const bookingRef = booking?.booking_id
 
   const onSubmit = async (values) => {
+    // Validate photo required for single aura
+    if (!isFamilyAura && !mainImage) {
+      setPhotoError('A photo is required for this service')
+      return
+    }
+    setPhotoError(null)
     setSubmitting(true)
     try {
       // Build details payload
-      const detailsPayload = {
-        birth_date: values.birth_date,
-        birth_time: values.birth_time,
-        birth_place: values.birth_place,
-      }
+      let detailsPayload = {}
 
       if (isFamilyAura) {
-        detailsPayload.family_member_count = fields.length
-        detailsPayload.family_member_details = values.family_members.map((m) => ({
-          name: m.name,
-          relation: m.relation,
-          dob: m.dob || null,
-        }))
+        detailsPayload = {
+          birth_date: values.birth_date,
+          birth_time: values.birth_time,
+          birth_place: values.birth_place,
+          family_member_count: fields.length,
+          family_member_details: values.family_members.map((m) => ({
+            name: m.name,
+            relation: m.relation,
+            dob: m.dob || null,
+          })),
+        }
+      } else {
+        detailsPayload = {
+          custom_data: {
+            full_name: values.full_name,
+            mother_name: values.mother_name,
+            current_city: values.current_city,
+            marital_status: values.marital_status,
+            scan_focus: values.scan_focus,
+          },
+        }
       }
 
       await bookingsAPI.addDetails(bookingId, detailsPayload)
@@ -185,48 +203,120 @@ export default function DetailsFormPage() {
                 {isFamilyAura ? 'Primary Person Details' : 'Your Personal Details'}
               </h2>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <Field label="Date of Birth *" error={errors.birth_date?.message}>
-                  <input
-                    type="date"
-                    {...register('birth_date', { required: 'Date of birth is required' })}
-                    className="input-field"
-                  />
-                </Field>
-
-                <Field label="Time of Birth *" error={errors.birth_time?.message}>
-                  <input
-                    type="time"
-                    {...register('birth_time', { required: 'Time of birth is required' })}
-                    className="input-field"
-                  />
-                </Field>
-
-                <div className="sm:col-span-2">
-                  <Field label="Place of Birth *" error={errors.birth_place?.message}>
+              {!isFamilyAura ? (
+                <div className="space-y-5">
+                  {/* Full Name */}
+                  <Field label="Full Name *" error={errors.full_name?.message}>
                     <div className="relative">
-                      <FiMapPin className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                      <FiUser className="absolute left-3.5 top-3.5 text-white/30" size={15} />
                       <input
-                        {...register('birth_place', { required: 'Place of birth is required' })}
-                        placeholder="City, Country"
+                        {...register('full_name', { required: 'Full name is required' })}
+                        placeholder="Your full name"
                         className="input-field pl-9"
                       />
                     </div>
                   </Field>
-                </div>
-              </div>
 
-              {/* Photo upload */}
-              <div className="mt-6">
-                <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
-                  Your Photo / Aura Image
-                </label>
-                <ImageUpload
-                  value={mainImage}
-                  onChange={setMainImage}
-                  id="main-photo"
-                />
-              </div>
+                  {/* Photo Upload */}
+                  <div>
+                    <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+                      Your Photo *
+                    </label>
+                    <ImageUpload value={mainImage} onChange={(f) => { setMainImage(f); setPhotoError(null) }} id="main-photo" />
+                    <p className="text-white/40 text-xs mt-2 flex items-start gap-1.5">
+                      <FiCamera size={11} className="mt-0.5 shrink-0 text-amber-400/70" />
+                      <span>Make sure the photo is <span className="text-amber-400/80">straight</span> and there are <span className="text-amber-400/80">no glasses</span> on your face.</span>
+                    </p>
+                    {photoError && <p className="text-red-400 text-xs mt-1">{photoError}</p>}
+                  </div>
+
+                  {/* Mother's Name */}
+                  <Field label="Mother's Name *" error={errors.mother_name?.message}>
+                    <input
+                      {...register('mother_name', { required: "Mother's name is required" })}
+                      placeholder="Your mother's full name"
+                      className="input-field"
+                    />
+                  </Field>
+
+                  {/* Current City */}
+                  <Field label="Current City of Residence *" error={errors.current_city?.message}>
+                    <div className="relative">
+                      <FiMapPin className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                      <input
+                        {...register('current_city', { required: 'Current city is required' })}
+                        placeholder="City where you currently live"
+                        className="input-field pl-9"
+                      />
+                    </div>
+                  </Field>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {/* Marital Status */}
+                    <Field label="Marital Status *" error={errors.marital_status?.message}>
+                      <select
+                        {...register('marital_status', { required: 'Marital status is required' })}
+                        className="input-field"
+                      >
+                        <option value="">Select status…</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </Field>
+
+                    {/* Scan Focus */}
+                    <Field label="Main Aspect to Focus *" error={errors.scan_focus?.message}>
+                      <input
+                        {...register('scan_focus', { required: 'Please specify the main aspect to focus on' })}
+                        placeholder="e.g. Health, Finance, Career…"
+                        className="input-field"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ) : (
+                /* Family Aura — birth details */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <Field label="Date of Birth *" error={errors.birth_date?.message}>
+                    <input
+                      type="date"
+                      {...register('birth_date', { required: 'Date of birth is required' })}
+                      className="input-field"
+                    />
+                  </Field>
+
+                  <Field label="Time of Birth *" error={errors.birth_time?.message}>
+                    <input
+                      type="time"
+                      {...register('birth_time', { required: 'Time of birth is required' })}
+                      className="input-field"
+                    />
+                  </Field>
+
+                  <div className="sm:col-span-2">
+                    <Field label="Place of Birth *" error={errors.birth_place?.message}>
+                      <div className="relative">
+                        <FiMapPin className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                        <input
+                          {...register('birth_place', { required: 'Place of birth is required' })}
+                          placeholder="City, Country"
+                          className="input-field pl-9"
+                        />
+                      </div>
+                    </Field>
+                  </div>
+
+                  {/* Photo upload */}
+                  <div className="sm:col-span-2 mt-1">
+                    <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+                      Your Photo / Aura Image
+                    </label>
+                    <ImageUpload value={mainImage} onChange={setMainImage} id="main-photo" />
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* ── Family Members (family_aura only) ─────────────────────── */}

@@ -1,69 +1,76 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AuthProvider } from './context/AuthContext'
-import { useAuth } from './context/AuthContext'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { ServicesProvider } from './context/ServicesContext'
+import { NotificationProvider } from './context/NotificationContext'
 
-// Layout
+// Layout & guards — eagerly loaded (tiny, needed on every render)
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
-
-// Pages
-import HomePage from './pages/Home/HomePage'
-import ServicesPage from './pages/Services/ServicesPage'
-import ServiceDetailPage from './pages/Services/ServiceDetailPage'
-import BookingPage from './pages/Booking/BookingPage'
-import DetailsFormPage from './pages/Booking/DetailsFormPage'
-import BookingSuccessPage from './pages/Booking/BookingSuccessPage'
-import PaymentSuccessPage from './pages/Payment/PaymentSuccessPage'
-import PaymentCancelPage from './pages/Payment/PaymentCancelPage'
-
-// Auth pages
-import LoginPage from './pages/Auth/LoginPage'
-import RegisterPage from './pages/Auth/RegisterPage'
-import VerifyOtpPage from './pages/Auth/VerifyOtpPage'
-import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage'
-import ResetPasswordPage from './pages/Auth/ResetPasswordPage'
-import SetPasswordPage from './pages/Auth/SetPasswordPage'
-import YahooCallbackPage from './pages/Auth/YahooCallbackPage'
-
-// Admin pages
-import AdminDashboardPage from './pages/Admin/AdminDashboardPage'
-import AdminCasesPage from './pages/Admin/AdminCasesPage'
-import AdminCaseDetailPage from './pages/Admin/AdminCaseDetailPage'
-
-// SuperAdmin pages
-import SuperAdminDashboardPage from './pages/SuperAdmin/SuperAdminDashboardPage'
-import SuperAdminCasesPage from './pages/SuperAdmin/SuperAdminCasesPage'
-import SuperAdminUsersPage from './pages/SuperAdmin/SuperAdminUsersPage'
-import SuperAdminBookingsPage from './pages/SuperAdmin/SuperAdminBookingsPage'
-import SuperAdminClientsPage from './pages/SuperAdmin/SuperAdminClientsPage'
-import SuperAdminAuraAssignmentsPage from './pages/SuperAdmin/SuperAdminAuraAssignmentsPage'
-import SuperAdminChatPage from './pages/SuperAdmin/SuperAdminChatPage'
-import SuperAdminSalesQuotesPage from './pages/SuperAdmin/SuperAdminSalesQuotesPage'
-import SuperAdminSalesOrdersPage from './pages/SuperAdmin/SuperAdminSalesOrdersPage'
-import SuperAdminInvoicePage from './pages/SuperAdmin/SuperAdminInvoicePage'
-import SuperAdminReportsPage from './pages/SuperAdmin/SuperAdminReportsPage'
-import SuperAdminAdminsPage from './pages/SuperAdmin/SuperAdminAdminsPage'
-import SuperAdminSettingsPage from './pages/SuperAdmin/SuperAdminSettingsPage'
-import SuperAdminBlogsPage from './pages/SuperAdmin/SuperAdminBlogsPage'
-import SuperAdminBlogPermissionsPage from './pages/SuperAdmin/SuperAdminBlogPermissionsPage'
-
-// Blog pages
-import BlogsPage from './pages/Blog/BlogsPage'
-import BlogDetailPage from './pages/Blog/BlogDetailPage'
-import CreateEditBlogPage from './pages/Blog/CreateEditBlogPage'
-import MyBlogsPage from './pages/Blog/MyBlogsPage'
-
-// Route guards
+import LoadingScreen from './components/LoadingScreen'
 import ProtectedRoute from './routes/ProtectedRoute'
 import RoleRoute from './routes/RoleRoute'
+
+// ── Lazy-loaded pages (each becomes its own JS chunk) ────────────────────────
+const HomePage           = lazy(() => import('./pages/Home/HomePage'))
+const ServicesPage       = lazy(() => import('./pages/Services/ServicesPage'))
+const ServiceDetailPage  = lazy(() => import('./pages/Services/ServiceDetailPage'))
+const BookingPage        = lazy(() => import('./pages/Booking/BookingPage'))
+const DetailsFormPage    = lazy(() => import('./pages/Booking/DetailsFormPage'))
+const BookingSuccessPage = lazy(() => import('./pages/Booking/BookingSuccessPage'))
+const PaymentSuccessPage = lazy(() => import('./pages/Payment/PaymentSuccessPage'))
+const PaymentCancelPage  = lazy(() => import('./pages/Payment/PaymentCancelPage'))
+
+// Auth
+const LoginPage          = lazy(() => import('./pages/Auth/LoginPage'))
+const RegisterPage       = lazy(() => import('./pages/Auth/RegisterPage'))
+const VerifyOtpPage      = lazy(() => import('./pages/Auth/VerifyOtpPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/Auth/ForgotPasswordPage'))
+const ResetPasswordPage  = lazy(() => import('./pages/Auth/ResetPasswordPage'))
+const SetPasswordPage    = lazy(() => import('./pages/Auth/SetPasswordPage'))
+const YahooCallbackPage  = lazy(() => import('./pages/Auth/YahooCallbackPage'))
+
+// Admin
+const AdminDashboardPage  = lazy(() => import('./pages/Admin/AdminDashboardPage'))
+const AdminCasesPage      = lazy(() => import('./pages/Admin/AdminCasesPage'))
+const AdminCaseDetailPage = lazy(() => import('./pages/Admin/AdminCaseDetailPage'))
+const AdminChatPage       = lazy(() => import('./pages/Admin/AdminChatPage'))
+
+// SuperAdmin
+const SuperAdminDashboardPage       = lazy(() => import('./pages/SuperAdmin/SuperAdminDashboardPage'))
+const SuperAdminCasesPage           = lazy(() => import('./pages/SuperAdmin/SuperAdminCasesPage'))
+const SuperAdminUsersPage           = lazy(() => import('./pages/SuperAdmin/SuperAdminUsersPage'))
+const SuperAdminBookingsPage        = lazy(() => import('./pages/SuperAdmin/SuperAdminBookingsPage'))
+const SuperAdminClientsPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminClientsPage'))
+const SuperAdminAuraAssignmentsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminAuraAssignmentsPage'))
+const SuperAdminChatPage            = lazy(() => import('./pages/SuperAdmin/SuperAdminChatPage'))
+const SuperAdminSalesQuotesPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesQuotesPage'))
+const SuperAdminSalesOrdersPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesOrdersPage'))
+const SuperAdminInvoicePage         = lazy(() => import('./pages/SuperAdmin/SuperAdminInvoicePage'))
+const SuperAdminReportsPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminReportsPage'))
+const SuperAdminAdminsPage          = lazy(() => import('./pages/SuperAdmin/SuperAdminAdminsPage'))
+const SuperAdminSettingsPage        = lazy(() => import('./pages/SuperAdmin/SuperAdminSettingsPage'))
+const SuperAdminBlogsPage           = lazy(() => import('./pages/SuperAdmin/SuperAdminBlogsPage'))
+const SuperAdminBlogPermissionsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminBlogPermissionsPage'))
+const SuperAdminNotificationsPage   = lazy(() => import('./pages/SuperAdmin/SuperAdminNotificationsPage'))
+
+// Blog
+const BlogsPage          = lazy(() => import('./pages/Blog/BlogsPage'))
+const BlogDetailPage     = lazy(() => import('./pages/Blog/BlogDetailPage'))
+const CreateEditBlogPage = lazy(() => import('./pages/Blog/CreateEditBlogPage'))
+const MyBlogsPage        = lazy(() => import('./pages/Blog/MyBlogsPage'))
+
+// Quote (client-facing)
+const QuotePage               = lazy(() => import('./pages/Quote/QuotePage'))
+const QuotePaymentSuccessPage = lazy(() => import('./pages/Quote/QuotePaymentSuccessPage'))
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ServicesProvider>
+          <NotificationProvider>
           <Toaster
             position="top-right"
             toastOptions={{
@@ -76,6 +83,7 @@ export default function App() {
               error:   { iconTheme: { primary: 'var(--color-accent)',  secondary: '#fff' } },
             }}
           />
+          <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Public pages with Navbar + Footer */}
             <Route element={<PublicLayout />}>
@@ -97,6 +105,10 @@ export default function App() {
             <Route path="/admin-reset/:token" element={<SetPasswordPage />} />
             <Route path="/oauth/yahoo/callback" element={<YahooCallbackPage />} />
 
+            {/* Quote pages — login-gated but accessible from email link */}
+            <Route path="/quote/payment/success" element={<QuotePaymentSuccessPage />} />
+            <Route path="/quote/:token" element={<QuotePage />} />
+
             {/* Protected — requires auth */}
             <Route element={<ProtectedRoute />}>
               {/* ── Core booking flow ── */}
@@ -111,6 +123,7 @@ export default function App() {
                 <Route path="/admin" element={<AdminDashboardPage />} />
                 <Route path="/admin/cases" element={<AdminCasesPage />} />
                 <Route path="/admin/cases/:id" element={<AdminCaseDetailPage />} />
+                <Route path="/admin/chat" element={<AdminChatPage />} />
               </Route>
 
               {/* ── Blog manager routes ── */}
@@ -137,11 +150,14 @@ export default function App() {
                 <Route path="/superadmin/settings"              element={<SuperAdminSettingsPage />} />
                 <Route path="/superadmin/blogs"                 element={<SuperAdminBlogsPage />} />
                 <Route path="/superadmin/blog-permissions"      element={<SuperAdminBlogPermissionsPage />} />
+                <Route path="/superadmin/notifications"         element={<SuperAdminNotificationsPage />} />
               </Route>
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
+          </NotificationProvider>
         </ServicesProvider>
       </AuthProvider>
     </BrowserRouter>

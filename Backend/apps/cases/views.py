@@ -15,6 +15,7 @@ from .serializers import (
     CaseSerializer, CaseListSerializer, CaseAssignSerializer,
     CaseStatusUpdateSerializer, CaseResultSerializer
 )
+from apps.sales.models import SalesQuote
 
 
 class CaseViewSet(viewsets.ModelViewSet):
@@ -147,6 +148,18 @@ class CaseViewSet(viewsets.ModelViewSet):
             case.completed_at = timezone.now()
         
         case.save()
+
+        # Auto-create draft quote when case is completed
+        if new_status == Case.STATUS_COMPLETED:
+            if not SalesQuote.objects.filter(case=case, status__in=[SalesQuote.STATUS_DRAFT, SalesQuote.STATUS_PENDING]).exists():
+                SalesQuote.objects.create(
+                    case=case,
+                    client=case.client,
+                    created_by=request.user,
+                    title=f"Treatment for {case.booking.service.name if case.booking and case.booking.service else 'Service'}",
+                    description='',
+                    amount=0,
+                )
         
         # Create history record
         CaseStatusHistory.objects.create(

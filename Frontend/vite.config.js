@@ -20,4 +20,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':  ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-forms':  ['react-hook-form'],
+          'vendor-http':   ['axios'],
+          'vendor-ui':     ['react-hot-toast', 'date-fns'],
+          'vendor-oauth':  ['@react-oauth/google'],
+        },
+      },
+    },
+  },
 })

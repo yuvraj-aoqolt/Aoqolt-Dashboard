@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
-import SuperAdminLayout from './SuperAdminLayout'
-import { FiMessageSquare, FiSend, FiSearch, FiPaperclip, FiSmile, FiMic, FiSquare, FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX, FiCheckCircle } from 'react-icons/fi'
-import { chatAPI, casesAPI } from '../../api'
+import AdminLayout from './AdminLayout'
+import { FiMessageSquare, FiSend, FiSearch, FiPaperclip, FiSmile, FiMic, FiSquare, FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi'
+import { chatAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 
-// ── helpers ─────────────────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
   if (!dateStr) return ''
   const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
@@ -23,7 +22,9 @@ function fmtTime(dateStr) {
 
 function fmtDate(dateStr) {
   if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(dateStr).toLocaleDateString([], {
+    weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+  })
 }
 
 const STATUS_COLORS = {
@@ -51,12 +52,11 @@ const getFileUrl = (url) => {
 const formatRecTime = (s) =>
   `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-// ── main component ───────────────────────────────────────────────────────────
-export default function SuperAdminChatPage() {
+// ── component ─────────────────────────────────────────────────────────────────
+export default function AdminChatPage() {
   const { user } = useAuth()
-  const location = useLocation()
   const [conversations, setConversations] = useState([])
-  const [selected, setSelected]           = useState(null)  // full conv object
+  const [selected, setSelected]           = useState(null)
   const [messages, setMessages]           = useState([])
   const [text, setText]                   = useState('')
   const [loadingConvs, setLoadingConvs]   = useState(true)
@@ -79,10 +79,8 @@ export default function SuperAdminChatPage() {
   const [activeMenu, setActiveMenu] = useState(null)
   const [editingId, setEditingId]   = useState(null)
   const [editText, setEditText]     = useState('')
-  const [completing, setCompleting] = useState(false)
-  const [confirmComplete, setConfirmComplete] = useState(false)
 
-  // ── fetch conversations list ───────────────────────────────────────────────
+  // ── data fetchers ─────────────────────────────────────────────────────────
   const fetchConvs = useCallback(async (silent = false) => {
     if (!silent) setLoadingConvs(true)
     try {
@@ -97,7 +95,6 @@ export default function SuperAdminChatPage() {
     }
   }, [])
 
-  // ── fetch messages for selected case ──────────────────────────────────────
   const fetchMsgs = useCallback(async (caseId) => {
     try {
       const { data } = await chatAPI.getMessages(caseId)
@@ -107,15 +104,7 @@ export default function SuperAdminChatPage() {
 
   useEffect(() => { fetchConvs() }, [fetchConvs])
 
-  // ── auto-open conversation from notification click ────────────────────
-  useEffect(() => {
-    const openId = location.state?.openCaseId
-    if (!openId || conversations.length === 0) return
-    const conv = conversations.find(c => c.case_id === openId)
-    if (conv) setSelected(conv)
-  }, [location.state?.openCaseId, conversations])
-
-  // ── when a conversation is selected ───────────────────────────────────────
+  // ── conversation selection & polling ─────────────────────────────────────
   useEffect(() => {
     if (!selected) return
     clearInterval(pollRef.current)
@@ -125,7 +114,6 @@ export default function SuperAdminChatPage() {
     setConversations(prev =>
       prev.map(c => c.case_id === selected.case_id ? { ...c, unread_count: 0 } : c)
     )
-    // poll every 3s
     pollRef.current = setInterval(() => {
       fetchMsgs(selected.case_id)
       fetchConvs(true)
@@ -134,7 +122,6 @@ export default function SuperAdminChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected?.case_id])
 
-  // ── auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -251,23 +238,6 @@ export default function SuperAdminChatPage() {
 
   const within12hrs = (dateStr) => Date.now() - new Date(dateStr) < 12 * 3600 * 1000
 
-  const handleMarkComplete = async () => {
-    if (!selected || completing) return
-    setCompleting(true)
-    setConfirmComplete(false)
-    try {
-      await casesAPI.updateStatus(selected.case_id, { status: 'completed', notes: 'Marked complete from chat' })
-      const updated = { ...selected, case_status: 'completed' }
-      setSelected(updated)
-      setConversations(prev => prev.map(c => c.case_id === selected.case_id ? { ...c, case_status: 'completed' } : c))
-      toast.success('Case marked as completed')
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to update status')
-    } finally {
-      setCompleting(false)
-    }
-  }
-
   const handleEditSave = async (id) => {
     if (!editText.trim()) return
     try {
@@ -290,33 +260,34 @@ export default function SuperAdminChatPage() {
   }
 
   const filtered = conversations.filter(c =>
-    c.admin_name.toLowerCase().includes(search.toLowerCase()) ||
     c.case_number.toLowerCase().includes(search.toLowerCase()) ||
     c.service_name.toLowerCase().includes(search.toLowerCase())
   )
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
-    <SuperAdminLayout>
+    <AdminLayout>
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-white">Admin Chat</h1>
+        <h1 className="text-2xl font-bold text-white">Chat</h1>
         <p className="text-white/35 text-sm mt-0.5">
-          Direct communication with assigned admins about cases
+          Message the Aoqolt team about your assigned cases
         </p>
       </div>
 
-      <div className="flex rounded-2xl overflow-hidden border border-white/5 bg-[#0d0d0d]"
-           style={{ height: 'calc(100vh - 180px)', minHeight: 520 }}>
-
-        {/* ── LEFT: conversation list ─────────────────────────────────────── */}
-        <div className="w-72 flex-shrink-0 border-r border-white/5 flex flex-col">
+      <div
+        className="flex rounded-2xl overflow-hidden border border-white/5 bg-[#0d0d0d]"
+        style={{ height: 'calc(100vh - 200px)', minHeight: 500 }}
+      >
+        {/* ── LEFT: case list ─────────────────────────────────────────────── */}
+        <div className="w-64 flex-shrink-0 border-r border-white/5 flex flex-col">
           {/* Search */}
           <div className="p-3 border-b border-white/5 flex-shrink-0">
             <div className="relative">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" size={13} />
               <input
-                value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Search chats"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search cases"
                 className="w-full bg-white/5 text-white text-sm pl-8 pr-3 py-2 rounded-xl border border-white/5 focus:outline-none focus:border-red-900/40 placeholder-white/20"
               />
             </div>
@@ -341,8 +312,8 @@ export default function SuperAdminChatPage() {
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-white/20">
                 <FiMessageSquare size={36} className="mb-3 text-white/10" />
-                <p className="text-xs">No chats yet</p>
-                <p className="text-xs mt-1 text-white/15">Assign a case to an admin first</p>
+                <p className="text-xs">No assigned cases</p>
+                <p className="text-xs mt-1 text-white/15">You'll see chats once cases are assigned to you</p>
               </div>
             ) : (
               filtered.map(conv => (
@@ -353,10 +324,10 @@ export default function SuperAdminChatPage() {
                     selected?.case_id === conv.case_id ? 'bg-white/[0.07]' : ''
                   }`}
                 >
-                  {/* Avatar */}
+                  {/* Aoqolt avatar */}
                   <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-700 to-red-950 flex items-center justify-center text-white font-bold text-sm select-none">
-                      {conv.admin_name?.[0]?.toUpperCase() || 'A'}
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center select-none">
+                      <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
                     </div>
                     {conv.unread_count > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
@@ -367,10 +338,10 @@ export default function SuperAdminChatPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1">
-                      <p className="text-white text-sm font-medium truncate">{conv.admin_name}</p>
+                      <p className="text-white text-sm font-medium truncate">Aoqolt</p>
                       <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
                     </div>
-                    <p className="text-white/30 text-xs truncate mt-0.5">{conv.service_name}</p>
+                    <p className="text-white/30 text-xs truncate mt-0.5">{conv.case_number} · {conv.service_name}</p>
                     <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
                       {conv.last_message || 'No messages yet'}
                     </p>
@@ -381,51 +352,22 @@ export default function SuperAdminChatPage() {
           </div>
         </div>
 
-        {/* ── RIGHT: conversation view ────────────────────────────────────── */}
+        {/* ── RIGHT: conversation view ─────────────────────────────────────── */}
         {selected ? (
           <div className="flex-1 flex flex-col min-w-0">
 
             {/* Header */}
-            <div className="px-5 py-3.5 border-b border-white/5 flex-shrink-0">
-              {/* Confirm banner */}
-              {confirmComplete && (
-                <div className="mb-3 flex items-center gap-3 bg-green-900/20 border border-green-900/30 rounded-xl px-4 py-2.5">
-                  <FiCheckCircle size={15} className="text-green-400 flex-shrink-0" />
-                  <p className="text-green-300 text-sm flex-1">Mark this booking as <strong>Completed</strong>?</p>
-                  <button
-                    onClick={handleMarkComplete}
-                    disabled={completing}
-                    className="bg-green-700/50 hover:bg-green-700/70 text-green-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {completing ? 'Saving…' : 'Confirm'}
-                  </button>
-                  <button onClick={() => setConfirmComplete(false)} className="text-white/30 hover:text-white/60 p-1 rounded-lg transition-colors">
-                    <FiX size={14} />
-                  </button>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-700 to-red-950 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {selected.admin_name?.[0]?.toUpperCase() || 'A'}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-white font-semibold text-sm leading-tight truncate">{selected.admin_name}</p>
-                  <p className="text-white/30 text-xs truncate">{selected.case_number} · {selected.service_name}</p>
-                </div>
-                {/* Always show current status badge */}
-                <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
-                  {selected.case_status}
-                </span>
-                {/* Mark Complete button — only when not already completed/cancelled */}
-                {selected.case_status !== 'completed' && selected.case_status !== 'cancelled' && (
-                  <button
-                    onClick={() => setConfirmComplete(true)}
-                    className="flex items-center gap-1.5 text-xs bg-green-900/20 hover:bg-green-900/35 text-green-400 border border-green-900/30 px-3 py-1.5 rounded-full transition-colors flex-shrink-0"
-                  >
-                    <FiCheckCircle size={13} /> Complete
-                  </button>
-                )}
+            <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-3 flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-black text-[9px] font-display tracking-tight">AOQ</span>
               </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-white font-semibold text-sm leading-tight">Aoqolt Team</p>
+                <p className="text-white/30 text-xs truncate">{selected.case_number} · {selected.service_name}</p>
+              </div>
+              <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
+                {selected.case_status}
+              </span>
             </div>
 
             {/* Messages */}
@@ -438,11 +380,12 @@ export default function SuperAdminChatPage() {
                 <div className="flex flex-col items-center justify-center h-full text-white/20 py-16">
                   <FiMessageSquare size={40} className="mb-3" />
                   <p className="text-sm">No messages yet</p>
-                  <p className="text-xs mt-1 text-white/15">Start the conversation with {selected.admin_name}</p>
+                  <p className="text-xs mt-1 text-white/15">Ask the Aoqolt team anything about this case</p>
                 </div>
               ) : (
                 messages.map((msg, i) => {
-                  const isMine = msg.sender_role === 'superadmin'
+                  // From admin's POV: 'mine' = messages sent by this admin
+                  const isMine = msg.sender_role === 'admin'
                   const showDate =
                     i === 0 ||
                     new Date(messages[i - 1].created_at).toDateString() !== new Date(msg.created_at).toDateString()
@@ -610,15 +553,12 @@ export default function SuperAdminChatPage() {
             </div>
           </div>
         ) : (
-          /* Placeholder when no conversation selected */
           <div className="flex-1 flex flex-col items-center justify-center text-white/20">
             <FiMessageSquare size={48} className="mb-4 text-white/10" />
-            <p className="text-sm">Select a chat to start messaging</p>
-            <p className="text-xs mt-1 text-white/15">Pick an admin conversation from the list</p>
+            <p className="text-sm">Select a case to view the chat</p>
           </div>
         )}
       </div>
-    </SuperAdminLayout>
+    </AdminLayout>
   )
 }
-

@@ -37,7 +37,7 @@ export default function SuperAdminCasesPage() {
         }
         if (adminsRes.status === 'fulfilled') {
           const d = adminsRes.value.data
-          setAdmins(Array.isArray(d) ? d : d.results || [])
+          setAdmins(Array.isArray(d) ? d : d.data || d.results || [])
         }
       } finally {
         setLoading(false)

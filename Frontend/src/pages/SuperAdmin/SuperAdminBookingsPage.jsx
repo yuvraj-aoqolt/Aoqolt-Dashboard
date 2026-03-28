@@ -76,15 +76,28 @@ export default function SuperAdminBookingsPage() {
   const openEditForm2 = (booking) => {
     setEditForm2Modal(booking)
     const d = booking.details || {}
-    setForm2Data({
-      birth_date: d.birth_date || '',
-      birth_time: d.birth_time || '',
-      birth_place: d.birth_place || '',
-      additional_notes: d.additional_notes || '',
-      family_member_count: d.family_member_count ?? '',
-      family_member_details: d.family_member_details ? JSON.stringify(d.family_member_details, null, 2) : '',
-      custom_data: d.custom_data ? JSON.stringify(d.custom_data, null, 2) : '',
-    })
+    const cd = d.custom_data || {}
+    const svcType = booking.service_type || booking.service?.service_type || booking.selected_service
+    if (svcType === 'single_aura') {
+      setForm2Data({
+        full_name: cd.full_name || '',
+        mother_name: cd.mother_name || '',
+        current_city: cd.current_city || '',
+        marital_status: cd.marital_status || '',
+        scan_focus: cd.scan_focus || '',
+        additional_notes: d.additional_notes || '',
+      })
+    } else {
+      setForm2Data({
+        birth_date: d.birth_date || '',
+        birth_time: d.birth_time || '',
+        birth_place: d.birth_place || '',
+        additional_notes: d.additional_notes || '',
+        family_member_count: d.family_member_count ?? '',
+        family_member_details: d.family_member_details ? JSON.stringify(d.family_member_details, null, 2) : '',
+        custom_data: d.custom_data ? JSON.stringify(d.custom_data, null, 2) : '',
+      })
+    }
   }
 
   const handleSaveForm1 = async () => {
@@ -104,11 +117,30 @@ export default function SuperAdminBookingsPage() {
   const handleSaveForm2 = async () => {
     setSaving(true)
     try {
-      const payload = { ...form2Data }
-      try { payload.family_member_details = form2Data.family_member_details ? JSON.parse(form2Data.family_member_details) : null } catch { /* keep raw */ }
-      try { payload.custom_data = form2Data.custom_data ? JSON.parse(form2Data.custom_data) : {} } catch { /* keep raw */ }
+      const svcType = editForm2Modal.service_type || editForm2Modal.service?.service_type || editForm2Modal.selected_service
+      let payload
+      if (svcType === 'single_aura') {
+        payload = {
+          custom_data: {
+            full_name: form2Data.full_name,
+            mother_name: form2Data.mother_name,
+            current_city: form2Data.current_city,
+            marital_status: form2Data.marital_status,
+            scan_focus: form2Data.scan_focus,
+          },
+          additional_notes: form2Data.additional_notes,
+        }
+      } else {
+        payload = { ...form2Data }
+        try { payload.family_member_details = form2Data.family_member_details ? JSON.parse(form2Data.family_member_details) : null } catch { /* keep raw */ }
+        try { payload.custom_data = form2Data.custom_data ? JSON.parse(form2Data.custom_data) : {} } catch { /* keep raw */ }
+      }
       await bookingsAPI.editForm2(editForm2Modal.id, payload)
-      setBookings(prev => prev.map(b => b.id === editForm2Modal.id ? { ...b, details: { ...b.details, ...payload } } : b))
+      setBookings(prev => prev.map(b =>
+        b.id === editForm2Modal.id
+          ? { ...b, details: { ...b.details, ...(svcType === 'single_aura' ? { custom_data: payload.custom_data, additional_notes: payload.additional_notes } : payload) } }
+          : b
+      ))
       toast.success('Form 2 updated')
       setEditForm2Modal(null)
     } catch (err) {
@@ -149,6 +181,8 @@ export default function SuperAdminBookingsPage() {
             const details = booking.details
             const isOpen = expanded === booking.id
             const hasFamilyMembers = details?.family_member_details?.length > 0
+            const svcType = booking.service_type || booking.service?.service_type || booking.selected_service
+            const isSingleAura = svcType === 'single_aura'
 
             return (
               <motion.div
@@ -231,24 +265,30 @@ export default function SuperAdminBookingsPage() {
                           <div className="space-y-5">
                             <h3 className="text-white/60 text-xs uppercase tracking-wider">Submitted Details (Form 2)</h3>
 
-                            {/* Primary person */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <DetailCell
-                                icon={<FiCalendar size={13} />}
-                                label="Date of Birth"
-                                value={details.birth_date}
-                              />
-                              <DetailCell
-                                icon={<FiClock size={13} />}
-                                label="Time of Birth"
-                                value={details.birth_time}
-                              />
-                              <DetailCell
-                                icon={<FiMapPin size={13} />}
-                                label="Place of Birth"
-                                value={details.birth_place}
-                              />
-                            </div>
+                            {/* Primary person / aura details */}
+                            {isSingleAura ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <DetailCell icon={<FiUser size={13} />} label="Full Name" value={details.custom_data?.full_name} />
+                                <DetailCell icon={<FiUsers size={13} />} label="Mother's Name" value={details.custom_data?.mother_name} />
+                                <DetailCell icon={<FiMapPin size={13} />} label="Current City" value={details.custom_data?.current_city} />
+                                <DetailCell
+                                  icon={<FiCheck size={13} />}
+                                  label="Marital Status"
+                                  value={details.custom_data?.marital_status
+                                    ? details.custom_data.marital_status.charAt(0).toUpperCase() + details.custom_data.marital_status.slice(1)
+                                    : '—'}
+                                />
+                                <div className="sm:col-span-2">
+                                  <DetailCell icon={<FiSearch size={13} />} label="Main Scan Focus" value={details.custom_data?.scan_focus} />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <DetailCell icon={<FiCalendar size={13} />} label="Date of Birth" value={details.birth_date} />
+                                <DetailCell icon={<FiClock size={13} />} label="Time of Birth" value={details.birth_time} />
+                                <DetailCell icon={<FiMapPin size={13} />} label="Place of Birth" value={details.birth_place} />
+                              </div>
+                            )}
 
                             {/* Attachments */}
                             {booking.attachments?.length > 0 && (
@@ -418,34 +458,68 @@ export default function SuperAdminBookingsPage() {
                 Booking <span className="text-white/70 font-mono">{editForm2Modal.booking_id}</span> — {editForm2Modal.full_name}
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <ModalField label="Date of Birth" icon={<FiCalendar size={13} />}>
-                  <input type="date" value={form2Data.birth_date || ''} onChange={e => setForm2Data(p => ({ ...p, birth_date: e.target.value }))} className="modal-input" />
-                </ModalField>
-                <ModalField label="Time of Birth" icon={<FiClock size={13} />}>
-                  <input type="time" value={form2Data.birth_time || ''} onChange={e => setForm2Data(p => ({ ...p, birth_time: e.target.value }))} className="modal-input" />
-                </ModalField>
-                <ModalField label="Place of Birth" icon={<FiMapPin size={13} />}>
-                  <input value={form2Data.birth_place || ''} onChange={e => setForm2Data(p => ({ ...p, birth_place: e.target.value }))} className="modal-input" placeholder="City, Country" />
-                </ModalField>
-
-                <div className="sm:col-span-3">
-                  <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
-                  <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
-                </div>
-
-                {form2Data.family_member_details !== '' && (
-                  <>
-                    <ModalField label="Family Member Count" icon={<FiUsers size={13} />}>
-                      <input type="number" value={form2Data.family_member_count ?? ''} onChange={e => setForm2Data(p => ({ ...p, family_member_count: e.target.value }))} className="modal-input" placeholder="0" />
+              {(() => {
+                const svcType = editForm2Modal.service_type || editForm2Modal.service?.service_type || editForm2Modal.selected_service
+                const isSingle = svcType === 'single_aura'
+                return isSingle ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <ModalField label="Full Name" icon={<FiUser size={13} />}>
+                      <input value={form2Data.full_name || ''} onChange={e => setForm2Data(p => ({ ...p, full_name: e.target.value }))} className="modal-input" placeholder="Full name" />
+                    </ModalField>
+                    <ModalField label="Mother's Name" icon={<FiUsers size={13} />}>
+                      <input value={form2Data.mother_name || ''} onChange={e => setForm2Data(p => ({ ...p, mother_name: e.target.value }))} className="modal-input" placeholder="Mother's full name" />
+                    </ModalField>
+                    <ModalField label="Current City of Residence" icon={<FiMapPin size={13} />}>
+                      <input value={form2Data.current_city || ''} onChange={e => setForm2Data(p => ({ ...p, current_city: e.target.value }))} className="modal-input" placeholder="Current city" />
+                    </ModalField>
+                    <ModalField label="Marital Status" icon={<FiCheck size={13} />}>
+                      <select value={form2Data.marital_status || ''} onChange={e => setForm2Data(p => ({ ...p, marital_status: e.target.value }))} className="modal-input">
+                        <option value="">Select…</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                      </select>
+                    </ModalField>
+                    <div className="sm:col-span-2">
+                      <ModalField label="Main Aspect to Focus" icon={<FiSearch size={13} />}>
+                        <input value={form2Data.scan_focus || ''} onChange={e => setForm2Data(p => ({ ...p, scan_focus: e.target.value }))} className="modal-input" placeholder="e.g. Health, Finance, Career…" />
+                      </ModalField>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
+                      <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <ModalField label="Date of Birth" icon={<FiCalendar size={13} />}>
+                      <input type="date" value={form2Data.birth_date || ''} onChange={e => setForm2Data(p => ({ ...p, birth_date: e.target.value }))} className="modal-input" />
+                    </ModalField>
+                    <ModalField label="Time of Birth" icon={<FiClock size={13} />}>
+                      <input type="time" value={form2Data.birth_time || ''} onChange={e => setForm2Data(p => ({ ...p, birth_time: e.target.value }))} className="modal-input" />
+                    </ModalField>
+                    <ModalField label="Place of Birth" icon={<FiMapPin size={13} />}>
+                      <input value={form2Data.birth_place || ''} onChange={e => setForm2Data(p => ({ ...p, birth_place: e.target.value }))} className="modal-input" placeholder="City, Country" />
                     </ModalField>
                     <div className="sm:col-span-3">
-                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Family Member Details (JSON)</label>
-                      <textarea value={form2Data.family_member_details || ''} onChange={e => setForm2Data(p => ({ ...p, family_member_details: e.target.value }))} className="modal-input resize-none font-mono text-xs" rows={6} placeholder='[{"name":"...","relation":"...","dob":"..."}]' />
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
+                      <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
                     </div>
-                  </>
-                )}
-              </div>
+                    {form2Data.family_member_details !== '' && (
+                      <>
+                        <ModalField label="Family Member Count" icon={<FiUsers size={13} />}>
+                          <input type="number" value={form2Data.family_member_count ?? ''} onChange={e => setForm2Data(p => ({ ...p, family_member_count: e.target.value }))} className="modal-input" placeholder="0" />
+                        </ModalField>
+                        <div className="sm:col-span-3">
+                          <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Family Member Details (JSON)</label>
+                          <textarea value={form2Data.family_member_details || ''} onChange={e => setForm2Data(p => ({ ...p, family_member_details: e.target.value }))} className="modal-input resize-none font-mono text-xs" rows={6} placeholder='[{"name":"...","relation":"...","dob":"..."}]' />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
 
               <button
                 onClick={handleSaveForm2}

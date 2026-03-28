@@ -3,13 +3,26 @@ import { servicesAPI } from '../api'
 
 const ServicesContext = createContext(null)
 
+// Routes that never need the services list — skip the fetch there
+const SKIP_FETCH_PREFIXES = [
+  '/login', '/register', '/verify-otp', '/forgot-password',
+  '/reset-password', '/invite', '/admin-reset', '/oauth',
+  '/admin', '/superadmin',
+]
+
 export function ServicesProvider({ children }) {
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchServices()
+    const path = window.location.pathname
+    const skip = SKIP_FETCH_PREFIXES.some((p) => path === p || path.startsWith(p + '/'))
+    if (skip) {
+      setLoading(false)
+    } else {
+      fetchServices()
+    }
   }, [])
 
   const fetchServices = async () => {

@@ -90,6 +90,33 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
                 'error': result.get('error', 'Failed to create checkout session')
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    @action(detail=False, methods=['get'], permission_classes=[IsSuperAdmin])
+    def recent_payments(self, request):
+        """
+        Recent succeeded payments for notification panel – SuperAdmin only
+        GET /api/v1/payments/recent_payments/?limit=20
+        """
+        limit = min(int(request.query_params.get('limit', 20)), 50)
+        payments = (
+            Payment.objects
+            .filter(status=Payment.STATUS_SUCCEEDED)
+            .select_related('user', 'booking__service')
+            .order_by('-paid_at')[:limit]
+        )
+        data = [
+            {
+                'id': str(p.id),
+                'user_name':    p.user.full_name,
+                'user_email':   p.user.email,
+                'service_name': p.booking.service.name if p.booking and p.booking.service else '',
+                'amount':       p.amount,
+                'currency':     p.currency,
+                'paid_at':      p.paid_at.isoformat() if p.paid_at else p.created_at.isoformat(),
+            }
+            for p in payments
+        ]
+        return Response({'success': True, 'count': len(data), 'data': data})
+
     @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
     def refund(self, request, pk=None):
         """

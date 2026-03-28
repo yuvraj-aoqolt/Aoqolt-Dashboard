@@ -20,7 +20,14 @@ class SalesQuoteSerializer(serializers.ModelSerializer):
     client_email = serializers.EmailField(source='client.email', read_only=True)
     case_number = serializers.CharField(source='case.case_number', read_only=True)
     created_by_name = serializers.CharField(source='created_by.full_name', read_only=True)
-    
+    service_name = serializers.SerializerMethodField()
+
+    def get_service_name(self, obj):
+        try:
+            return obj.case.booking.service.name
+        except Exception:
+            return ''
+
     class Meta:
         model = SalesQuote
         fields = [
@@ -28,11 +35,12 @@ class SalesQuoteSerializer(serializers.ModelSerializer):
             'client_email', 'created_by', 'created_by_name', 'title', 'description',
             'amount', 'amount_display', 'currency', 'valid_until',
             'terms_and_conditions', 'status', 'items', 'client_response_notes',
-            'responded_at', 'created_at', 'updated_at'
+            'responded_at', 'created_at', 'updated_at',
+            'is_sent', 'sent_at', 'service_name', 'access_token',
         ]
         read_only_fields = [
             'id', 'quote_number', 'client', 'created_by', 'status',
-            'responded_at', 'created_at', 'updated_at'
+            'responded_at', 'created_at', 'updated_at', 'is_sent', 'sent_at', 'access_token',
         ]
 
 
@@ -95,11 +103,21 @@ class SalesOrderSerializer(serializers.ModelSerializer):
 class SalesOrderListSerializer(serializers.ModelSerializer):
     """Simplified serializer for listing orders"""
     amount_display = serializers.ReadOnlyField()
+    client_name = serializers.CharField(source='client.full_name', read_only=True)
     client_email = serializers.EmailField(source='client.email', read_only=True)
-    
+    quote_number = serializers.CharField(source='quote.quote_number', read_only=True)
+    service_name = serializers.SerializerMethodField()
+
+    def get_service_name(self, obj):
+        try:
+            return obj.quote.case.booking.service.name
+        except Exception:
+            return ''
+
     class Meta:
         model = SalesOrder
         fields = [
-            'id', 'order_number', 'client_email', 'amount_display',
-            'payment_status', 'status', 'created_at'
+            'id', 'order_number', 'quote_number', 'client_name', 'client_email',
+            'amount_display', 'total_amount', 'currency',
+            'payment_status', 'amount_paid', 'status', 'service_name', 'created_at'
         ]
