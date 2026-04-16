@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { format, isToday } from 'date-fns'
 import { FiSearch, FiCalendar } from 'react-icons/fi'
-import { casesAPI } from '../../api'
+import { casesAPI, bookingsAPI } from '../../api'
 import AdminLayout from './AdminLayout'
 import toast from 'react-hot-toast'
 
@@ -15,7 +15,16 @@ function formatDate(dateStr) {
 
 function WorkCard({ c, delay }) {
   const navigate = useNavigate()
+  const isBooking = c._type === 'BOOKING'
   const date = formatDate(c.started_at || c.created_at)
+
+  const handleContinue = () => {
+    if (isBooking) {
+      navigate('/admin/chat', { state: { bookingId: c.id } })
+    } else {
+      navigate('/admin/chat', { state: { caseId: c.id } })
+    }
+  }
 
   return (
     <motion.div
@@ -25,9 +34,16 @@ function WorkCard({ c, delay }) {
       className="bg-[#2a2a2a] border border-cyan-500/15 rounded-2xl p-5 flex flex-col gap-3"
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-semibold px-3 py-1 rounded-md bg-cyan-500 text-white">
-          In Progress
-        </span>
+        <div className="flex items-center gap-2">
+          {isBooking && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              Booking
+            </span>
+          )}
+          <span className="text-[11px] font-semibold px-3 py-1 rounded-md bg-cyan-500 text-white">
+            In Progress
+          </span>
+        </div>
         <span className="text-white/30 text-xs flex items-center gap-1.5">
           <FiCalendar size={11} />
           {date}
@@ -35,8 +51,9 @@ function WorkCard({ c, delay }) {
       </div>
 
       <div>
-        <p className="text-white/70 text-sm font-mono font-semibold">{c.case_number || '—'}</p>
-        {c.booking_id && <p className="text-white/30 text-xs mt-0.5">Booking: {c.booking_id}</p>}
+        <p className="text-white/70 text-sm font-mono font-semibold">
+          {isBooking ? (c.booking_id || '—') : (c.case_number || '—')}
+        </p>
       </div>
 
       <div>
@@ -49,7 +66,7 @@ function WorkCard({ c, delay }) {
       </div>
 
       <button
-        onClick={() => navigate('/admin/chat', { state: { caseId: c.id } })}
+        onClick={handleContinue}
         className="w-full py-2.5 rounded-xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-sm font-semibold hover:bg-cyan-600/30 transition-all"
       >
         Continue Work
@@ -59,27 +76,44 @@ function WorkCard({ c, delay }) {
 }
 
 export default function AdminWorkPage() {
-  const [cases, setCases]     = useState([])
+  const [allRows, setAllRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
 
   useEffect(() => {
-    casesAPI.allCases()
-      .then(({ data }) => {
-        const all = Array.isArray(data) ? data : data.results || []
-        setCases(all.filter(c => c.status === 'working'))
+    Promise.all([casesAPI.allCases(), bookingsAPI.allBookings()])
+      .then(([{ data: cData }, { data: bData }]) => {
+        const cases    = Array.isArray(cData) ? cData : cData.results || []
+        const bookings = Array.isArray(bData) ? bData : bData.results || []
+
+        const caseRows = cases
+          .filter(c => c.status === 'working')
+          .map(c => ({ ...c, _type: 'CASE' }))
+
+        const bookingRows = bookings
+          .filter(b => b.work_started === true)
+          .map(b => ({
+            ...b,
+            _type: 'BOOKING',
+            booking_id: b.booking_id,   // e.g. BOOK-00001
+            client_name: b.client_name,
+            service_name: b.service_name,
+            started_at: b.work_started_at || b.created_at,
+          }))
+
+        setAllRows([...caseRows, ...bookingRows])
       })
-      .catch(() => toast.error('Failed to load working cases'))
+      .catch(() => toast.error('Failed to load working items'))
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = cases.filter(c => {
+  const filtered = allRows.filter(c => {
     const q = search.toLowerCase()
     return (
       !q ||
-      c.client?.full_name?.toLowerCase().includes(q) ||
-      c.case_number?.toLowerCase().includes(q) ||
-      c.booking?.service?.name?.toLowerCase().includes(q)
+      c.client_name?.toLowerCase().includes(q) ||
+      (c._type === 'BOOKING' ? c.booking_id : c.case_number)?.toLowerCase().includes(q) ||
+      c.service_name?.toLowerCase().includes(q)
     )
   })
 
@@ -112,11 +146,11 @@ export default function AdminWorkPage() {
             {[1,2,3].map(i => <div key={i} className="h-52 bg-white/3 rounded-2xl animate-pulse" />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-24 text-center text-white/20 text-sm">No working cases</div>
+          <div className="py-24 text-center text-white/20 text-sm">No items in progress</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((c, i) => (
-              <WorkCard key={c.id} c={c} delay={i * 0.04} />
+              <WorkCard key={`${c._type}-${c.id}`} c={c} delay={i * 0.04} />
             ))}
           </div>
         )}

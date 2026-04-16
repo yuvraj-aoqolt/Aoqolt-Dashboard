@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { format, isToday } from 'date-fns'
 import { FiChevronRight } from 'react-icons/fi'
-import { casesAPI, chatAPI } from '../../api'
+import { casesAPI, chatAPI, bookingsAPI } from '../../api'
 import AdminLayout from './AdminLayout'
 import toast from 'react-hot-toast'
 
@@ -52,25 +52,62 @@ function StatCard({ label, count, color, borderColor, bgColor, to, delay }) {
 
 // ── main ──────────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
-  const [cases, setCases]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [cases, setCases]       = useState([])
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading]   = useState(true)
   const navigate = useNavigate()
 
-  // KEEPING ORIGINAL FETCH LOGIC UNCHANGED
   useEffect(() => {
-    casesAPI.allCases()
-      .then(({ data }) => setCases(Array.isArray(data) ? data : data.results || []))
-      .catch(() => toast.error('Failed to load cases'))
+    Promise.allSettled([casesAPI.allCases(), bookingsAPI.allBookings()])
+      .then(([casesRes, bookingsRes]) => {
+        if (casesRes.status === 'fulfilled') {
+          const d = casesRes.value.data
+          setCases(Array.isArray(d) ? d : d.results || [])
+        }
+        if (bookingsRes.status === 'fulfilled') {
+          const d = bookingsRes.value.data
+          // Only show paid bookings (status=completed) that have no case yet
+          const list = Array.isArray(d) ? d : d.results || []
+          setBookings(list.filter(b => b.status === 'completed' && !b.case_id))
+        }
+      })
+      .catch(() => toast.error('Failed to load tasks'))
       .finally(() => setLoading(false))
   }, [])
 
-  const assigned  = cases.filter((c) => ['received', 'assigned'].includes(c.status))
-  const working   = cases.filter((c) => c.status === 'working')
-  const completed = cases.filter((c) => c.status === 'completed')
+  // Normalise bookings into the same shape as cases for the table
+  const bookingRows = bookings.map(b => {
+    const bStatus = b.work_completed ? 'completed' : b.work_started ? 'working' : 'received'
+    return {
+      _type:        'BOOKING',
+      id:           b.id,
+      case_number:  b.booking_id || '—',
+      booking_id:   null,
+      client_name:  b.full_name || '—',
+      service_name: b.service_name || '—',
+      created_at:   b.created_at,
+      status:       bStatus,
+    }
+  })
+
+  const allRows   = [...cases.map(c => ({ _type: 'CASE', ...c })), ...bookingRows]
+  const assigned  = allRows.filter((r) => ['received', 'assigned'].includes(r.status))
+  const working   = allRows.filter((r) => r.status === 'working')
+  const completed = allRows.filter((r) => r.status === 'completed')
   const recent    = [...assigned, ...working, ...completed].slice(0, 10)
 
   // KEEPING ORIGINAL ACTION LOGIC UNCHANGED
   const handleAction = async (c) => {
+    if (c._type === 'BOOKING') {
+      if (c.status === 'received') {
+        // Not started yet — go to Assigned Tasks to click Start Work
+        navigate('/admin/cases')
+      } else {
+        // In progress or completed — open booking chat
+        navigate('/admin/chat', { state: { bookingId: c.id } })
+      }
+      return
+    }
     if (['received', 'assigned'].includes(c.status)) {
       try {
         await casesAPI.updateStatus(c.id, { status: 'working' })
@@ -95,7 +132,7 @@ export default function AdminDashboardPage() {
 
   const STATS = [
     {
-      label: 'Assigned', count: loading ? '–' : cases.length,
+      label: 'Assigned', count: loading ? '–' : allRows.length,
       color: 'text-[#facc15]', borderColor: 'border-[#facc15]/20', bgColor: 'bg-[#facc15]/5',
       to: '/admin/cases', delay: 0,
     },
@@ -159,11 +196,19 @@ export default function AdminDashboardPage() {
                   {recent.map((c) => {
                     const { label, cls } = statusMeta(c.status)
                     const isPending = ['received', 'assigned'].includes(c.status)
+                    const isBooking = c._type === 'BOOKING'
                     return (
                       <tr key={c.id} className="hover:bg-white/[0.02] transition-colors">
                         <td className="px-8 py-6 text-sm">
                           <p className="text-white/80 font-medium">{c.case_number || '—'}</p>
-                          {c.booking_id && <p className="text-white/30 text-xs mt-0.5">Booking: {c.booking_id}</p>}
+                          {isBooking && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-900/30">
+                              Booking
+                            </span>
+                          )}
+                          {!isBooking && c.booking_id && (
+                            <p className="text-white/30 text-xs mt-0.5">Booking: {c.booking_id}</p>
+                          )}
                         </td>
                         <td className="px-8 py-6">
                           <div className="flex items-center gap-4">
@@ -193,7 +238,10 @@ export default function AdminDashboardPage() {
                                 : 'bg-zinc-800/80 hover:bg-zinc-700 text-white/80 border border-white/10'
                               }`}
                           >
-                            {isPending ? 'Start Work' : 'View'}
+                            {isBooking
+                              ? isPending ? 'Start Work' : c.status === 'working' ? 'Continue' : 'View'
+                              : isPending ? 'Start Work' : 'View'
+                            }
                           </button>
                         </td>
                       </tr>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isToday } from 'date-fns'
 import { FiSearch, FiSliders, FiCalendar, FiChevronDown, FiX, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiClock } from 'react-icons/fi'
-import { casesAPI, chatAPI } from '../../api'
+import { casesAPI, chatAPI, bookingsAPI } from '../../api'
 import AdminLayout from './AdminLayout'
 import toast from 'react-hot-toast'
 
@@ -30,16 +30,24 @@ function formatDate(dateStr) {
 }
 
 // ── Booking Detail Modal ─────────────────────────────────────────────────
-function BookingModal({ caseId, onClose }) {
+function BookingModal({ caseId, bookingId, onClose }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    casesAPI.detail(caseId)
-      .then(({ data: d }) => setData(d.data || d))
-      .catch(() => toast.error('Failed to load booking details'))
+    const req = caseId
+      ? casesAPI.detail(caseId).then(({ data: d }) => ({ _type: 'CASE', ...(d.data || d) }))
+      : bookingsAPI.detail(bookingId).then(({ data: d }) => ({
+          _type:       'BOOKING',
+          case_number: null,
+          booking_id:  d.booking_id,
+          booking:     d,
+        }))
+    req
+      .then(setData)
+      .catch(() => toast.error('Failed to load details'))
       .finally(() => setLoading(false))
-  }, [caseId])
+  }, [caseId, bookingId])
 
   const b  = data?.booking
   const f2 = b?.details
@@ -118,17 +126,19 @@ function BookingModal({ caseId, onClose }) {
               <p className="text-white/30 text-sm text-center py-8">No booking data found</p>
             ) : (
               <>
-                {/* Form 1 */}
-                <div>
-                  <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest mb-3">Form 1 — Personal Details</p>
-                  <div className="space-y-3">
-                    <Row icon={FiUser}    label="Full Name"    value={b.full_name} />
-                    <Row icon={FiMail}    label="Email"        value={b.email} />
-                    <Row icon={FiPhone}   label="Phone"        value={`${b.phone_country_code || ''}${b.phone_number || ''}`} />
-                    <Row icon={FiMapPin}  label="Address"      value={[b.address, b.city, b.state, b.country, b.postal_code].filter(Boolean).join(', ')} />
-                    <Row icon={FiFileText} label="Special Note" value={b.special_note} />
+                {/* Form 1 — only shown for cases (admin cannot see booking personal data) */}
+                {data?._type !== 'BOOKING' ? (
+                  <div>
+                    <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest mb-3">Form 1 — Personal Details</p>
+                    <div className="space-y-3">
+                      <Row icon={FiUser}    label="Full Name"    value={b.full_name} />
+                      <Row icon={FiMail}    label="Email"        value={b.email} />
+                      <Row icon={FiPhone}   label="Phone"        value={`${b.phone_country_code || ''}${b.phone_number || ''}`} />
+                      <Row icon={FiMapPin}  label="Address"      value={[b.address, b.city, b.state, b.country, b.postal_code].filter(Boolean).join(', ')} />
+                      <Row icon={FiFileText} label="Special Note" value={b.special_note} />
+                    </div>
                   </div>
-                </div>
+                ) : null}
 
                 {/* Form 2 */}
                 {f2 && (
@@ -158,7 +168,7 @@ function BookingModal({ caseId, onClose }) {
 }
 
 // ── card ─────────────────────────────────────────────────────────────────
-function CaseCard({ c, onStartWork, delay }) {
+function CaseCard({ c, onStartWork, onStartBookingWork, delay }) {
   const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const isPending   = ['received', 'assigned'].includes(c.status)
@@ -166,6 +176,8 @@ function CaseCard({ c, onStartWork, delay }) {
   const isCompleted = c.status === 'completed'
   const date = formatDate(c.started_at || c.created_at)
   const badge = BADGE[c.status] || BADGE.received
+
+  const isBooking = c._type === 'BOOKING'
 
   return (
     <motion.div
@@ -188,7 +200,10 @@ function CaseCard({ c, onStartWork, delay }) {
       {/* IDs */}
       <div>
         <p className="text-white/70 text-sm font-mono font-semibold">{c.case_number || '—'}</p>
-        {c.booking_id && <p className="text-white/30 text-xs mt-0.5">Booking: {c.booking_id}</p>}
+        {isBooking && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-900/30">Booking</span>
+        )}
+        {!isBooking && c.booking_id && <p className="text-white/30 text-xs mt-0.5">Booking: {c.booking_id}</p>}
       </div>
 
       {/* Client */}
@@ -209,7 +224,31 @@ function CaseCard({ c, onStartWork, delay }) {
         >
           View
         </button>
-        {isPending && (
+        {isBooking && isPending && (
+          <button
+            onClick={() => onStartBookingWork(c)}
+            className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold transition-all"
+          >
+            Start Work
+          </button>
+        )}
+        {isBooking && isWorking && (
+          <button
+            onClick={() => navigate('/admin/chat', { state: { bookingId: c.id } })}
+            className="flex-1 py-2.5 rounded-xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-sm font-semibold hover:bg-cyan-600/30 transition-all"
+          >
+            Continue Work
+          </button>
+        )}
+        {isBooking && isCompleted && (
+          <button
+            onClick={() => navigate('/admin/chat', { state: { bookingId: c.id } })}
+            className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm font-semibold hover:bg-white/6 transition-all"
+          >
+            View Chat
+          </button>
+        )}
+        {!isBooking && isPending && (
           <button
             onClick={() => onStartWork(c)}
             className="flex-1 py-2.5 rounded-xl border border-white/15 text-white text-sm font-semibold hover:bg-white/8 transition-all"
@@ -217,7 +256,7 @@ function CaseCard({ c, onStartWork, delay }) {
             Start Work
           </button>
         )}
-        {isWorking && (
+        {!isBooking && isWorking && (
           <button
             onClick={() => navigate('/admin/chat', { state: { caseId: c.id } })}
             className="flex-1 py-2.5 rounded-xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 text-sm font-semibold hover:bg-cyan-600/30 transition-all"
@@ -225,7 +264,7 @@ function CaseCard({ c, onStartWork, delay }) {
             Continue
           </button>
         )}
-        {isCompleted && (
+        {!isBooking && isCompleted && (
           <button
             onClick={() => navigate('/admin/chat', { state: { caseId: c.id } })}
             className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/50 text-sm font-semibold hover:bg-white/6 transition-all"
@@ -235,7 +274,11 @@ function CaseCard({ c, onStartWork, delay }) {
         )}
       </div>
 
-      {showModal && <BookingModal caseId={c.id} onClose={() => setShowModal(false)} />}
+      {showModal && (
+        isBooking
+          ? <BookingModal bookingId={c.id} onClose={() => setShowModal(false)} />
+          : <BookingModal caseId={c.id} onClose={() => setShowModal(false)} />
+      )}
     </motion.div>
   )
 }
@@ -243,17 +286,64 @@ function CaseCard({ c, onStartWork, delay }) {
 // ── page ─────────────────────────────────────────────────────────────────
 export default function AdminCasesPage() {
   const navigate = useNavigate()
-  const [cases, setCases]     = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch]   = useState('')
-  const [filter, setFilter]   = useState('all')
+  const [cases, setCases]       = useState([])
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [search, setSearch]     = useState('')
+  const [filter, setFilter]     = useState('all')
 
   useEffect(() => {
-    casesAPI.allCases()
-      .then(({ data }) => setCases(Array.isArray(data) ? data : data.results || []))
-      .catch(() => toast.error('Failed to load cases'))
+    Promise.allSettled([casesAPI.allCases(), bookingsAPI.allBookings()])
+      .then(([casesRes, bookingsRes]) => {
+        if (casesRes.status === 'fulfilled') {
+          const d = casesRes.value.data
+          setCases(Array.isArray(d) ? d : d.results || [])
+        }
+        if (bookingsRes.status === 'fulfilled') {
+          const d = bookingsRes.value.data
+          const list = Array.isArray(d) ? d : d.results || []
+          // Paid bookings with no case yet
+          setBookings(list.filter(b => b.status === 'completed' && !b.case_id))
+        }
+      })
+      .catch(() => toast.error('Failed to load tasks'))
       .finally(() => setLoading(false))
   }, [])
+
+  // Booking rows normalised to the same shape as cases
+  const bookingRows = bookings.map(b => ({
+    _type:        'BOOKING',
+    id:           b.id,
+    case_number:  b.booking_id || '—',
+    booking_id:   null,
+    client_name:  b.full_name || '—',
+    service_name: b.service_name || '—',
+    created_at:   b.created_at,
+    started_at:   b.work_started_at || null,
+    status:       b.work_completed ? 'completed' : b.work_started ? 'working' : 'received',
+  }))
+  const allRows = [
+    ...cases.map(c => ({ _type: 'CASE', ...c })),
+    ...bookingRows,
+  ]
+
+  const handleStartBookingWork = async (c) => {
+    try {
+      await bookingsAPI.startWork(c.id)
+      // Optimistically update the row to 'working'
+      setBookings(prev => prev.map(b => b.id === c.id ? { ...b, work_started: true } : b))
+    } catch { /* continue even if status update fails */ }
+    try {
+      await chatAPI.sendMessage({
+        source_type: 'BOOKING',
+        booking: c.id,
+        message_type: 'text',
+        message: '👋 I have started working on your booking. I will keep you updated.',
+      })
+    } catch { /* message optional */ }
+    toast.success('Work started — navigating to chat')
+    navigate('/admin/chat', { state: { bookingId: c.id } })
+  }
 
   const handleStartWork = async (c) => {
     try {
@@ -275,7 +365,7 @@ export default function AdminCasesPage() {
     }
   }
 
-  const filtered = cases.filter((c) => {
+  const filtered = allRows.filter((c) => {
     const matchStatus =
       filter === 'all' ||
       (filter === 'pending'   && ['received', 'assigned'].includes(c.status)) ||
@@ -285,17 +375,17 @@ export default function AdminCasesPage() {
     const q = search.toLowerCase()
     const matchSearch =
       !q ||
-      c.client?.full_name?.toLowerCase().includes(q) ||
+      c.client_name?.toLowerCase().includes(q) ||
       c.case_number?.toLowerCase().includes(q) ||
-      c.booking?.service?.name?.toLowerCase().includes(q)
+      c.service_name?.toLowerCase().includes(q)
 
     return matchStatus && matchSearch
   })
 
   const counts = {
-    pending:   cases.filter((c) => ['received', 'assigned'].includes(c.status)).length,
-    working:   cases.filter((c) => c.status === 'working').length,
-    completed: cases.filter((c) => c.status === 'completed').length,
+    pending:   allRows.filter((c) => ['received', 'assigned'].includes(c.status)).length,
+    working:   allRows.filter((c) => c.status === 'working').length,
+    completed: allRows.filter((c) => c.status === 'completed').length,
   }
 
   return (
@@ -345,7 +435,7 @@ export default function AdminCasesPage() {
         {/* Status tabs */}
         <div className="flex gap-2 flex-wrap">
           {[
-            { value: 'all',       label: 'All',         count: cases.length,     dot: 'bg-white/40'   },
+              { value: 'all',       label: 'All',         count: allRows.length,   dot: 'bg-white/40'   },
             { value: 'pending',   label: 'Pending',      count: counts.pending,   dot: 'bg-amber-400'  },
             { value: 'working',   label: 'In Progress',  count: counts.working,   dot: 'bg-cyan-400'   },
             { value: 'completed', label: 'Completed',    count: counts.completed, dot: 'bg-green-400'  },
@@ -374,11 +464,11 @@ export default function AdminCasesPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-24 text-center text-white/20 text-sm">No cases found</div>
+          <div className="py-24 text-center text-white/20 text-sm">No tasks found</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filtered.map((c, i) => (
-              <CaseCard key={c.id} c={c} onStartWork={handleStartWork} delay={i * 0.04} />
+              <CaseCard key={c.id} c={c} onStartWork={handleStartWork} onStartBookingWork={handleStartBookingWork} delay={i * 0.04} />
             ))}
           </div>
         )}

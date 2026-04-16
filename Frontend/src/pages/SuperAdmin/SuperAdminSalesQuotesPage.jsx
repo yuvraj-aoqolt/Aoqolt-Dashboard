@@ -157,6 +157,9 @@ function QuoteEditor({ quote, onSaved, onSent }) {
           <p className="text-xs text-white/40 uppercase tracking-wide mb-1">Bill To</p>
           <p className="font-semibold">{quote.client_name}</p>
           <p className="text-sm text-white/60">{quote.client_email}</p>
+          {quote.booking_ref && (
+            <p className="text-xs text-amber-400/70 mt-0.5">Booking: {quote.booking_ref}</p>
+          )}
           {quote.service_name && <p className="text-xs text-white/40 mt-0.5">Service: {quote.service_name}</p>}
         </div>
         <div>
@@ -190,24 +193,17 @@ function QuoteEditor({ quote, onSaved, onSent }) {
 
       {/* Line Items */}
       <div className="px-6 py-4">
-        <div className="grid grid-cols-[1fr_80px_120px_32px] gap-2 text-xs text-white/40 uppercase tracking-wide mb-2">
-          <span>Description</span><span>Qty</span><span>Unit Price</span><span />
+        <div className="grid grid-cols-[1fr_120px_32px] gap-2 text-xs text-white/40 uppercase tracking-wide mb-2">
+          <span>Description</span><span>Unit Price</span><span />
         </div>
         <div className="space-y-2">
           {items.map((item, idx) => (
-            <div key={idx} className="grid grid-cols-[1fr_80px_120px_32px] gap-2 items-center">
+            <div key={idx} className="grid grid-cols-[1fr_120px_32px] gap-2 items-center">
               <input
                 value={item.description}
                 onChange={e => updateItem(idx, 'description', e.target.value)}
                 className="bg-white/5 rounded-lg px-3 py-2 text-sm text-white outline-none border border-white/10 focus:border-red-500/60"
                 placeholder="Treatment / service description"
-              />
-              <input
-                type="number"
-                min="1"
-                value={item.quantity}
-                onChange={e => updateItem(idx, 'quantity', e.target.value)}
-                className="bg-white/5 rounded-lg px-3 py-2 text-sm text-white outline-none border border-white/10 focus:border-red-500/60 text-center"
               />
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
@@ -371,7 +367,7 @@ export default function SuperAdminSalesQuotesPage() {
             <div className="flex flex-col items-center py-16 text-white/20">
               <FiFileText size={36} className="mb-3" />
               <p className="text-xs">No quotes yet</p>
-              <p className="text-xs mt-1 text-white/15">Mark a case completed to auto-create</p>
+              <p className="text-xs mt-1 text-white/15">Mark a case or booking completed to auto-create</p>
             </div>
           ) : quotes.map(q => (
             <button
@@ -381,12 +377,19 @@ export default function SuperAdminSalesQuotesPage() {
             >
               <div className="flex items-start justify-between gap-2 mb-1">
                 <span className="text-xs font-mono text-white/50 leading-tight">{q.quote_number}</span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize shrink-0 ${STATUS_BADGE[q.status] || 'bg-white/10 text-white/40'}`}>
-                  {q.status}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {q.booking_ref && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                      BKG
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${STATUS_BADGE[q.status] || 'bg-white/10 text-white/40'}`}>
+                    {q.status}
+                  </span>
+                </div>
               </div>
               <p className="text-sm font-semibold text-white truncate">{q.client_name}</p>
-              <p className="text-xs text-white/45 truncate">{q.title || q.service_name || 'No title'}</p>
+              <p className="text-xs text-white/45 truncate">{q.booking_ref || q.title || q.service_name || 'No title'}</p>
               <p className="text-sm font-bold text-red-400 mt-1">${Number(q.amount).toFixed(2)}</p>
             </button>
           ))}

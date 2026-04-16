@@ -6,7 +6,6 @@ from django.conf import settings
 from django.utils import timezone
 from .models import Payment
 from apps.bookings.models import Booking
-from apps.cases.models import Case
 import logging
 
 logger = logging.getLogger(__name__)
@@ -130,15 +129,8 @@ class StripeService:
             booking.status = Booking.STATUS_COMPLETED
             booking.completed_at = timezone.now()
             booking.save()
-            
-            # Create case
-            case = Case.objects.create(
-                booking=booking,
-                client=booking.user,
-                status=Case.STATUS_RECEIVED
-            )
-            
-            logger.info(f"Payment succeeded for booking {booking.id}, case {case.case_number} created")
+
+            logger.info(f"Payment succeeded for booking {booking.id} ({booking.booking_id})")
             
             return True
             

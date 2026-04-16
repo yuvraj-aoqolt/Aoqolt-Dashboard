@@ -104,15 +104,32 @@ export default function QuotePaymentSuccessPage() {
         {isRegisteredUser ? (
           <>
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-5 py-4 mb-6">
-              <p className="text-blue-300 text-sm font-medium">Your case is now processing</p>
-              <p className="text-white/50 text-xs mt-1">Login to your account to track progress and chat with our team.</p>
+              <p className="text-blue-300 text-sm font-medium">Your case is now open</p>
+              <p className="text-white/50 text-xs mt-1">
+                {user
+                  ? 'You can now chat with our team directly from your dashboard.'
+                  : 'Login to your account to track progress and chat with our team.'}
+              </p>
             </div>
-            <button
-              onClick={() => navigate('/login')}
-              className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold transition-colors mb-3"
-            >
-              Login to Track My Case
-            </button>
+            {user ? (
+              <button
+                onClick={() => navigate('/dashboard/chat', {
+                  state: { caseId: details?.case_id }
+                })}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold transition-colors mb-3"
+              >
+                Open Chat with Our Team
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/login', {
+                  state: { redirect: '/dashboard/chat', caseId: details?.case_id }
+                })}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold transition-colors mb-3"
+              >
+                Login to Track My Case
+              </button>
+            )}
             <a href="/" className="block text-sm text-white/40 hover:text-white/60 transition-colors">Go to Home</a>
           </>
         ) : (

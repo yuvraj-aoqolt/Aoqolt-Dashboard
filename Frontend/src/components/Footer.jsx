@@ -23,10 +23,11 @@ export default function Footer() {
               astrology services tailored for your spiritual journey.
             </p>
             <div className="flex gap-3 mt-6">
-              {[FaTwitter, FaInstagram, FaFacebook].map((Icon, i) => (
+              {[{icon: FaTwitter, name: 'Twitter'}, {icon: FaInstagram, name: 'Instagram'}, {icon: FaFacebook, name: 'Facebook'}].map(({icon: Icon, name}, i) => (
                 <motion.a
                   key={i}
                   href="#"
+                  aria-label={name}
                   whileHover={{ scale: 1.15 }}
                   className="w-9 h-9 bg-white/5 hover:bg-red-900/30 border border-white/10 hover:border-red-900/50 rounded-lg flex items-center justify-center text-white/50 hover:text-red-400 transition-all"
                 >
@@ -38,7 +39,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Services</h4>
+            <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Services</h3>
             <ul className="space-y-2">
               {['Single Aura Reading', 'Family Aura Reading', 'Astrology Reading', 'All Services'].map((item) => (
                 <li key={item}>
@@ -55,7 +56,7 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Contact</h4>
+            <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Contact</h3>
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-white/40 text-sm">
                 <FiMail size={14} className="text-red-600" />

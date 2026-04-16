@@ -1,11 +1,12 @@
 /**
  * NotificationContext
- * Polls chat conversations (unread counts) + recent payments every 15s.
- * Also polls partial-overdue sales orders (15+ days since first partial payment) every 5 min.
+ * Uses TanStack Query with refetchInterval for polling instead of manual setInterval.
+ * - Chat + payments: every 15 s
+ * - Partial-overdue orders: every 5 min
  * Only active when the logged-in user is superadmin.
  */
-import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createContext, useContext, useState, useRef, useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { chatAPI, paymentsAPI, salesAPI } from '../api'
 import { useAuth } from './AuthContext'
 
@@ -33,69 +34,61 @@ function fmtDollar(amount, currency = 'USD') {
 export function NotificationProvider({ children }) {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'superadmin'
-
-  const [chatNotifs, setChatNotifs]         = useState([])
-  const [paymentNotifs, setPaymentNotifs]   = useState([])
-  const [partialNotifs, setPartialNotifs]   = useState([])   // overdue partial payment orders
+  const queryClient  = useQueryClient()
 
   const seenPaymentIds = useRef(new Set())
-  const [newPayments, setNewPayments]       = useState([])
-  const pollRef        = useRef(null)
-  const partialPollRef = useRef(null)
+  const [newPayments, setNewPayments] = useState([])
 
-  // ── fetch chat + recent payments (every 15 s) ─────────────────────────────
-  const fetchAll = useCallback(async () => {
-    if (!isSuperAdmin) return
-    try {
-      const [convRes, payRes] = await Promise.all([
-        chatAPI.getConversations(),
-        paymentsAPI.recentPayments(),
-      ])
-      const convs = convRes.data?.data || []
-      const pays  = payRes.data?.data  || []
+  // ── Chat conversations: poll every 15 s ───────────────────────────────────
+  const { data: chatData = [] } = useQuery({
+    queryKey: ['notifications', 'chat'],
+    queryFn:  () => chatAPI.getConversations().then(r => r.data?.data || []),
+    enabled:  isSuperAdmin,
+    refetchInterval: isSuperAdmin ? 15_000 : false,
+    staleTime: 10_000,
+  })
 
-      setChatNotifs(convs.filter(c => c.unread_count > 0))
+  // ── Recent payments: poll every 15 s ─────────────────────────────────────
+  const { data: paymentData = [] } = useQuery({
+    queryKey: ['notifications', 'payments'],
+    queryFn:  () => paymentsAPI.recentPayments().then(r => r.data?.data || []),
+    enabled:  isSuperAdmin,
+    refetchInterval: isSuperAdmin ? 15_000 : false,
+    staleTime: 10_000,
+  })
 
-      const fetchedIds = new Set(pays.map(p => p.id))
-      if (seenPaymentIds.current.size === 0) {
-        seenPaymentIds.current = fetchedIds
-        setPaymentNotifs(pays)
-        setNewPayments([])
-      } else {
-        const fresh = pays.filter(p => !seenPaymentIds.current.has(p.id))
-        fresh.forEach(p => seenPaymentIds.current.add(p.id))
-        setPaymentNotifs(pays)
-        if (fresh.length > 0) setNewPayments(prev => [...fresh, ...prev].slice(0, 50))
-      }
-    } catch { /* silent */ }
-  }, [isSuperAdmin])
+  // ── Partial-overdue orders: poll every 5 min ──────────────────────────────
+  const { data: partialData = [] } = useQuery({
+    queryKey: ['notifications', 'partial'],
+    queryFn:  () => salesAPI.partialOverdue().then(r => r.data?.data || []),
+    enabled:  isSuperAdmin,
+    refetchInterval: isSuperAdmin ? 5 * 60_000 : false,
+    staleTime: 4 * 60_000,
+  })
 
-  // ── fetch partial-overdue orders (every 5 min) ────────────────────────────
-  const fetchPartial = useCallback(async () => {
-    if (!isSuperAdmin) return
-    try {
-      const res = await salesAPI.partialOverdue()
-      setPartialNotifs(res.data?.data || [])
-    } catch { /* silent */ }
-  }, [isSuperAdmin])
-
+  // ── Track new payments (first poll seeds the set; later polls detect new) ─
   useEffect(() => {
-    if (!isSuperAdmin) return
-    fetchAll()
-    fetchPartial()
-    pollRef.current        = setInterval(fetchAll,    15000)
-    partialPollRef.current = setInterval(fetchPartial, 5 * 60 * 1000)
-    return () => {
-      clearInterval(pollRef.current)
-      clearInterval(partialPollRef.current)
+    if (!isSuperAdmin || !paymentData.length) return
+    const fetchedIds = new Set(paymentData.map(p => p.id))
+    if (seenPaymentIds.current.size === 0) {
+      seenPaymentIds.current = fetchedIds
+      setNewPayments([])
+    } else {
+      const fresh = paymentData.filter(p => !seenPaymentIds.current.has(p.id))
+      fresh.forEach(p => seenPaymentIds.current.add(p.id))
+      if (fresh.length > 0) setNewPayments(prev => [...fresh, ...prev].slice(0, 50))
     }
-  }, [isSuperAdmin, fetchAll, fetchPartial])
+  }, [paymentData, isSuperAdmin])
+
+  const chatNotifs    = chatData.filter(c => c.unread_count > 0)
+  const paymentNotifs = paymentData
+  const partialNotifs = partialData
 
   const totalUnread = chatNotifs.reduce((s, c) => s + c.unread_count, 0)
     + newPayments.length
     + partialNotifs.length
 
-  // ── unified notification list ─────────────────────────────────────────────
+  // ── Unified notification list ─────────────────────────────────────────────
   const notifications = [
     ...chatNotifs.map(c => ({
       type: 'chat',
@@ -130,21 +123,32 @@ export function NotificationProvider({ children }) {
 
   const clearNewPayments = () => setNewPayments([])
 
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['notifications', 'chat'] })
+    queryClient.invalidateQueries({ queryKey: ['notifications', 'payments'] })
+  }
+
+  const refreshPartial = () =>
+    queryClient.invalidateQueries({ queryKey: ['notifications', 'partial'] })
+
+  const val = useMemo(() => ({
+    notifications,
+    chatNotifs,
+    paymentNotifs,
+    newPayments,
+    partialNotifs,
+    totalUnread,
+    clearNewPayments,
+    refresh,
+    refreshPartial,
+    timeAgo,
+    fmtAmount,
+    fmtDollar,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [notifications, chatNotifs, paymentNotifs, newPayments, partialNotifs, totalUnread])
+
   return (
-    <NotificationContext.Provider value={{
-      notifications,
-      chatNotifs,
-      paymentNotifs,
-      newPayments,
-      partialNotifs,
-      totalUnread,
-      clearNewPayments,
-      refresh: fetchAll,
-      refreshPartial: fetchPartial,
-      timeAgo,
-      fmtAmount,
-      fmtDollar,
-    }}>
+    <NotificationContext.Provider value={val}>
       {children}
     </NotificationContext.Provider>
   )

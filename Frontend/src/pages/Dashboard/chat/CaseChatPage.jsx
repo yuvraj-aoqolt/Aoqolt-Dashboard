@@ -65,26 +65,16 @@ export default function CaseChatPage() {
 
   const [caseInfo, setCaseInfo]       = useState(null)
   const [clientMsgs, setClientMsgs]   = useState([])
-  const [adminMsgs, setAdminMsgs]     = useState([])
   const [loadingClient, setLoadingClient] = useState(true)
-  const [loadingAdmin, setLoadingAdmin]   = useState(true)
   const [sendingClient, setSendingClient] = useState(false)
-  const [sendingAdmin, setSendingAdmin]   = useState(false)
 
   const pollRef = useRef(null)
 
   // ── Fetch helpers ────────────────────────────────────────────────────────
   const fetchClientMsgs = useCallback(async () => {
     try {
-      const { data } = await chatAPI.getMessages({ caseId, conversationType: 'client' })
+      const { data } = await chatAPI.getMessages({ caseId, conversationType: 'CLIENT' })
       setClientMsgs(data.data || [])
-    } catch { /* silent poll */ }
-  }, [caseId])
-
-  const fetchAdminMsgs = useCallback(async () => {
-    try {
-      const { data } = await chatAPI.getMessages({ caseId, conversationType: 'admin' })
-      setAdminMsgs(data.data || [])
     } catch { /* silent poll */ }
   }, [caseId])
 
@@ -101,23 +91,16 @@ export default function CaseChatPage() {
   useEffect(() => {
     fetchCaseInfo()
 
-    Promise.all([
-      chatAPI.getMessages({ caseId, conversationType: 'client' }),
-      chatAPI.getMessages({ caseId, conversationType: 'admin' }),
-    ]).then(([clientRes, adminRes]) => {
-      setClientMsgs(clientRes.data.data || [])
-      setAdminMsgs(adminRes.data.data || [])
-    }).catch(() => {})
-      .finally(() => { setLoadingClient(false); setLoadingAdmin(false) })
+    chatAPI.getMessages({ caseId, conversationType: 'CLIENT' })
+      .then(res => setClientMsgs(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingClient(false))
 
     // Mark as read
-    chatAPI.markConversationRead({ caseId, conversationType: 'client' }).catch(() => {})
+    chatAPI.markConversationRead({ caseId, conversationType: 'CLIENT' }).catch(() => {})
 
     // Poll every 4s
-    pollRef.current = setInterval(() => {
-      fetchClientMsgs()
-      fetchAdminMsgs()
-    }, 4000)
+    pollRef.current = setInterval(() => { fetchClientMsgs() }, 4000)
 
     return () => clearInterval(pollRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,7 +110,7 @@ export default function CaseChatPage() {
   const sendClientText = async (text) => {
     setSendingClient(true)
     try {
-      await chatAPI.sendMessage({ case: caseId, conversation_type: 'client', message_type: 'text', message: text })
+      await chatAPI.sendMessage({ case: caseId, conversation_type: 'CLIENT', message_type: 'text', message: text })
       await fetchClientMsgs()
     } catch { toast.error('Failed to send') }
     finally { setSendingClient(false) }
@@ -137,7 +120,7 @@ export default function CaseChatPage() {
     setSendingClient(true)
     const fd = new FormData()
     fd.append('case', caseId)
-    fd.append('conversation_type', 'client')
+    fd.append('conversation_type', 'CLIENT')
     fd.append('message_type', file.type.startsWith('video/') ? 'video' : 'image')
     fd.append('file_url', file)
     try {
@@ -152,7 +135,7 @@ export default function CaseChatPage() {
     const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
     const fd = new FormData()
     fd.append('case', caseId)
-    fd.append('conversation_type', 'client')
+    fd.append('conversation_type', 'CLIENT')
     fd.append('message_type', 'voice')
     fd.append('file_url', file)
     try {
@@ -163,16 +146,16 @@ export default function CaseChatPage() {
   }
 
   const sendAdminText = async (text) => {
-    setSendingAdmin(true)
+    setSendingClient(true)
     try {
-      await chatAPI.sendMessage({ case: caseId, conversation_type: 'admin', message_type: 'text', message: text })
-      await fetchAdminMsgs()
+      await chatAPI.sendMessage({ case: caseId, conversation_type: 'CLIENT', message_type: 'text', message: text })
+      await fetchClientMsgs()
     } catch { toast.error('Failed to send') }
-    finally { setSendingAdmin(false) }
+    finally { setSendingClient(false) }
   }
 
   const sendAdminFile = async (file) => {
-    setSendingAdmin(true)
+    setSendingClient(true)
     const fd = new FormData()
     fd.append('case', caseId)
     fd.append('conversation_type', 'admin')
@@ -180,13 +163,13 @@ export default function CaseChatPage() {
     fd.append('file_url', file)
     try {
       await chatAPI.sendFile(fd)
-      await fetchAdminMsgs()
+      await fetchClientMsgs()
     } catch { toast.error('Failed to send file') }
-    finally { setSendingAdmin(false) }
+    finally { setSendingClient(false) }
   }
 
   const sendAdminVoice = async (blob) => {
-    setSendingAdmin(true)
+    setSendingClient(true)
     const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
     const fd = new FormData()
     fd.append('case', caseId)
@@ -195,16 +178,15 @@ export default function CaseChatPage() {
     fd.append('file_url', file)
     try {
       await chatAPI.sendFile(fd)
-      await fetchAdminMsgs()
+      await fetchClientMsgs()
     } catch { toast.error('Failed to send voice note') }
-    finally { setSendingAdmin(false) }
+    finally { setSendingClient(false) }
   }
 
   const handleEdit = async (id, newText) => {
     try {
       const { data } = await chatAPI.editMessage(id, newText)
       setClientMsgs(prev => prev.map(m => m.id === id ? { ...m, ...data.data } : m))
-      setAdminMsgs(prev  => prev.map(m => m.id === id ? { ...m, ...data.data } : m))
     } catch (err) { toast.error(err.response?.data?.error || 'Failed to edit') }
   }
 
@@ -212,7 +194,6 @@ export default function CaseChatPage() {
     try {
       await chatAPI.deleteMessage(id)
       setClientMsgs(prev => prev.filter(m => m.id !== id))
-      setAdminMsgs(prev  => prev.filter(m => m.id !== id))
     } catch (err) { toast.error(err.response?.data?.error || 'Failed to delete') }
   }
 
@@ -243,54 +224,26 @@ export default function CaseChatPage() {
         </div>
       </div>
 
-      {/* Dual-panel titles */}
-      <div className="grid grid-cols-2 gap-0 mb-0">
-        <p className="text-white font-bold text-lg px-1 pb-2">Client Chat</p>
-        <p className="text-white font-bold text-lg px-1 pb-2">Baba Chat</p>
-      </div>
-
-      {/* Split-screen chat */}
+      {/* Single chat panel */}
       <div
-        className="grid grid-cols-2 rounded-2xl overflow-hidden border border-white/[0.06]"
-        style={{ height: 'calc(100vh - 230px)', minHeight: 500, background: '#161616' }}
+        className="rounded-2xl overflow-hidden border border-white/[0.06]"
+        style={{ height: 'calc(100vh - 210px)', minHeight: 500, background: '#161616' }}
       >
-        {/* LEFT — Client Chat */}
-        <div className="flex flex-col min-h-0 min-w-0 border-r border-white/[0.06]">
-          <ThreadPanel
-            title={user?.full_name || 'You'}
-            avatarInitials={(user?.full_name?.[0] || 'U').toUpperCase()}
-            avatarGradient="linear-gradient(135deg,#4b5563,#374151)"
-            messages={clientMsgs}
-            loading={loadingClient}
-            sending={sendingClient}
-            onSend={sendClientText}
-            onSendFile={sendClientFile}
-            onSendVoice={sendClientVoice}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            userId={user?.id}
-            placeholder="Enter your message"
-          />
-        </div>
-
-        {/* RIGHT — Baba Chat */}
-        <div className="flex flex-col min-h-0 min-w-0">
-          <ThreadPanel
-            title={caseInfo?.admin_name || 'Baba Ramesh'}
-            avatarInitials={caseInfo?.admin_name?.[0] || 'B'}
-            avatarGradient="linear-gradient(135deg,#6b4226,#4a2c14)"
-            messages={adminMsgs}
-            loading={loadingAdmin}
-            sending={sendingAdmin}
-            onSend={sendAdminText}
-            onSendFile={sendAdminFile}
-            onSendVoice={sendAdminVoice}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            userId={user?.id}
-            placeholder="Enter your message"
-          />
-        </div>
+        <ThreadPanel
+          title="Aoqolt Team"
+          avatarInitials="AOQ"
+          avatarGradient="linear-gradient(135deg,#991b1b,#7f1d1d)"
+          messages={clientMsgs}
+          loading={loadingClient}
+          sending={sendingClient}
+          onSend={sendClientText}
+          onSendFile={sendClientFile}
+          onSendVoice={sendClientVoice}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          userId={user?.id}
+          placeholder="Enter your message"
+        />
       </div>
     </DashboardLayout>
   )

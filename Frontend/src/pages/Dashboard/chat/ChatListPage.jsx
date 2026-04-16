@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FiMessageSquare, FiSearch, FiFolder, FiCalendar, FiChevronRight } from 'react-icons/fi'
-import { chatAPI, bookingsAPI } from '../../../api'
+import { FiMessageSquare, FiSearch, FiFolder, FiChevronRight } from 'react-icons/fi'
+import { chatAPI } from '../../../api'
 import DashboardLayout from '../DashboardLayout'
 import toast from 'react-hot-toast'
 
@@ -84,9 +84,7 @@ function ChatRow({ badge, badgeColor, title, subtitle, meta, lastMsg, timestamp,
 export default function ChatListPage() {
   const navigate = useNavigate()
   const [cases, setCases]       = useState([])
-  const [bookings, setBookings] = useState([])
-  const [loadingCases, setLoadingCases]       = useState(true)
-  const [loadingBookings, setLoadingBookings] = useState(true)
+  const [loadingCases, setLoadingCases] = useState(true)
   const [search, setSearch]     = useState('')
 
   const fetchCases = useCallback(async () => {
@@ -101,22 +99,9 @@ export default function ChatListPage() {
     }
   }, [])
 
-  const fetchBookings = useCallback(async () => {
-    setLoadingBookings(true)
-    try {
-      const { data } = await bookingsAPI.myBookings()
-      setBookings(data.data || data.results || (Array.isArray(data) ? data : []))
-    } catch {
-      // Bookings list is optional context — don't block UI
-    } finally {
-      setLoadingBookings(false)
-    }
-  }, [])
-
   useEffect(() => {
     fetchCases()
-    fetchBookings()
-  }, [fetchCases, fetchBookings])
+  }, [fetchCases])
 
   const q = search.toLowerCase()
 
@@ -126,20 +111,14 @@ export default function ChatListPage() {
     c.service_name?.toLowerCase().includes(q)
   )
 
-  const filteredBookings = bookings.filter(b =>
-    !q ||
-    b.booking_id?.toLowerCase().includes(q) ||
-    (b.service_name || b.service?.name || '').toLowerCase().includes(q)
-  )
-
-  const loading = loadingCases && loadingBookings
+  const loading = loadingCases
 
   return (
     <DashboardLayout>
       {/* Page header */}
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-white">Messages</h1>
-        <p className="text-white/35 text-sm mt-0.5">Chat with the Aoqolt team about your cases and bookings</p>
+        <p className="text-white/35 text-sm mt-0.5">Chat with the Aoqolt team about your cases</p>
       </div>
 
       {/* Search bar */}
@@ -148,7 +127,7 @@ export default function ChatListPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search cases or bookings…"
+          placeholder="Search cases…"
           className="w-full bg-white/5 border border-white/8 text-white text-sm pl-9 pr-4 py-2.5 rounded-xl focus:outline-none focus:border-red-900/40 placeholder-white/20"
         />
       </div>
@@ -159,7 +138,7 @@ export default function ChatListPage() {
           <div className="flex justify-center py-16">
             <div className="w-6 h-6 border-2 border-white/10 border-t-red-500 rounded-full animate-spin" />
           </div>
-        ) : filteredCases.length === 0 && filteredBookings.length === 0 ? (
+        ) : filteredCases.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-white/20">
             <FiMessageSquare size={40} className="mb-3 text-white/10" />
             <p className="text-sm">No conversations found</p>
@@ -192,33 +171,6 @@ export default function ChatListPage() {
               </>
             )}
 
-            {/* ── Bookings section ── */}
-            {!loadingBookings && (
-              <>
-                <SectionHeader icon={FiCalendar} label="Bookings" count={filteredBookings.length} />
-                {filteredBookings.length === 0 ? (
-                  <div className="px-4 py-6 text-white/20 text-sm text-center">No bookings found</div>
-                ) : (
-                  filteredBookings.map(b => {
-                    const svcName = b.service_name || b.service?.name || 'Service'
-                    return (
-                      <ChatRow
-                        key={`booking-${b.id}`}
-                        badge="Booking"
-                        badgeColor="bg-purple-900/40 text-purple-400"
-                        title={b.booking_id || `#${b.id}`}
-                        subtitle={svcName}
-                        meta={b.status}
-                        lastMsg={b.last_message || null}
-                        timestamp={b.last_message_at ? timeAgo(b.last_message_at) : timeAgo(b.created_at)}
-                        unread={0}
-                        onClick={() => navigate(`/dashboard/chat/booking/${b.id}`)}
-                      />
-                    )
-                  })
-                )}
-              </>
-            )}
           </>
         )}
       </div>

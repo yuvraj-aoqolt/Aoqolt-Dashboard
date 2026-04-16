@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 from apps.accounts.models import User
 from apps.cases.models import Case
+from apps.bookings.models import Booking
 import uuid
 import secrets
 
@@ -34,7 +35,8 @@ class SalesQuote(models.Model):
     access_token = models.CharField(max_length=64, unique=True, blank=True)
 
     # Relations
-    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name='quotes')
+    case    = models.ForeignKey(Case,    on_delete=models.CASCADE, null=True, blank=True, related_name='quotes')
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, null=True, blank=True, related_name='quotes')
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='quotes')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='quotes_created')
 

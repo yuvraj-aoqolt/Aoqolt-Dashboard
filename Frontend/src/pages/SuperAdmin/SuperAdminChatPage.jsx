@@ -6,7 +6,7 @@ import {
   FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX, FiCheckCircle,
   FiUser, FiChevronRight, FiBriefcase, FiCalendar,
 } from 'react-icons/fi'
-import { chatAPI, casesAPI } from '../../api'
+import { chatAPI, casesAPI, bookingsAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { compressImage, validateVideo } from '../../utils/chatMediaUtils'
@@ -160,24 +160,20 @@ function CaseAccordion({ conv, selectedCaseId, onSelectCase }) {
 }
 
 // ─ BookingAccordion ───────────────────────────────────────────────────────
-function BookingAccordion({ conv, selected, onSelectThread, expandedSet, toggleExpand }) {
-  const { booking_id, booking_ref, booking_status, service_name, client_name, admin_name, admin_thread = {}, last_activity } = conv
-  const isOpen  = expandedSet.has(booking_id)
-  const isSel   = selected?.key === `BOOK:${booking_id}`
-  const unread  = admin_thread.unread_count || 0
-  const meta    = getBook(booking_status)
+function BookingAccordion({ conv, selected, onSelectThread }) {
+  const { booking_id, booking_ref, booking_status, work_completed, service_name, client_name, admin_name, admin_thread = {}, last_activity } = conv
+  const isSel  = selected?.key === `BOOK:${booking_id}`
+  const unread = admin_thread.unread_count || 0
+  const meta   = getBook(booking_status)
 
   return (
     <div className={`border-b border-white/[0.04] ${isSel ? 'bg-violet-950/15' : ''}`}>
       <button
-        onClick={() => toggleExpand(booking_id)}
+        onClick={() => onSelectThread({ ...conv, key: `BOOK:${booking_id}`, source_type: 'BOOKING', conversation_type: 'ADMIN' })}
         className={`w-full text-left px-3 pt-2.5 pb-2 flex items-start gap-2 transition-colors hover:bg-white/[0.04] ${
           isSel ? 'border-l-2 border-l-violet-500' : 'border-l-2 border-l-transparent'
         }`}
       >
-        <span className="mt-0.5 flex-shrink-0 text-white/30 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0)' }}>
-          <FiChevronRight size={12} />
-        </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1 mb-1">
             <div className="flex items-center gap-1.5 flex-wrap min-w-0">
@@ -185,7 +181,10 @@ function BookingAccordion({ conv, selected, onSelectThread, expandedSet, toggleE
               <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
                 isSel ? 'bg-violet-600/30 text-violet-200' : 'bg-white/8 text-white/50'
               }`}>{booking_ref}</span>
-              <StatusBadge meta={meta} size="xs" />
+              {work_completed
+                ? <span className="inline-flex items-center gap-1 border rounded-full text-[10px] px-1.5 py-0.5 font-medium bg-green-900/20 text-green-400 border-green-900/30"><span className="w-1.5 h-1.5 rounded-full bg-green-400" />Work Done</span>
+                : <StatusBadge meta={meta} size="xs" />
+              }
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
               {unread > 0 && (
@@ -213,32 +212,11 @@ function BookingAccordion({ conv, selected, onSelectThread, expandedSet, toggleE
               <FiUser size={10} /> {client_name}
             </span>
           )}
+          {admin_thread.last_message && (
+            <p className="text-[11px] text-white/25 truncate mt-0.5">{admin_thread.last_message}</p>
+          )}
         </div>
       </button>
-
-      <div className="overflow-hidden transition-all duration-200" style={{ maxHeight: isOpen ? 100 : 0 }}>
-        <div className="pb-1.5">
-          <button
-            onClick={() => onSelectThread({ ...conv, key: `BOOK:${booking_id}`, source_type: 'BOOKING', conversation_type: 'ADMIN' })}
-            className={`w-full flex items-center gap-2.5 pl-9 pr-3 py-2 transition-colors ${
-              isSel ? 'bg-violet-900/20 text-white' : 'text-white/45 hover:bg-white/[0.04] hover:text-white/75'
-            }`}
-          >
-            <FiBriefcase size={12} className={isSel ? 'text-violet-400 flex-shrink-0' : 'text-white/25 flex-shrink-0'} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">Chat with Admin{admin_name ? ` · ${admin_name}` : ''}</p>
-              {admin_thread.last_message && (
-                <p className="text-[11px] text-white/25 truncate">{admin_thread.last_message}</p>
-              )}
-            </div>
-            {unread > 0 && (
-              <span className="min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold flex-shrink-0">
-                {unread > 9 ? '9+' : unread}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -566,7 +544,9 @@ function DualCaseChatPanel({ conv, onMarkComplete }) {
       {/* Two chat panels side by side */}
       <div className="flex-1 flex divide-x divide-white/[0.06] min-w-0 overflow-hidden">
         <CaseChatPanel caseId={conv.case_id} conversationType="CLIENT" conv={conv} />
-        <CaseChatPanel caseId={conv.case_id} conversationType="ADMIN" conv={conv} />
+        {!conv.client_is_guest && (
+          <CaseChatPanel caseId={conv.case_id} conversationType="ADMIN" conv={conv} />
+        )}
       </div>
     </div>
   )
@@ -608,6 +588,7 @@ export default function SuperAdminChatPage() {
   const [editText, setEditText]     = useState('')
   const [completing, setCompleting] = useState(false)
   const [confirmComplete, setConfirmComplete] = useState(false)
+  const [confirmCompleteBooking, setConfirmCompleteBooking] = useState(false)
   const [confirmDelThread, setConfirmDelThread] = useState(false)
   const [deletingThread, setDeletingThread]     = useState(false)
 
@@ -704,6 +685,7 @@ export default function SuperAdminChatPage() {
     setText('')
     setEditingId(null)
     setConfirmComplete(false)
+    setConfirmCompleteBooking(false)
     setConfirmDelThread(false)
   }, [])
 
@@ -846,6 +828,20 @@ export default function SuperAdminChatPage() {
     finally { setCompleting(false) }
   }
 
+  const handleMarkBookingComplete = async () => {
+    if (!selected?.booking_id || completing) return
+    setCompleting(true); setConfirmCompleteBooking(false)
+    try {
+      await bookingsAPI.completeWork(selected.booking_id)
+      setSelected(s => ({ ...s, work_completed: true }))
+      setConversations(prev => prev.map(c =>
+        c.booking_id === selected.booking_id ? { ...c, work_completed: true } : c
+      ))
+      toast.success('Booking marked as completed')
+    } catch (err) { toast.error(err.response?.data?.error || 'Failed') }
+    finally { setCompleting(false) }
+  }
+
   const handleEditSave = async (id) => {
     if (!editText.trim()) return
     try {
@@ -961,7 +957,7 @@ export default function SuperAdminChatPage() {
                     selectedCaseId={selectedCase?.case_id} onSelectCase={handleSelectCase} />
                 ) : (
                   <BookingAccordion key={conv.booking_id} conv={conv} selected={selected}
-                    onSelectThread={handleSelectThread} expandedSet={expandedSet} toggleExpand={toggleExpand} />
+                    onSelectThread={handleSelectThread} />
                 )
               )
             )}
@@ -987,6 +983,17 @@ export default function SuperAdminChatPage() {
                   <button onClick={() => setConfirmComplete(false)} className="text-white/30 hover:text-white/60 p-1 rounded-lg"><FiX size={14} /></button>
                 </div>
               )}
+              {confirmCompleteBooking && selected.booking_id && (
+                <div className="flex items-center gap-3 bg-green-900/15 border-b border-green-900/25 px-5 py-2.5">
+                  <FiCheckCircle size={14} className="text-green-400 flex-shrink-0" />
+                  <p className="text-green-300 text-sm flex-1">Mark <strong>{headerRef}</strong> as Completed?</p>
+                  <button onClick={handleMarkBookingComplete} disabled={completing}
+                    className="bg-green-700/50 hover:bg-green-700/70 text-green-200 text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50">
+                    {completing ? 'Saving…' : 'Confirm'}
+                  </button>
+                  <button onClick={() => setConfirmCompleteBooking(false)} className="text-white/30 hover:text-white/60 p-1 rounded-lg"><FiX size={14} /></button>
+                </div>
+              )}
               <div className="px-5 py-3.5 flex items-start gap-4">
                 <div className="flex-1 min-w-0 space-y-1">
                   {/* Line 1: ref + type badge + status */}
@@ -997,6 +1004,11 @@ export default function SuperAdminChatPage() {
                     }`}>{headerRef}</span>
                     {selected.case_status && <StatusBadge meta={getCase(selected.case_status)} />}
                     {selected.booking_status && <StatusBadge meta={getBook(selected.booking_status)} />}
+                    {isBookingThread && selected.work_completed && (
+                      <span className="inline-flex items-center gap-1 border rounded-full font-medium text-xs px-2 py-0.5 bg-green-900/20 text-green-400 border-green-900/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> Work Done
+                      </span>
+                    )}
                     {selected.service_name && (
                       <><span className="text-white/20 text-xs">·</span>
                       <span className="text-white/45 text-xs truncate">{selected.service_name}</span></>
@@ -1015,6 +1027,12 @@ export default function SuperAdminChatPage() {
                 </div>
                 {selected.case_id && selected.case_status !== 'completed' && selected.case_status !== 'cancelled' && (
                   <button onClick={() => setConfirmComplete(true)}
+                    className="flex items-center gap-1.5 text-xs bg-green-900/20 hover:bg-green-900/35 text-green-400 border border-green-900/30 px-3 py-1.5 rounded-full transition-colors flex-shrink-0">
+                    <FiCheckCircle size={12} /> Complete
+                  </button>
+                )}
+                {isBookingThread && !selected.work_completed && (
+                  <button onClick={() => setConfirmCompleteBooking(true)}
                     className="flex items-center gap-1.5 text-xs bg-green-900/20 hover:bg-green-900/35 text-green-400 border border-green-900/30 px-3 py-1.5 rounded-full transition-colors flex-shrink-0">
                     <FiCheckCircle size={12} /> Complete
                   </button>

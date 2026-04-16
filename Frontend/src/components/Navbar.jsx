@@ -56,11 +56,10 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`nav-entrance fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
+      className={`nav-entrance fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
           ? 'bg-[var(--color-bg-navbar)] backdrop-blur-xl border-b border-red-900/20 shadow-lg shadow-red-950/20'
           : 'bg-transparent'
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -68,7 +67,8 @@ export default function Navbar() {
           <Link to="/" className="flex items-center gap-2 group">
             <img
               src="/Aoqolt logo 1-01-02.png"
-              alt="Aoqolt"
+              alt=""
+              aria-hidden="true"
               className="h-9 w-9 object-contain flex-shrink-0"
             />
             <span className="text-white font-display font-bold text-xl tracking-wider">
@@ -82,15 +82,13 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`text-sm font-medium transition-colors relative group ${
-                  location.pathname === link.to ? 'text-red-400' : 'text-white/70 hover:text-white'
-                }`}
+                className={`text-sm font-medium transition-colors relative group ${location.pathname === link.to ? 'text-red-400' : 'text-white/70 hover:text-white'
+                  }`}
               >
                 {link.label}
                 <span
-                  className={`absolute -bottom-1 left-0 h-0.5 bg-red-500 transition-all duration-300 ${
-                    location.pathname === link.to ? 'w-full' : 'w-0 group-hover:w-full'
-                  }`}
+                  className={`absolute -bottom-1 left-0 h-0.5 bg-red-500 transition-all duration-300 ${location.pathname === link.to ? 'w-full' : 'w-0 group-hover:w-full'
+                    }`}
                 />
               </Link>
             ))}
@@ -194,20 +192,18 @@ export default function Navbar() {
 
       {/* Mobile Menu — CSS max-height transition instead of framer-motion */}
       <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          open ? 'max-h-[500px]' : 'max-h-0'
-        }`}
+        className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-[500px]' : 'max-h-0'
+          }`}
       >
         <div className="bg-[var(--color-bg-navbar-mobile)] backdrop-blur-xl border-t border-red-900/20 px-4 py-4 space-y-2">
           {navLinks.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                location.pathname === link.to
+              className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === link.to
                   ? 'bg-red-900/30 text-red-400 border border-red-900/40'
                   : 'text-white/70 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               {link.label}
             </Link>

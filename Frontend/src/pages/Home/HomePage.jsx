@@ -25,16 +25,6 @@ function getBlogPreviewCache() {
   } catch { return null }
 }
 
-// Particles defined once at module level — positions never change between renders
-const PARTICLES = Array.from({ length: 25 }, (_, i) => ({
-  id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  size: Math.random() * 2.5 + 1,
-  delay: `${(i / 25) * 8}s`,
-  duration: `${Math.random() * 8 + 8}s`,
-  color: i % 3 === 0 ? '#dc2626' : i % 3 === 1 ? '#ef4444' : '#f87171',
-}))
 
 const SERVICES_PREVIEW = [
   {
@@ -73,9 +63,9 @@ const TESTIMONIALS = [
 
 const STATS = [
   { value: '5000', display: '5,000+', label: 'Readings Completed', suffix: '+' },
-  { value: '98',   display: '98%',    label: 'Satisfaction Rate',  suffix: '%' },
-  { value: '50',   display: '50+',    label: 'Countries Served',   suffix: '+' },
-  { value: '10',   display: '10+',    label: 'Years Experience',   suffix: '+' },
+  { value: '98', display: '98%', label: 'Satisfaction Rate', suffix: '%' },
+  { value: '50', display: '50+', label: 'Countries Served', suffix: '+' },
+  { value: '10', display: '10+', label: 'Years Experience', suffix: '+' },
 ]
 
 const FEATURES = [
@@ -103,8 +93,8 @@ const FEATURES = [
 
 const HOW_IT_WORKS = [
   { step: '01', title: 'Choose Service', desc: 'Browse our spiritual services and select the one that resonates with your needs.' },
-  { step: '02', title: 'Book & Pay',    desc: 'Complete your booking form and securely process your payment.' },
-  { step: '03', title: 'Analysis',      desc: 'Our expert practitioners analyze your energy field with precision.' },
+  { step: '02', title: 'Book & Pay', desc: 'Complete your booking form and securely process your payment.' },
+  { step: '03', title: 'Analysis', desc: 'Our expert practitioners analyze your energy field with precision.' },
   { step: '04', title: 'Receive Insights', desc: 'Get your detailed report and chat directly with your assigned practitioner.' },
 ]
 
@@ -193,7 +183,7 @@ export default function HomePage() {
     return () => clearInterval(id)
   }, [])
   const prevT = () => { setTDir(-1); setTIdx((p) => (p - 1 + TESTIMONIALS.length) % TESTIMONIALS.length) }
-  const nextT = () => { setTDir(1);  setTIdx((p) => (p + 1) % TESTIMONIALS.length) }
+  const nextT = () => { setTDir(1); setTIdx((p) => (p + 1) % TESTIMONIALS.length) }
 
   /* ── how-it-works active step ── */
   const [activeStep, setActiveStep] = useState(null)
@@ -207,9 +197,9 @@ export default function HomePage() {
         setLatestBlogs(blogs)
         try {
           sessionStorage.setItem(BLOG_PREVIEW_KEY, JSON.stringify({ data: blogs, ts: Date.now() }))
-        } catch {}
+        } catch { }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   const handleServiceClick = async (serviceType) => {
@@ -234,10 +224,7 @@ export default function HomePage() {
 
         {/* Background layers — all CSS-animated, zero JS cost */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Pulsing orbs */}
-          <div className="hero-orb-1 absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-red-900/20 rounded-full blur-3xl" />
-          <div className="hero-orb-2 absolute bottom-1/4 right-1/4 w-96 h-96 bg-red-700/15 rounded-full blur-3xl" />
-          <div className="hero-orb-3 absolute top-1/2 left-1/2 w-[700px] h-[700px] bg-red-950/20 rounded-full blur-3xl" />
+
 
           {/* Grid */}
           <div
@@ -251,22 +238,7 @@ export default function HomePage() {
             }}
           />
 
-          {/* Particles — CSS animated, no Framer Motion instances */}
-          {PARTICLES.map((p) => (
-            <div
-              key={p.id}
-              className="hero-particle absolute rounded-full"
-              style={{
-                left: `${p.x}%`,
-                top: `${p.y}%`,
-                width: p.size,
-                height: p.size,
-                background: p.color,
-                animationDuration: p.duration,
-                animationDelay: p.delay,
-              }}
-            />
-          ))}
+
         </div>
 
         {/* Hero content — split layout */}
@@ -281,15 +253,15 @@ export default function HomePage() {
             </span>
 
             {/* Headline */}
-            <div className="overflow-hidden mb-8">
+            <div className="mb-8">
               <h1 className="font-display leading-none">
-                <span className="block text-[clamp(3.2rem,7.5vw,7rem)] font-black text-white tracking-tight">
+                <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black text-white tracking-tight">
                   Discover
                 </span>
-                <span className="block text-[clamp(3.2rem,7.5vw,7rem)] font-black text-white/15 tracking-tight -mt-2">
+                <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black text-white/15 tracking-tight -mt-2">
                   Your
                 </span>
-                <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black gradient-text tracking-tight -mt-1">
+                <span className="block text-[clamp(2.2rem,5vw,4.5rem)] font-black gradient-text tracking-tight -mt-1 pb-4">
                   Energy Field
                 </span>
               </h1>
@@ -320,28 +292,19 @@ export default function HomePage() {
                 </motion.button>
               </Link>
 
-              <Link to="/register">
-                {/* <motion.button
-                  whileHover={{ scale: 1.05, borderColor: 'rgba(239,68,68,0.5)' }}
-                  whileTap={{ scale: 0.96 }}
-                  className="flex items-center gap-2 bg-white/5 border border-white/15 text-white/80 hover:text-white font-semibold text-base px-9 py-4 rounded-xl transition-colors duration-300"
-                >
-                  <FiZap size={16} className="text-red-400" />
-                  Start Free
-                </motion.button> */}
-              </Link>
+
             </div>
           </div>
 
           {/* ── Right: Aoqolt Logo ── */}
           <div className="flex-shrink-0 flex items-center justify-center">
             <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-[440px] lg:h-[440px] flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full bg-red-900/15 blur-3xl pointer-events-none" />
+
               <img
                 src="/Aoqolt logo 1-01-02.png"
                 alt="Aoqolt"
                 fetchPriority="high"
-                className="relative z-10 w-52 h-52 sm:w-64 sm:h-64 lg:w-[360px] lg:h-[360px] object-contain drop-shadow-[0_0_80px_rgba(220,38,38,0.5)]"
+                className="relative z-10 w-52 h-52 sm:w-64 sm:h-64 lg:w-[360px] lg:h-[360px] object-contain"
               />
             </div>
           </div>
@@ -446,18 +409,16 @@ export default function HomePage() {
 
                 <div
                   style={{ transform: activeStep === i ? 'translateY(-6px)' : 'translateY(0)', transition: 'transform 0.2s ease' }}
-                  className={`relative z-10 rounded-2xl p-6 border transition-colors duration-300 ${
-                    activeStep === i
-                      ? 'bg-red-950/40 border-red-800/50'
-                      : 'glass border-transparent'
-                  }`}
+                  className={`relative z-10 rounded-2xl p-6 border transition-colors duration-300 ${activeStep === i
+                    ? 'bg-red-950/40 border-red-800/50'
+                    : 'glass border-transparent'
+                    }`}
                 >
                   {/* Step circle */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-5 transition-all duration-300 ${
-                    activeStep === i
-                      ? 'bg-red-600 text-white shadow-lg shadow-red-900/50'
-                      : 'bg-red-950/40 border border-red-900/40 text-red-500'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-5 transition-all duration-300 ${activeStep === i
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-900/50'
+                    : 'bg-red-950/40 border border-red-900/40 text-red-500'
+                    }`}>
                     {item.step}
                   </div>
                   <h3 className={`font-semibold mb-2 transition-colors duration-300 ${activeStep === i ? 'text-white' : 'text-white/80'}`}>
@@ -543,12 +504,14 @@ export default function HomePage() {
             {/* Prev / Next */}
             <button
               onClick={prevT}
+              aria-label="Previous Testimonial"
               className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 sm:-translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white/60 hover:text-white hover:bg-red-900/60 transition-all"
             >
               <FiChevronLeft size={18} />
             </button>
             <button
               onClick={nextT}
+              aria-label="Next Testimonial"
               className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 sm:translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white/60 hover:text-white hover:bg-red-900/60 transition-all"
             >
               <FiChevronRight size={18} />
@@ -560,6 +523,7 @@ export default function HomePage() {
             {TESTIMONIALS.map((_, i) => (
               <button
                 key={i}
+                aria-label={`Go to testimonial ${i + 1}`}
                 onClick={() => { setTDir(i > tIdx ? 1 : -1); setTIdx(i) }}
                 className={`rounded-full transition-all duration-300 ${i === tIdx ? 'w-6 h-2 bg-red-500' : 'w-2 h-2 bg-white/20 hover:bg-white/40'}`}
               />
@@ -584,7 +548,7 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {latestBlogs.map((blog, i) => (
-              <Reveal key={blog.id} delay={i * 0.1}>
+                <Reveal key={blog.id} delay={i * 0.1}>
                   <Link
                     to={`/blogs/${blog.slug}`}
                     className="group flex flex-col h-full rounded-2xl overflow-hidden border border-white/5 bg-white/[0.03] hover:border-red-900/40 hover:bg-white/5 transition-all duration-300"
@@ -625,7 +589,7 @@ export default function HomePage() {
                       </span>
                     </div>
                   </Link>
-              </Reveal>
+                </Reveal>
               ))}
             </div>
 
@@ -651,10 +615,6 @@ export default function HomePage() {
             <div className="ring-3 absolute inset-0 rounded-3xl border border-red-700/20 pointer-events-none" />
 
             <div className="relative z-10">
-              <div className="crystal-spin inline-block text-red-500/50 mb-6">
-                <GiCrystalBall size={52} />
-              </div>
-
               <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mb-4">
                 Begin Your Journey Today
               </h2>

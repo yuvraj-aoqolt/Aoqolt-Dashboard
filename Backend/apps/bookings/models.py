@@ -64,10 +64,19 @@ class Booking(models.Model):
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     
+    # Work tracking — set to True when admin clicks "Start Work"
+    work_started = models.BooleanField(default=False)
+    work_started_at = models.DateTimeField(null=True, blank=True)
+
+    # Completion tracking — set to True when SuperAdmin marks booking as completed
+    work_completed = models.BooleanField(default=False)
+    work_completed_at = models.DateTimeField(null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    chat_locked = models.BooleanField(default=False)
     
     class Meta:
         db_table = 'bookings'

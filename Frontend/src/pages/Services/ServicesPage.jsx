@@ -65,9 +65,6 @@ export default function ServicesPage() {
           transition={{ duration: 0.7 }}
           className="text-center"
         >
-          {/* Glow orb */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-32 w-[500px] h-[300px] bg-red-900/10 rounded-full blur-3xl pointer-events-none" />
-
           <span className="relative inline-flex items-center gap-2 text-xs text-red-400 uppercase tracking-widest font-medium bg-red-950/30 border border-red-900/40 rounded-full px-4 py-1.5 mb-6">
             ✦ Spiritual Services
           </span>

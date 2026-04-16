@@ -58,7 +58,8 @@ const formatRecTime = (s) =>
 export default function AdminChatPage() {
   const { user } = useAuth()
   const location = useLocation()
-  const pendingCaseId = location.state?.caseId ?? null
+  const pendingCaseId    = location.state?.caseId    ?? null
+  const pendingBookingId  = location.state?.bookingId ?? null
   const [conversations, setConversations] = useState([])
   const [selected, setSelected]           = useState(null)
   const [messages, setMessages]           = useState([])
@@ -99,10 +100,14 @@ export default function AdminChatPage() {
     }
   }, [])
 
-  const fetchMsgs = useCallback(async (caseId) => {
-    if (!caseId) return
+  const fetchMsgs = useCallback(async (conv) => {
+    if (!conv) return
     try {
-      const { data } = await chatAPI.getMessages({ caseId })
+      const isBooking = conv.item_type === 'BOOKING'
+      const params = isBooking
+        ? { bookingId: conv.booking_id, sourceType: 'BOOKING' }
+        : { caseId: conv.case_id }
+      const { data } = await chatAPI.getMessages(params)
       setMessages(data.data || [])
     } catch { /* silent */ }
   }, [])
@@ -111,28 +116,45 @@ export default function AdminChatPage() {
 
   // Auto-select conversation when navigated from Start Work
   useEffect(() => {
-    if (!pendingCaseId || conversations.length === 0 || selected) return
-    const conv = conversations.find(c => String(c.case_id) === String(pendingCaseId))
-    if (conv) setSelected(conv)
-  }, [conversations, pendingCaseId, selected])
+    if (conversations.length === 0 || selected) return
+    if (pendingBookingId) {
+      const conv = conversations.find(c => c.item_type === 'BOOKING' && String(c.booking_id) === String(pendingBookingId))
+      if (conv) setSelected(conv)
+    } else if (pendingCaseId) {
+      const conv = conversations.find(c => String(c.case_id) === String(pendingCaseId))
+      if (conv) setSelected(conv)
+    }
+  }, [conversations, pendingCaseId, pendingBookingId, selected])
 
   // ── conversation selection & polling ─────────────────────────────────────
+  const selectedKey = selected
+    ? (selected.item_type === 'BOOKING' ? `B-${selected.booking_id}` : `C-${selected.case_id}`)
+    : null
+
   useEffect(() => {
     if (!selected) return
+    const isBooking = selected.item_type === 'BOOKING'
     clearInterval(pollRef.current)
     setLoadingMsgs(true)
-    fetchMsgs(selected.case_id).finally(() => setLoadingMsgs(false))
-    chatAPI.markConversationRead({ caseId: selected.case_id }).catch(() => {})
+    fetchMsgs(selected).finally(() => setLoadingMsgs(false))
+    if (isBooking) {
+      chatAPI.markConversationRead({ bookingId: selected.booking_id, sourceType: 'BOOKING' }).catch(() => {})
+    } else {
+      chatAPI.markConversationRead({ caseId: selected.case_id }).catch(() => {})
+    }
     setConversations(prev =>
-      prev.map(c => c.case_id === selected.case_id ? { ...c, unread_count: 0 } : c)
+      prev.map(c => {
+        const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+        return key === selectedKey ? { ...c, unread_count: 0 } : c
+      })
     )
     pollRef.current = setInterval(() => {
-      fetchMsgs(selected.case_id)
+      fetchMsgs(selected)
       fetchConvs(true)
     }, 3000)
     return () => clearInterval(pollRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.case_id])
+  }, [selectedKey])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -141,18 +163,21 @@ export default function AdminChatPage() {
   // ── send ──────────────────────────────────────────────────────────────────
   const handleSend = async () => {
     if (!text.trim() || !selected || sending) return
+    const isBooking = selected.item_type === 'BOOKING'
     const body = text.trim()
     setText('')
     setSending(true)
     try {
-      await chatAPI.sendMessage({ case: selected.case_id, message_type: 'text', message: body })
-      await fetchMsgs(selected.case_id)
+      const payload = isBooking
+        ? { source_type: 'BOOKING', booking: selected.booking_id, message_type: 'text', message: body }
+        : { case: selected.case_id, message_type: 'text', message: body }
+      await chatAPI.sendMessage(payload)
+      await fetchMsgs(selected)
       setConversations(prev =>
-        prev.map(c =>
-          c.case_id === selected.case_id
-            ? { ...c, last_message: body, last_message_at: new Date().toISOString() }
-            : c
-        )
+        prev.map(c => {
+          const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+          return key === selectedKey ? { ...c, last_message: body, last_message_at: new Date().toISOString() } : c
+        })
       )
     } catch {
       toast.error('Failed to send message')
@@ -177,6 +202,7 @@ export default function AdminChatPage() {
     let file = e.target.files?.[0]
     if (!file || !selected) return
     e.target.value = ''
+    const isBooking = selected.item_type === 'BOOKING'
 
     const isImage = file.type.startsWith('image/')
     const isVideo = file.type.startsWith('video/')
@@ -192,19 +218,23 @@ export default function AdminChatPage() {
     }
 
     const fd = new FormData()
-    fd.append('case', selected.case_id)
+    if (isBooking) {
+      fd.append('source_type', 'BOOKING')
+      fd.append('booking', selected.booking_id)
+    } else {
+      fd.append('case', selected.case_id)
+    }
     fd.append('message_type', type)
     fd.append('file_url', file)
     setSending(true)
     try {
       await chatAPI.sendFile(fd)
-      await fetchMsgs(selected.case_id)
+      await fetchMsgs(selected)
       setConversations(prev =>
-        prev.map(c =>
-          c.case_id === selected.case_id
-            ? { ...c, last_message: `[${type}]`, last_message_at: new Date().toISOString() }
-            : c
-        )
+        prev.map(c => {
+          const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+          return key === selectedKey ? { ...c, last_message: `[${type}]`, last_message_at: new Date().toISOString() } : c
+        })
       )
     } catch {
       toast.error('Failed to send file')
@@ -222,22 +252,27 @@ export default function AdminChatPage() {
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
+        const isBooking = selected.item_type === 'BOOKING'
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
         const fd = new FormData()
-        fd.append('case', selected.case_id)
+        if (isBooking) {
+          fd.append('source_type', 'BOOKING')
+          fd.append('booking', selected.booking_id)
+        } else {
+          fd.append('case', selected.case_id)
+        }
         fd.append('message_type', 'voice')
         fd.append('file_url', file)
         setSending(true)
         try {
           await chatAPI.sendFile(fd)
-          await fetchMsgs(selected.case_id)
+          await fetchMsgs(selected)
           setConversations(prev =>
-            prev.map(c =>
-              c.case_id === selected.case_id
-                ? { ...c, last_message: '[Voice note]', last_message_at: new Date().toISOString() }
-                : c
-            )
+            prev.map(c => {
+              const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+              return key === selectedKey ? { ...c, last_message: '[Voice note]', last_message_at: new Date().toISOString() } : c
+            })
           )
         } catch {
           toast.error('Failed to send voice note')
@@ -284,14 +319,23 @@ export default function AdminChatPage() {
     }
   }
 
-  // Only show conversations for cases the admin has started working on
+  // Show booking threads + working/completed case threads
   const filtered = conversations.filter(c => {
+    if (c.item_type === 'BOOKING') {
+      const q = search.toLowerCase()
+      if (!q) return true
+      return (
+        (c.booking_ref || '').toLowerCase().includes(q) ||
+        (c.service_name || '').toLowerCase().includes(q) ||
+        (c.client_name  || '').toLowerCase().includes(q)
+      )
+    }
     const status = c.case_status || ''
     if (!['working', 'completed'].includes(status)) return false
     const q = search.toLowerCase()
     if (!q) return true
     return (
-      (c.case_number || '').toLowerCase().includes(q) ||
+      (c.case_number  || '').toLowerCase().includes(q) ||
       (c.service_name || '').toLowerCase().includes(q)
     )
   })
@@ -350,41 +394,56 @@ export default function AdminChatPage() {
                 <p className="text-xs mt-1 text-white/15">Chats appear here after you click "Start Work" on an assigned case</p>
               </div>
             ) : (
-              filtered.map(conv => (
-                <button
-                  key={conv.case_id}
-                  onClick={() => setSelected(conv)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.04] hover:bg-white/5 transition-colors ${
-                    selected?.case_id === conv.case_id ? 'bg-white/[0.07]' : ''
-                  }`}
-                >
-                  {/* Aoqolt avatar */}
-                  <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center select-none">
-                      <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
+              filtered.map(conv => {
+                const isBookingConv = conv.item_type === 'BOOKING'
+                const convKey = isBookingConv ? `B-${conv.booking_id}` : `C-${conv.case_id}`
+                const isActive = selectedKey === convKey
+                const refLabel = isBookingConv
+                  ? (conv.booking_ref || conv.booking_id)
+                  : (conv.case_number || conv.case_id)
+                return (
+                  <button
+                    key={convKey}
+                    onClick={() => setSelected(conv)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.04] hover:bg-white/5 transition-colors ${
+                      isActive ? 'bg-white/[0.07]' : ''
+                    }`}
+                  >
+                    {/* Aoqolt avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center select-none">
+                        <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
+                      </div>
+                      {conv.unread_count > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
+                          {conv.unread_count > 9 ? '9+' : conv.unread_count}
+                        </span>
+                      )}
                     </div>
-                    {conv.unread_count > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
-                        {conv.unread_count > 9 ? '9+' : conv.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-white text-sm font-medium truncate">Aoqolt</p>
-                      <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {isBookingConv && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0">
+                              BKG
+                            </span>
+                          )}
+                          <p className="text-white text-sm font-medium truncate">Aoqolt</p>
+                        </div>
+                        <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
+                      </div>
+                      <p className="text-white/30 text-xs truncate mt-0.5">
+                        {refLabel}
+                        {conv.service_name ? ` · ${conv.service_name}` : ''}
+                      </p>
+                      <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
+                        {conv.last_message || 'No messages yet'}
+                      </p>
                     </div>
-                    <p className="text-white/30 text-xs truncate mt-0.5">
-                      {conv.source === 'sales' ? conv.case_number : (conv.booking_id || conv.case_number)}
-                      {conv.service_name ? ` · ${conv.service_name}` : ''}
-                    </p>
-                    <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
-                      {conv.last_message || 'No messages yet'}
-                    </p>
-                  </div>
-                </button>
-              ))
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
@@ -401,13 +460,23 @@ export default function AdminChatPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-white font-semibold text-sm leading-tight">Aoqolt Team</p>
                 <p className="text-white/30 text-xs truncate">
-                  {selected.source === 'sales' ? selected.case_number : (selected.booking_id || selected.case_number)}
+                  {selected.item_type === 'BOOKING'
+                    ? (selected.booking_ref || selected.booking_id)
+                    : (selected.case_number || selected.case_id)}
                   {selected.service_name ? ` · ${selected.service_name}` : ''}
                 </p>
               </div>
-              <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
-                {selected.case_status}
-              </span>
+              {selected.item_type === 'BOOKING' ? (
+                selected.work_completed
+                  ? <span className="text-xs border px-2.5 py-1 rounded-full flex-shrink-0 bg-green-900/30 text-green-400 border-green-900/30">✓ Completed</span>
+                  : selected.work_started
+                  ? <span className="text-xs border px-2.5 py-1 rounded-full flex-shrink-0 bg-blue-900/30 text-blue-400 border-blue-900/30">● In Progress</span>
+                  : <span className="text-xs border px-2.5 py-1 rounded-full flex-shrink-0 bg-yellow-900/30 text-yellow-400 border-yellow-900/30">Pending</span>
+              ) : (
+                <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
+                  {selected.case_status}
+                </span>
+              )}
             </div>
 
             {/* Messages */}

@@ -2,16 +2,14 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { ServicesProvider } from './context/ServicesContext'
 import { NotificationProvider } from './context/NotificationContext'
 import RoleRoute from './routes/RoleRoute'
 
-// ── Lazy-loaded layout chrome (keeps initial bundle minimal) ─────────────────
-const Navbar = lazy(() => import('./components/Navbar'))
-const Footer = lazy(() => import('./components/Footer'))
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 
-// ── All pages lazy (each is its own JS chunk) ────────────────────────────────
-const HomePage           = lazy(() => import('./pages/Home/HomePage'))
+// ── All pages lazy (each is its own JS chunk) except immediate visible pages ─────────────
+import HomePage from './pages/Home/HomePage'
 const ServicesPage       = lazy(() => import('./pages/Services/ServicesPage'))
 const ServiceDetailPage  = lazy(() => import('./pages/Services/ServiceDetailPage'))
 const BookingPage        = lazy(() => import('./pages/Booking/BookingPage'))
@@ -82,7 +80,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ServicesProvider>
           <Toaster
             position="top-right"
             toastOptions={{
@@ -99,7 +96,7 @@ export default function App() {
           <Routes>
             {/* Public pages with Navbar + Footer */}
             <Route element={<PublicLayout />}>
-              <Route path="/"             element={<S><HomePage /></S>} />
+              <Route path="/"             element={<HomePage />} />
               <Route path="/services"     element={<S><ServicesPage /></S>} />
               <Route path="/services/:id" element={<S><ServiceDetailPage /></S>} />
               <Route path="/blogs"        element={<S><BlogsPage /></S>} />
@@ -179,7 +176,6 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </ServicesProvider>
       </AuthProvider>
     </BrowserRouter>
   )
@@ -211,13 +207,13 @@ function ProtectedLayout() {
   )
 }
 
-// Lazy Navbar/Footer so their JS is excluded from the initial bundle
+// Lazy Navbar/Footer is removed to improve initial load
 function PublicLayout() {
   return (
     <>
-      <Suspense fallback={Noop}><Navbar /></Suspense>
+      <Navbar />
       <Outlet />
-      <Suspense fallback={Noop}><Footer /></Suspense>
+      <Footer />
     </>
   )
 }

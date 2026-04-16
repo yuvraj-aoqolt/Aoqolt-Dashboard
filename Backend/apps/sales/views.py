@@ -252,7 +252,7 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
         payment_type = request.data.get('payment_type', 'full')
 
         try:
-            quote = SalesQuote.objects.select_related('client', 'case').get(id=quote_id)
+            quote = SalesQuote.objects.select_related('client', 'case', 'booking__user').get(id=quote_id)
         except SalesQuote.DoesNotExist:
             return Response({'success': False, 'error': 'Quote not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -270,18 +270,6 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
             quote.responded_at = timezone.now()
             quote.save(update_fields=['status', 'responded_at'])
 
-            # Create a new treatment Case (sales-based, no booking FK)
-            try:
-                Case.objects.create(
-                    booking=None,
-                    client=quote.client,
-                    source='sales',
-                    status=Case.STATUS_RECEIVED,
-                    admin_notes=f"Treatment case from quote {quote.quote_number}",
-                )
-            except Exception as exc:
-                logger.warning(f"Sales case creation failed for quote {quote.id}: {exc}")
-
         # Create or update sales order (idempotent)
         order, created = SalesOrder.objects.get_or_create(
             quote=quote,
@@ -298,17 +286,41 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
             order.amount_paid = float(quote.amount)
             order.save(update_fields=['payment_status', 'amount_paid'])
 
+        # ── Auto-create Case for booking-sourced quotes ─────────────────────
+        # When a quote linked to a Booking (not a Case) is paid, generate a
+        # Case so the booking appears in Aura Assignments for admin assignment.
+        if quote.booking and not quote.case:
+            from apps.cases.models import Case as CaseModel
+            booking = quote.booking
+            # Idempotent — skip if a case already exists for this booking
+            if not hasattr(booking, 'case') or booking.case is None:
+                try:
+                    new_case = CaseModel.objects.create(
+                        booking=booking,
+                        client=booking.user,
+                        source=CaseModel.SOURCE_BOOKING,
+                        status=CaseModel.STATUS_RECEIVED,
+                    )
+                    # Link quote to the new case as well
+                    quote.case = new_case
+                    quote.save(update_fields=['case'])
+                except Exception:
+                    pass  # case already exists (race condition guard)
+
         # True only for real registered accounts — guests have is_guest=True
         client_has_account = bool(quote.client_id) and not quote.client.is_guest
 
+        # Also return case_id so client frontend can navigate directly to chat
+        new_case = quote.case
         return Response({
             'success': True,
             'payment_type': payment_type,
-            'case_number': quote.case.case_number,
+            'case_number': new_case.case_number if new_case else None,
+            'case_id':     str(new_case.id) if new_case else None,
+            'booking_ref': quote.booking.booking_id if quote.booking else None,
             'order_number': order.order_number,
             'client_has_account': client_has_account,
         })
-
     @action(detail=True, methods=['post'])
     def respond(self, request, pk=None):
         """Client responds to quote (accept/reject)"""

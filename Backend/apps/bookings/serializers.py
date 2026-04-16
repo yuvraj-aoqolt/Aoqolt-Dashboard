@@ -164,6 +164,36 @@ class BookingSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'completed_at',
         ]
 
+class AdminBookingSerializer(serializers.ModelSerializer):
+    """
+    Booking serializer for regular admin view.
+    Exposes Form 2 details + attachments only — Form 1 personal/contact data is hidden.
+    """
+    service_name = serializers.CharField(source='service.name', read_only=True)
+    service_type = serializers.CharField(source='service.service_type', read_only=True)
+    details = BookingDetailSerializer(read_only=True)
+    attachments = BookingAttachmentSerializer(many=True, read_only=True)
+    admin_name = serializers.CharField(source='assigned_admin.full_name', read_only=True)
+    work_started = serializers.BooleanField(read_only=True)
+    work_completed = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = [
+            'id', 'booking_id',
+            'service_name', 'service_type', 'selected_service',
+            'status', 'form2_submitted',
+            'admin_name', 'work_started', 'work_completed',
+            'details', 'attachments',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'booking_id', 'service_name', 'service_type', 'selected_service',
+            'status', 'form2_submitted', 'admin_name', 'work_started', 'work_completed',
+            'created_at', 'updated_at',
+        ]
+
+
 class BookingEditForm1Serializer(serializers.ModelSerializer):
     """Serializer for superadmin directly editing Form 1 (personal/contact details)."""
     class Meta:
@@ -192,6 +222,10 @@ class BookingListSerializer(serializers.ModelSerializer):
     case_number = serializers.SerializerMethodField()
     details = BookingDetailSerializer(read_only=True)
     attachments = BookingAttachmentSerializer(many=True, read_only=True)
+    admin_name = serializers.CharField(source='assigned_admin.full_name', read_only=True)
+    admin_id = serializers.UUIDField(source='assigned_admin.id', read_only=True)
+    work_started = serializers.BooleanField(read_only=True)
+    work_completed = serializers.BooleanField(read_only=True)
 
     def get_case_id(self, obj):
         try:
@@ -213,6 +247,7 @@ class BookingListSerializer(serializers.ModelSerializer):
             'service_name', 'service_type', 'selected_service',
             'status', 'case_id', 'case_number',
             'form2_submitted',
+            'admin_name', 'admin_id', 'work_started', 'work_completed',
             'details', 'attachments',
             'created_at',
         ]

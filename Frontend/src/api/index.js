@@ -163,6 +163,9 @@ export const bookingsAPI = {
   // SuperAdmin
   allBookings: () => api.get('/bookings/'),
   deleteBooking: (id) => api.delete(`/bookings/${id}/`),
+  assign: (id, data) => api.post(`/bookings/${id}/assign/`, data),
+  startWork: (id) => api.post(`/bookings/${id}/start_work/`),
+  completeWork: (id) => api.post(`/bookings/${id}/complete_work/`),
 }
 
 // ── Correction (public, token-based) ─────────────────────────────────────

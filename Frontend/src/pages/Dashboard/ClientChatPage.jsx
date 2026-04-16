@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import DashboardLayout from './DashboardLayout'
 import { FiMessageSquare, FiSend, FiSearch, FiPaperclip, FiSmile, FiMic, FiSquare, FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi'
 import { chatAPI } from '../../api'
@@ -35,6 +36,9 @@ const STATUS_COLORS = {
   cancelled:'bg-red-900/30   text-red-400   border-red-900/30',
 }
 
+// stable key per conversation (BOOKING or CASE)
+const convKey = (c) => c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+
 const EMOJIS = [
   '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😉','😊','😇','🥰','😍','🤩','😘',
   '😚','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤔','😐','😶','😏','😒','🙄','😬',
@@ -56,6 +60,8 @@ const formatRecTime = (s) =>
 // ── component ─────────────────────────────────────────────────────────────────
 export default function ClientChatPage() {
   const { user } = useAuth()
+  const location = useLocation()
+  const pendingCaseId = location.state?.caseId ?? null
   const [conversations, setConversations] = useState([])
   const [selected, setSelected]           = useState(null)
   const [messages, setMessages]           = useState([])
@@ -96,32 +102,51 @@ export default function ClientChatPage() {
     }
   }, [])
 
-  const fetchMsgs = useCallback(async (caseId) => {
+  const fetchMsgs = useCallback(async (conv) => {
+    if (!conv) return
     try {
-      const { data } = await chatAPI.getMessages(caseId)
+      const isBooking = conv.item_type === 'BOOKING'
+      const params = isBooking
+        ? { bookingId: conv.booking_id, sourceType: 'BOOKING' }
+        : { caseId: conv.case_id }
+      const { data } = await chatAPI.getMessages(params)
       setMessages(data.data || [])
     } catch { /* silent */ }
   }, [])
 
   useEffect(() => { fetchConvs() }, [fetchConvs])
 
+  // Auto-select case when navigated from QuotePaymentSuccessPage
+  useEffect(() => {
+    if (!pendingCaseId || conversations.length === 0 || selected) return
+    const match = conversations.find(c => c.item_type === 'CASE' && c.case_id === pendingCaseId)
+    if (match) setSelected(match)
+  }, [pendingCaseId, conversations, selected])
+
   // ── conversation selection & polling ─────────────────────────────────────
+  const selectedKey = selected ? convKey(selected) : null
+
   useEffect(() => {
     if (!selected) return
+    const isBooking = selected.item_type === 'BOOKING'
     clearInterval(pollRef.current)
     setLoadingMsgs(true)
-    fetchMsgs(selected.case_id).finally(() => setLoadingMsgs(false))
-    chatAPI.markConversationRead(selected.case_id).catch(() => {})
+    fetchMsgs(selected).finally(() => setLoadingMsgs(false))
+    if (isBooking) {
+      chatAPI.markConversationRead({ bookingId: selected.booking_id, sourceType: 'BOOKING' }).catch(() => {})
+    } else {
+      chatAPI.markConversationRead({ caseId: selected.case_id }).catch(() => {})
+    }
     setConversations(prev =>
-      prev.map(c => c.case_id === selected.case_id ? { ...c, unread_count: 0 } : c)
+      prev.map(c => convKey(c) === selectedKey ? { ...c, unread_count: 0 } : c)
     )
     pollRef.current = setInterval(() => {
-      fetchMsgs(selected.case_id)
+      fetchMsgs(selected)
       fetchConvs(true)
     }, 3000)
     return () => clearInterval(pollRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.case_id])
+  }, [selectedKey])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -130,17 +155,20 @@ export default function ClientChatPage() {
   // ── send ──────────────────────────────────────────────────────────────────
   const handleSend = async () => {
     if (!text.trim() || !selected || sending) return
+    const isBooking = selected.item_type === 'BOOKING'
     const body = text.trim()
     setText('')
     setSending(true)
     try {
-      await chatAPI.sendMessage({ case: selected.case_id, message_type: 'text', message: body })
-      await fetchMsgs(selected.case_id)
+      const payload = isBooking
+        ? { source_type: 'BOOKING', booking: selected.booking_id, message_type: 'text', message: body }
+        : { case: selected.case_id, message_type: 'text', message: body }
+      await chatAPI.sendMessage(payload)
+      await fetchMsgs(selected)
       setConversations(prev =>
-        prev.map(c =>
-          c.case_id === selected.case_id
-            ? { ...c, last_message: body, last_message_at: new Date().toISOString() }
-            : c
+        prev.map(c => convKey(c) === selectedKey
+          ? { ...c, last_message: body, last_message_at: new Date().toISOString() }
+          : c
         )
       )
     } catch {
@@ -166,6 +194,7 @@ export default function ClientChatPage() {
     let file = e.target.files?.[0]
     if (!file || !selected) return
     e.target.value = ''
+    const isBooking = selected.item_type === 'BOOKING'
 
     const isImage = file.type.startsWith('image/')
     const isVideo = file.type.startsWith('video/')
@@ -181,18 +210,22 @@ export default function ClientChatPage() {
     }
 
     const fd = new FormData()
-    fd.append('case', selected.case_id)
+    if (isBooking) {
+      fd.append('source_type', 'BOOKING')
+      fd.append('booking', selected.booking_id)
+    } else {
+      fd.append('case', selected.case_id)
+    }
     fd.append('message_type', type)
     fd.append('file_url', file)
     setSending(true)
     try {
       await chatAPI.sendFile(fd)
-      await fetchMsgs(selected.case_id)
+      await fetchMsgs(selected)
       setConversations(prev =>
-        prev.map(c =>
-          c.case_id === selected.case_id
-            ? { ...c, last_message: `[${type}]`, last_message_at: new Date().toISOString() }
-            : c
+        prev.map(c => convKey(c) === selectedKey
+          ? { ...c, last_message: `[${type}]`, last_message_at: new Date().toISOString() }
+          : c
         )
       )
     } catch {
@@ -211,21 +244,26 @@ export default function ClientChatPage() {
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
+        const isBooking = selected.item_type === 'BOOKING'
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         const file = new File([blob], `voice_${Date.now()}.webm`, { type: 'audio/webm' })
         const fd = new FormData()
-        fd.append('case', selected.case_id)
+        if (isBooking) {
+          fd.append('source_type', 'BOOKING')
+          fd.append('booking', selected.booking_id)
+        } else {
+          fd.append('case', selected.case_id)
+        }
         fd.append('message_type', 'voice')
         fd.append('file_url', file)
         setSending(true)
         try {
           await chatAPI.sendFile(fd)
-          await fetchMsgs(selected.case_id)
+          await fetchMsgs(selected)
           setConversations(prev =>
-            prev.map(c =>
-              c.case_id === selected.case_id
-                ? { ...c, last_message: '[Voice note]', last_message_at: new Date().toISOString() }
-                : c
+            prev.map(c => convKey(c) === selectedKey
+              ? { ...c, last_message: '[Voice note]', last_message_at: new Date().toISOString() }
+              : c
             )
           )
         } catch {
@@ -273,10 +311,16 @@ export default function ClientChatPage() {
     }
   }
 
-  const filtered = conversations.filter(c =>
-    c.case_number.toLowerCase().includes(search.toLowerCase()) ||
-    c.service_name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = conversations.filter(c => {
+    if (c.item_type === 'BOOKING') return false   // bookings hidden from client chat
+    const q = search.toLowerCase()
+    if (!q) return true
+    const ref = c.case_number || ''
+    return (
+      ref.toLowerCase().includes(q) ||
+      (c.service_name || '').toLowerCase().includes(q)
+    )
+  })
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
@@ -330,38 +374,54 @@ export default function ClientChatPage() {
                 <p className="text-xs mt-1 text-white/15">You'll see chats here once your case is assigned to an agent</p>
               </div>
             ) : (
-              filtered.map(conv => (
-                <button
-                  key={conv.case_id}
-                  onClick={() => setSelected(conv)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.04] hover:bg-white/5 transition-colors ${
-                    selected?.case_id === conv.case_id ? 'bg-white/[0.07]' : ''
-                  }`}
-                >
-                  {/* Aoqolt avatar */}
-                  <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center select-none">
-                      <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
+              filtered.map(conv => {
+                const isBookingConv = conv.item_type === 'BOOKING'
+                const ck = convKey(conv)
+                const refLabel = isBookingConv ? (conv.booking_ref || conv.booking_id) : (conv.case_number || '')
+                return (
+                  <button
+                    key={ck}
+                    onClick={() => setSelected(conv)}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 text-left border-b border-white/[0.04] hover:bg-white/5 transition-colors ${
+                      selectedKey === ck ? 'bg-white/[0.07]' : ''
+                    }`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center select-none">
+                        <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
+                      </div>
+                      {conv.unread_count > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
+                          {conv.unread_count > 9 ? '9+' : conv.unread_count}
+                        </span>
+                      )}
                     </div>
-                    {conv.unread_count > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">
-                        {conv.unread_count > 9 ? '9+' : conv.unread_count}
-                      </span>
-                    )}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-white text-sm font-medium truncate">Aoqolt Team</p>
-                      <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {isBookingConv && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0">BKG</span>
+                          )}
+                          <p className="text-white text-sm font-medium truncate">Aoqolt Team</p>
+                        </div>
+                        <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
+                      </div>
+                      <p className="text-white/30 text-xs truncate mt-0.5">
+                        {refLabel}{conv.service_name ? ` · ${conv.service_name}` : ''}
+                      </p>
+                      {isBookingConv && conv.work_completed && (
+                        <p className="text-green-400 text-[10px] mt-0.5 font-medium">✓ Work Completed</p>
+                      )}
+                      {!isBookingConv && conv.case_status === 'completed' && (
+                        <p className="text-green-400 text-[10px] mt-0.5 font-medium">✓ Case Completed</p>
+                      )}
+                      <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
+                        {conv.last_message || 'No messages yet'}
+                      </p>
                     </div>
-                    <p className="text-white/30 text-xs truncate mt-0.5">{conv.case_number} · {conv.service_name}</p>
-                    <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
-                      {conv.last_message || 'No messages yet'}
-                    </p>
-                  </div>
-                </button>
-              ))
+                  </button>
+                )
+              })
             )}
           </div>
         </div>
@@ -377,11 +437,22 @@ export default function ClientChatPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-semibold text-sm leading-tight">Aoqolt Team</p>
-                <p className="text-white/30 text-xs truncate">{selected.case_number} · {selected.service_name}</p>
+                <p className="text-white/30 text-xs truncate">
+                  {selected.item_type === 'BOOKING'
+                    ? `${selected.booking_ref || selected.booking_id}${selected.service_name ? ` · ${selected.service_name}` : ''}`
+                    : `${selected.case_number || ''} · ${selected.service_name || ''}`
+                  }
+                </p>
               </div>
-              <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
-                {selected.case_status}
-              </span>
+              {selected.item_type === 'BOOKING' ? (
+                selected.work_completed
+                  ? <span className="text-xs border px-2.5 py-1 rounded-full flex-shrink-0 bg-green-900/30 text-green-400 border-green-900/30">✓ Work Done</span>
+                  : <span className="text-xs border px-2.5 py-1 rounded-full flex-shrink-0 bg-amber-900/30 text-amber-400 border-amber-900/30">Booking</span>
+              ) : (
+                <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
+                  {selected.case_status}
+                </span>
+              )}
             </div>
 
             {/* Messages */}

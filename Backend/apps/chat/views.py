@@ -170,10 +170,11 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 .select_related('assigned_admin', 'client', 'booking__service')
                 .order_by('-updated_at')
             )
+            # Only bookings WITHOUT a case — those with a case appear via the Case thread
             bookings = list(
                 Booking.objects
-                .filter(assigned_admin__isnull=False)
-                .select_related('assigned_admin', 'user', 'service', 'case__assigned_admin')
+                .filter(assigned_admin__isnull=False, case__isnull=True)
+                .select_related('assigned_admin', 'user', 'service')
                 .order_by('-updated_at')
             )
 
@@ -184,7 +185,13 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 .select_related('assigned_admin', 'client', 'booking__service')
                 .order_by('-updated_at')
             )
-            bookings = []
+            # Bookings assigned to this admin that don't have a case yet
+            bookings = list(
+                Booking.objects
+                .filter(assigned_admin=user, case__isnull=True)
+                .select_related('assigned_admin', 'user', 'service')
+                .order_by('-updated_at')
+            )
         else:
             return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -251,21 +258,22 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 ct = _thread('CLIENT')
                 at = _thread('ADMIN')
                 result.append({
-                    'item_type':    'CASE',
-                    'case_id':      cid,
-                    'case_number':  case.case_number,
-                    'case_status':  case.status,
-                    'source':       case.source,
-                    'booking_ref':  booking_ref,
-                    'client_name':  client_name,
-                    'client_email': client_email,
-                    'admin_id':     str(case.assigned_admin.id),
-                    'admin_name':   case.assigned_admin.full_name,
-                    'admin_email':  case.assigned_admin.email,
-                    'service_name': service_name,
-                    'client_thread': ct,
-                    'admin_thread':  at,
-                    'last_activity': max(ct['last_message_at'], at['last_message_at']),
+                    'item_type':      'CASE',
+                    'case_id':        cid,
+                    'case_number':    case.case_number,
+                    'case_status':    case.status,
+                    'source':         case.source,
+                    'booking_ref':    booking_ref,
+                    'client_name':    client_name,
+                    'client_email':   client_email,
+                    'client_is_guest': getattr(case.client, 'is_guest', False) if case.client else True,
+                    'admin_id':       str(case.assigned_admin.id),
+                    'admin_name':     case.assigned_admin.full_name,
+                    'admin_email':    case.assigned_admin.email,
+                    'service_name':   service_name,
+                    'client_thread':  ct,
+                    'admin_thread':   at,
+                    'last_activity':  max(ct['last_message_at'], at['last_message_at']),
                 })
 
             # ── Build BOOKING items ────────────────────────────────────────
@@ -294,6 +302,8 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                     'booking_id':   bid,
                     'booking_ref':  booking.booking_id or bid[:8],
                     'booking_status': booking.status,
+                    'work_started':   booking.work_started,
+                    'work_completed': booking.work_completed,
                     'service_name': booking.service.name if booking.service else '',
                     'client_name':  client_name,
                     'client_email': client_email,
@@ -311,7 +321,7 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
             result.sort(key=lambda x: x['last_activity'], reverse=True)
             return Response({'success': True, 'count': len(result), 'data': result})
 
-        # ── Admin path (single-thread, cases only) ─────────────────────────
+        # ── Admin path (single-thread, cases + bookings) ──────────────────
         last_msg_map = {}
         unread_map   = {}
         for msg in case_messages:
@@ -322,6 +332,15 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 last_msg_map[cid] = msg
             if not msg.is_read and str(msg.sender_id) != str(user.id):
                 unread_map[cid] = unread_map.get(cid, 0) + 1
+
+        bk_last_msg_admin = {}
+        bk_unread_admin   = {}
+        for msg in booking_messages:
+            bid = str(msg.booking_id)
+            if bid not in bk_last_msg_admin:
+                bk_last_msg_admin[bid] = msg
+            if not msg.is_read and str(msg.sender_id) != str(user.id):
+                bk_unread_admin[bid] = bk_unread_admin.get(bid, 0) + 1
 
         result = []
         for case in cases:
@@ -358,6 +377,32 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 'service_name':        service_name,
                 'last_message':        last_msg.message if last_msg else '',
                 'last_message_at':     last_msg.created_at.isoformat() if last_msg else fallback_time,
+                'last_message_sender': last_msg.sender.full_name if last_msg else '',
+                'unread_count':        unread,
+            })
+
+        for booking in bookings:
+            bid      = str(booking.id)
+            last_msg = bk_last_msg_admin.get(bid)
+            unread   = bk_unread_admin.get(bid, 0)
+            fallback = booking.created_at.isoformat()
+            client_name  = booking.full_name or (booking.user.full_name if booking.user else '')
+            client_email = booking.email or (booking.user.email if booking.user else '')
+            result.append({
+                'item_type':           'BOOKING',
+                'booking_id':          bid,
+                'booking_ref':         booking.booking_id or bid[:8],
+                'booking_status':      booking.status,
+                'work_started':        booking.work_started,
+                'work_completed':      booking.work_completed,
+                'service_name':        booking.service.name if booking.service else '',
+                'client_name':         client_name,
+                'client_email':        client_email,
+                'admin_id':            str(booking.assigned_admin_id) if booking.assigned_admin_id else '',
+                'admin_name':          booking.assigned_admin.full_name if booking.assigned_admin else '',
+                'admin_email':         booking.assigned_admin.email if booking.assigned_admin else '',
+                'last_message':        last_msg.message if last_msg else '',
+                'last_message_at':     last_msg.created_at.isoformat() if last_msg else fallback,
                 'last_message_sender': last_msg.sender.full_name if last_msg else '',
                 'unread_count':        unread,
             })
@@ -454,55 +499,97 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
     def client_conversations(self, request):
         """
         GET /api/v1/chat/messages/client_conversations/
-        Returns all cases the logged-in client is the owner of (for client chat UI).
-        Only returns cases that have an assigned admin (i.e. chat is active).
+        Returns all active chat threads for the logged-in client:
+        - BOOKING threads: bookings with assigned admin but no case yet
+        - CASE threads: cases with assigned admin
         """
         user = request.user
+        # Booking threads (no case yet, admin assigned)
+        bookings = list(
+            Booking.objects
+            .filter(user=user, assigned_admin__isnull=False, case__isnull=True)
+            .select_related('assigned_admin', 'service')
+            .order_by('-updated_at')
+        )
+        # Case threads — show all cases for client (even unassigned, so client can see their thread)
         cases = list(
             Case.objects
-            .filter(client=user, assigned_admin__isnull=False)
+            .filter(client=user)
             .select_related('assigned_admin', 'booking__service')
             .order_by('-updated_at')
         )
 
-        case_ids = [c.id for c in cases]
-        all_messages = list(
+        booking_ids = [b.id for b in bookings]
+        case_ids    = [c.id for c in cases]
+
+        booking_messages = list(
+            CaseMessage.objects
+            .filter(booking_id__in=booking_ids, source_type='BOOKING', is_deleted=False)
+            .select_related('sender')
+            .order_by('booking_id', '-created_at')
+        )
+        case_messages = list(
             CaseMessage.objects
             .filter(case_id__in=case_ids, is_deleted=False)
             .select_related('sender')
             .order_by('case_id', '-created_at')
         )
-        last_msg_map = {}
-        unread_map   = {}
-        for msg in all_messages:
-            cid = str(msg.case_id)
-            if cid not in last_msg_map:
-                last_msg_map[cid] = msg
+
+        bk_last = {}
+        bk_unread = {}
+        for msg in booking_messages:
+            bid = str(msg.booking_id)
+            if bid not in bk_last:
+                bk_last[bid] = msg
             if not msg.is_read and str(msg.sender_id) != str(user.id):
-                unread_map[cid] = unread_map.get(cid, 0) + 1
+                bk_unread[bid] = bk_unread.get(bid, 0) + 1
+
+        case_last = {}
+        case_unread = {}
+        for msg in case_messages:
+            cid = str(msg.case_id)
+            if cid not in case_last:
+                case_last[cid] = msg
+            if not msg.is_read and str(msg.sender_id) != str(user.id):
+                case_unread[cid] = case_unread.get(cid, 0) + 1
 
         result = []
+        for booking in bookings:
+            bid      = str(booking.id)
+            last_msg = bk_last.get(bid)
+            fallback = booking.created_at.isoformat()
+            result.append({
+                'item_type':           'BOOKING',
+                'booking_id':          bid,
+                'booking_ref':         booking.booking_id or bid[:8],
+                'booking_status':      booking.status,
+                'work_started':        booking.work_started,
+                'work_completed':      booking.work_completed,
+                'service_name':        booking.service.name if booking.service else '',
+                'last_message':        last_msg.message if last_msg else '',
+                'last_message_at':     last_msg.created_at.isoformat() if last_msg else fallback,
+                'last_message_sender': last_msg.sender.full_name if last_msg else '',
+                'unread_count':        bk_unread.get(bid, 0),
+            })
+
         for case in cases:
             cid      = str(case.id)
-            last_msg = last_msg_map.get(cid)
-            unread   = unread_map.get(cid, 0)
+            last_msg = case_last.get(cid)
+            fallback = case.assigned_at.isoformat() if case.assigned_at else case.created_at.isoformat()
             try:
                 service_name = case.booking.service.name
             except Exception:
                 service_name = ''
-            fallback_time = (
-                case.assigned_at.isoformat() if case.assigned_at
-                else case.created_at.isoformat()
-            )
             result.append({
+                'item_type':           'CASE',
                 'case_id':             cid,
                 'case_number':         case.case_number,
                 'case_status':         case.status,
                 'service_name':        service_name,
                 'last_message':        last_msg.message if last_msg else '',
-                'last_message_at':     last_msg.created_at.isoformat() if last_msg else fallback_time,
+                'last_message_at':     last_msg.created_at.isoformat() if last_msg else fallback,
                 'last_message_sender': last_msg.sender.full_name if last_msg else '',
-                'unread_count':        unread,
+                'unread_count':        case_unread.get(cid, 0),
             })
 
         result.sort(key=lambda x: x['last_message_at'], reverse=True)

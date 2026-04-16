@@ -23,7 +23,8 @@ from .models import Booking, BookingDetail, BookingAttachment, BookingToken
 from .serializers import (
     BookingSerializer, BookingListSerializer, BookingCreateSerializer,
     BookingDetailSerializer, BookingAttachmentSerializer,
-    BookingEditForm1Serializer, BookingEditForm2Serializer
+    BookingEditForm1Serializer, BookingEditForm2Serializer,
+    AdminBookingSerializer,
 )
 from apps.services.serializers import ServiceSerializer
 
@@ -62,19 +63,20 @@ class BookingViewSet(viewsets.ModelViewSet):
         if user.is_superadmin:
             return Booking.objects.all()
         elif user.is_admin:
-            # Admins see bookings assigned to their cases
-            from apps.cases.models import Case
-            assigned_cases = Case.objects.filter(assigned_admin=user)
-            booking_ids = assigned_cases.values_list('booking_id', flat=True)
-            return Booking.objects.filter(id__in=booking_ids)
+            # Admins see bookings directly assigned to them
+            return Booking.objects.filter(assigned_admin=user)
         else:
             # Clients see only their own bookings
             return Booking.objects.filter(user=user)
     
     def get_serializer_class(self):
+        user = self.request.user
         if self.action == 'create':
             return BookingCreateSerializer
-        elif self.action == 'list':
+        # Regular admins see Form 2 details only — personal Form 1 data is hidden
+        if getattr(user, 'is_admin', False) and not getattr(user, 'is_superadmin', False):
+            return AdminBookingSerializer
+        if self.action == 'list':
             return BookingListSerializer
         return BookingSerializer
 
@@ -125,22 +127,6 @@ class BookingViewSet(viewsets.ModelViewSet):
             # Mark form2 as permanently submitted
             booking.form2_submitted = True
             booking.save(update_fields=['form2_submitted'])
-
-            # Auto-create a Case for this booking if one doesn't exist yet
-            try:
-                from apps.cases.models import Case as CaseModel
-                if not CaseModel.objects.filter(booking=booking).exists():
-                    CaseModel.objects.create(
-                        booking=booking,
-                        client=booking.user,
-                        source=CaseModel.SOURCE_BOOKING,
-                        status=CaseModel.STATUS_RECEIVED,
-                    )
-            except Exception as exc:
-                logger.warning(
-                    'Case auto-creation failed for booking %s: %s',
-                    booking.booking_id, exc
-                )
 
             try:
                 _send_booking_confirmation_email(booking)
@@ -211,6 +197,76 @@ class BookingViewSet(viewsets.ModelViewSet):
     # Token-based security endpoints are handled by dedicated APIView classes
     # below (BookingInitiateView, BookingTokenValidateView, BookingForm2InfoView).
     # -----------------------------------------------------------------------
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def start_work(self, request, pk=None):
+        """
+        Mark a booking as in-progress (admin starts working on it).
+        POST /api/v1/bookings/{id}/start_work/
+        """
+        booking = self.get_object()
+        if not (request.user.is_superadmin or booking.assigned_admin == request.user):
+            return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        if booking.work_started:
+            return Response({'success': True, 'message': 'Already started'})
+        booking.work_started = True
+        booking.work_started_at = timezone.now()
+        booking.save(update_fields=['work_started', 'work_started_at'])
+        return Response({'success': True, 'message': 'Work started'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
+    def complete_work(self, request, pk=None):
+        """
+        Mark a booking as work_completed — SuperAdmin only.
+        POST /api/v1/bookings/{id}/complete_work/
+        Sets work_completed=True, work_completed_at=now(), and creates a draft SalesQuote.
+        """
+        from django.utils import timezone
+        from apps.sales.models import SalesQuote
+        booking = self.get_object()
+        if getattr(booking, 'work_completed', False):
+            return Response({'success': False, 'error': 'Already completed'}, status=status.HTTP_400_BAD_REQUEST)
+        booking.work_completed = True
+        booking.work_completed_at = timezone.now()
+        booking.save(update_fields=['work_completed', 'work_completed_at'])
+
+        # Auto-create a draft Sales Quote for this booking (if one doesn't exist yet)
+        if not SalesQuote.objects.filter(booking=booking).exists():
+            service_name = getattr(booking.service, 'name', None) or booking.selected_service or 'Service'
+            SalesQuote.objects.create(
+                booking=booking,
+                case=None,
+                client=booking.user,
+                created_by=request.user,
+                title=f'Quote for {service_name} — {booking.booking_id}',
+                status=SalesQuote.STATUS_DRAFT,
+            )
+
+        return Response({'success': True, 'message': 'Booking marked as completed'})
+
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
+    def assign(self, request, pk=None):
+        """
+        Assign a booking to an admin — SuperAdmin only.
+        POST /api/v1/bookings/{id}/assign/
+        { "admin_id": "uuid" }
+        """
+        booking = self.get_object()
+        admin_id = request.data.get('admin_id')
+        if not admin_id:
+            return Response({'success': False, 'error': 'admin_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            from apps.accounts.models import User
+            admin = User.objects.get(id=admin_id, role=User.ADMIN)
+        except User.DoesNotExist:
+            return Response({'success': False, 'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+        booking.assigned_admin = admin
+        booking.save(update_fields=['assigned_admin'])
+        return Response({
+            'success': True,
+            'message': 'Booking assigned successfully',
+            'data': BookingSerializer(booking).data,
+        })
 
     @action(detail=True, methods=['patch'], permission_classes=[IsSuperAdmin])
     def edit_form1(self, request, pk=None):

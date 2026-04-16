@@ -306,12 +306,10 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gold), var(--color-primary));
-  background-size: 200% auto;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradient-x 3s ease infinite;
 }
 
 .red-glow {
@@ -329,13 +327,11 @@ body {
 
 .glass {
   background: var(--color-glass-bg);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--color-glass-border);
 }
 
 .glass-dark {
   background: var(--color-glass-dark-bg);
-  backdrop-filter: blur(20px);
   border: 1px solid var(--color-glass-dark-border);
 }
 
