@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import { FiMessageSquare, FiSend, FiSearch, FiPaperclip, FiSmile, FiMic, FiSquare, FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX } from 'react-icons/fi'
 import { chatAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
+import { compressImage, validateVideo } from '../../utils/chatMediaUtils'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -55,6 +57,8 @@ const formatRecTime = (s) =>
 // ── component ─────────────────────────────────────────────────────────────────
 export default function AdminChatPage() {
   const { user } = useAuth()
+  const location = useLocation()
+  const pendingCaseId = location.state?.caseId ?? null
   const [conversations, setConversations] = useState([])
   const [selected, setSelected]           = useState(null)
   const [messages, setMessages]           = useState([])
@@ -96,13 +100,21 @@ export default function AdminChatPage() {
   }, [])
 
   const fetchMsgs = useCallback(async (caseId) => {
+    if (!caseId) return
     try {
-      const { data } = await chatAPI.getMessages(caseId)
+      const { data } = await chatAPI.getMessages({ caseId })
       setMessages(data.data || [])
     } catch { /* silent */ }
   }, [])
 
   useEffect(() => { fetchConvs() }, [fetchConvs])
+
+  // Auto-select conversation when navigated from Start Work
+  useEffect(() => {
+    if (!pendingCaseId || conversations.length === 0 || selected) return
+    const conv = conversations.find(c => String(c.case_id) === String(pendingCaseId))
+    if (conv) setSelected(conv)
+  }, [conversations, pendingCaseId, selected])
 
   // ── conversation selection & polling ─────────────────────────────────────
   useEffect(() => {
@@ -110,7 +122,7 @@ export default function AdminChatPage() {
     clearInterval(pollRef.current)
     setLoadingMsgs(true)
     fetchMsgs(selected.case_id).finally(() => setLoadingMsgs(false))
-    chatAPI.markConversationRead(selected.case_id).catch(() => {})
+    chatAPI.markConversationRead({ caseId: selected.case_id }).catch(() => {})
     setConversations(prev =>
       prev.map(c => c.case_id === selected.case_id ? { ...c, unread_count: 0 } : c)
     )
@@ -162,10 +174,23 @@ export default function AdminChatPage() {
   }
 
   const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0]
+    let file = e.target.files?.[0]
     if (!file || !selected) return
     e.target.value = ''
-    const type = file.type.startsWith('image/') ? 'image' : 'video'
+
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    const type    = isImage ? 'image' : 'video'
+
+    if (isVideo) {
+      const check = await validateVideo(file)
+      if (!check.ok) { toast.error(check.reason); return }
+    }
+
+    if (isImage) {
+      try { file = await compressImage(file) } catch { /* use original on error */ }
+    }
+
     const fd = new FormData()
     fd.append('case', selected.case_id)
     fd.append('message_type', type)
@@ -259,15 +284,25 @@ export default function AdminChatPage() {
     }
   }
 
-  const filtered = conversations.filter(c =>
-    c.case_number.toLowerCase().includes(search.toLowerCase()) ||
-    c.service_name.toLowerCase().includes(search.toLowerCase())
-  )
+  // Only show conversations for cases the admin has started working on
+  const filtered = conversations.filter(c => {
+    const status = c.case_status || ''
+    if (!['working', 'completed'].includes(status)) return false
+    const q = search.toLowerCase()
+    if (!q) return true
+    return (
+      (c.case_number || '').toLowerCase().includes(q) ||
+      (c.service_name || '').toLowerCase().includes(q)
+    )
+  })
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
     <AdminLayout>
-      <div className="mb-4">
+      {/* Fixed-height wrapper that prevents page body from scrolling */}
+      <div className="flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 112px)' }}>
+
+      <div className="mb-4 flex-shrink-0">
         <h1 className="text-2xl font-bold text-white">Chat</h1>
         <p className="text-white/35 text-sm mt-0.5">
           Message the Aoqolt team about your assigned cases
@@ -275,11 +310,10 @@ export default function AdminChatPage() {
       </div>
 
       <div
-        className="flex rounded-2xl overflow-hidden border border-white/5 bg-[#0d0d0d]"
-        style={{ height: 'calc(100vh - 200px)', minHeight: 500 }}
+        className="flex-1 min-h-0 flex rounded-2xl overflow-hidden border border-white/5 bg-[#0d0d0d]"
       >
         {/* ── LEFT: case list ─────────────────────────────────────────────── */}
-        <div className="w-64 flex-shrink-0 border-r border-white/5 flex flex-col">
+        <div className="w-80 flex-shrink-0 border-r border-white/5 flex flex-col">
           {/* Search */}
           <div className="p-3 border-b border-white/5 flex-shrink-0">
             <div className="relative">
@@ -312,8 +346,8 @@ export default function AdminChatPage() {
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-white/20">
                 <FiMessageSquare size={36} className="mb-3 text-white/10" />
-                <p className="text-xs">No assigned cases</p>
-                <p className="text-xs mt-1 text-white/15">You'll see chats once cases are assigned to you</p>
+                <p className="text-xs">No active chats</p>
+                <p className="text-xs mt-1 text-white/15">Chats appear here after you click "Start Work" on an assigned case</p>
               </div>
             ) : (
               filtered.map(conv => (
@@ -341,7 +375,10 @@ export default function AdminChatPage() {
                       <p className="text-white text-sm font-medium truncate">Aoqolt</p>
                       <span className="text-white/25 text-[11px] flex-shrink-0">{timeAgo(conv.last_message_at)}</span>
                     </div>
-                    <p className="text-white/30 text-xs truncate mt-0.5">{conv.case_number} · {conv.service_name}</p>
+                    <p className="text-white/30 text-xs truncate mt-0.5">
+                      {conv.source === 'sales' ? conv.case_number : (conv.booking_id || conv.case_number)}
+                      {conv.service_name ? ` · ${conv.service_name}` : ''}
+                    </p>
                     <p className={`text-xs truncate mt-0.5 ${conv.unread_count > 0 ? 'text-white/60 font-medium' : 'text-white/25'}`}>
                       {conv.last_message || 'No messages yet'}
                     </p>
@@ -363,7 +400,10 @@ export default function AdminChatPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-semibold text-sm leading-tight">Aoqolt Team</p>
-                <p className="text-white/30 text-xs truncate">{selected.case_number} · {selected.service_name}</p>
+                <p className="text-white/30 text-xs truncate">
+                  {selected.source === 'sales' ? selected.case_number : (selected.booking_id || selected.case_number)}
+                  {selected.service_name ? ` · ${selected.service_name}` : ''}
+                </p>
               </div>
               <span className={`text-xs border px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${STATUS_COLORS[selected.case_status] || ''}`}>
                 {selected.case_status}
@@ -558,6 +598,7 @@ export default function AdminChatPage() {
             <p className="text-sm">Select a case to view the chat</p>
           </div>
         )}
+      </div>
       </div>
     </AdminLayout>
   )

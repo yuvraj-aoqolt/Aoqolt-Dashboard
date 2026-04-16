@@ -23,9 +23,21 @@ def custom_exception_handler(exc, context):
         
         if isinstance(response.data, dict):
             if 'detail' in response.data:
-                custom_response_data['error']['message'] = response.data['detail']
+                custom_response_data['error']['message'] = str(response.data['detail'])
+            elif 'non_field_errors' in response.data:
+                custom_response_data['error']['message'] = str(response.data['non_field_errors'][0])
+                custom_response_data['error']['details'] = response.data
             else:
-                custom_response_data['error']['message'] = 'An error occurred'
+                # Extract first human-readable message as the top-level message
+                first_msg = ''
+                for v in response.data.values():
+                    if isinstance(v, list) and v:
+                        first_msg = str(v[0])
+                    elif isinstance(v, str):
+                        first_msg = v
+                    if first_msg:
+                        break
+                custom_response_data['error']['message'] = first_msg or 'An error occurred'
                 custom_response_data['error']['details'] = response.data
         else:
             custom_response_data['error']['message'] = str(response.data)

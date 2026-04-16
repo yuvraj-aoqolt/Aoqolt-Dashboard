@@ -38,16 +38,17 @@ function NavItem({ to, icon: Icon, label, end, onNav }) {
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
           isActive
-            ? 'bg-red-900/30 text-red-400 border border-red-900/40'
-            : 'text-white/50 hover:text-white hover:bg-white/5'
+            ? 'text-white border border-red-800/40 shadow-lg shadow-red-900/20'
+            : 'text-white hover:text-white hover:bg-white/5'
         }`
       }
+      style={({ isActive }) => isActive ? { background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)' } : {}}
     >
       {({ isActive }) => (
         <>
           <Icon
             size={17}
-            className={isActive ? 'text-red-400' : 'text-white/35 group-hover:text-white/70 transition-colors'}
+            className={isActive ? 'text-white' : 'text-white/35 group-hover:text-white/70 transition-colors'}
           />
           {label}
         </>
@@ -80,11 +81,13 @@ export default function SuperAdminLayout({ children }) {
       {/* Logo */}
       <div className="px-5 pt-6 pb-5 flex-shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-600 to-red-900 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-900/30">
-            <span className="text-white font-black text-[10px] font-display tracking-tight">AOQ</span>
-          </div>
+          <img
+            src="/Aoqolt logo 1-01-02.png"
+            alt="Aoqolt"
+            className="h-10 w-10 object-contain flex-shrink-0"
+          />
           <div>
-            <h2 className="font-display font-bold text-white text-[15px] leading-tight">Aoqolt</h2>
+            <h2 className="font-bold text-white text-[15px] leading-tight">Aoqolt</h2>
             <span className="text-[11px] text-red-400 font-medium leading-none">Spiritual Insights</span>
           </div>
         </div>

@@ -8,6 +8,28 @@ const api = axios.create({
   timeout: 10000,
 })
 
+// ── In-flight GET deduplication ───────────────────────────────────────────
+// Simultaneous calls to the same URL share one promise (kills Strict Mode ×2).
+const _inFlight = new Map()
+function dedupGet(url, config = {}) {
+  const key = url + (config.params ? '\0' + JSON.stringify(config.params) : '')
+  if (_inFlight.has(key)) return _inFlight.get(key)
+  const promise = api.get(url, config).finally(() => _inFlight.delete(key))
+  _inFlight.set(key, promise)
+  return promise
+}
+
+// Short-lived result cache (TTL in ms). Re-uses the last response while it's
+// fresh so navigating quickly between admin pages skips unnecessary refetches.
+const _cache = new Map()  // key → { data, ts }
+function cachedGet(url, ttl = 30_000) {
+  const hit = _cache.get(url)
+  if (hit && Date.now() - hit.ts < ttl) return Promise.resolve(hit.data)
+  return dedupGet(url).then((res) => { _cache.set(url, { data: res, ts: Date.now() }); return res })
+}
+/** Call when a mutation makes the cache stale (e.g. after updateStatus) */
+export function invalidateCache(url) { _cache.delete(url) }
+
 // Attach access token to every request
 api.interceptors.request.use(
   (config) => {
@@ -82,7 +104,7 @@ export const authAPI = {
 // ── Accounts ──────────────────────────────────────────────────────────────
 export const accountsAPI = {
   // Full user object (id, email, full_name, role, etc.)
-  me: () => api.get('/accounts/users/me/'),
+  me: () => dedupGet('/accounts/users/me/'),
   // UserProfile fields (date_of_birth, gender, notifications, etc.)
   getProfile: () => api.get('/accounts/profile/'),
   updateProfile: (data) => api.patch('/accounts/profile/', data),
@@ -95,7 +117,7 @@ export const accountsAPI = {
   allUsers: () => api.get('/accounts/users/'),
   adminUsers: () => api.get('/accounts/users/admins/'),
   promoteToAdmin: (id) => api.post(`/accounts/users/${id}/promote/`),
-}
+  deleteUser: (id) => api.delete(`/accounts/users/${id}/`),}
 
 // ── Invite / Account-Setup ────────────────────────────────────────────────
 export const inviteAPI = {
@@ -115,7 +137,7 @@ export const inviteAPI = {
 
 // ── Services ─────────────────────────────────────────────────────────────
 export const servicesAPI = {
-  list: () => api.get('/services/active/'),
+  list: () => dedupGet('/services/active/'),
   detail: (id) => api.get(`/services/${id}/details/`),
 }
 
@@ -140,6 +162,7 @@ export const bookingsAPI = {
   requestCorrection: (id, data) => api.post(`/bookings/${id}/request_correction/`, data),
   // SuperAdmin
   allBookings: () => api.get('/bookings/'),
+  deleteBooking: (id) => api.delete(`/bookings/${id}/`),
 }
 
 // ── Correction (public, token-based) ─────────────────────────────────────
@@ -158,7 +181,8 @@ export const casesAPI = {
   detail: (id) => api.get(`/cases/${id}/`),
   submitRating: (id, data) => api.post(`/cases/${id}/submit_rating/`, data),
   // Admin
-  allCases: () => api.get('/cases/'),
+  allCases: () => cachedGet('/cases/'),
+  invalidateCases: () => invalidateCache('/cases/'),
   assign: (id, data) => api.post(`/cases/${id}/assign/`, data),
   uploadResult: (id, formData) =>
     api.post(`/cases/${id}/upload_result/`, formData, {
@@ -166,29 +190,59 @@ export const casesAPI = {
       timeout: 60000,
     }),
   updateStatus: (id, data) => api.post(`/cases/${id}/update_status/`, data),
+  deleteCase: (id) => api.delete(`/cases/${id}/`),
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────
 export const chatAPI = {
-  getMessages: (caseId) =>
-    api.get(`/chat/messages/case_messages/?case_id=${caseId}`),
+  /**
+   * Get messages for a thread.
+   * Case thread:    getMessages({ caseId, conversationType })
+   * Booking thread: getMessages({ bookingId, sourceType: 'BOOKING' })
+   */
+  getMessages: ({ caseId, bookingId, sourceType = 'CASE', conversationType } = {}) => {
+    const params = new URLSearchParams({ source_type: sourceType })
+    if (sourceType === 'BOOKING') {
+      params.append('booking_id', bookingId)
+    } else {
+      params.append('case_id', caseId)
+      if (conversationType) params.append('conversation_type', conversationType)
+    }
+    return api.get(`/chat/messages/case_messages/?${params}`)
+  },
   sendMessage: (data) => api.post('/chat/messages/', data),
   sendFile: (formData) =>
     api.post('/chat/messages/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     }),
-  getConversations: () => api.get('/chat/messages/conversations/'),
-  markConversationRead: (caseId) =>
-    api.post('/chat/messages/mark_conversation_read/', { case_id: caseId }),
+  getConversations: () => dedupGet('/chat/messages/conversations/'),
+  getClientConversations: () => dedupGet('/chat/messages/client_conversations/'),
+  /**
+   * Mark a thread as read.
+   * Case:    markConversationRead({ caseId, conversationType })
+   * Booking: markConversationRead({ bookingId, sourceType: 'BOOKING' })
+   */
+  markConversationRead: ({ caseId, bookingId, sourceType = 'CASE', conversationType } = {}) => {
+    const body = { source_type: sourceType }
+    if (sourceType === 'BOOKING') {
+      body.booking_id = bookingId
+    } else {
+      body.case_id = caseId
+      if (conversationType) body.conversation_type = conversationType
+    }
+    return api.post('/chat/messages/mark_conversation_read/', body)
+  },
   editMessage: (id, message) => api.patch(`/chat/messages/${id}/`, { message }),
   deleteMessage: (id) => api.delete(`/chat/messages/${id}/`),
+  deleteThread: (params) => api.delete('/chat/messages/delete_thread/', { data: params }),
 }
 
 // ── Payments ──────────────────────────────────────────────────────────────
 export const paymentsAPI = {
   createCheckout: (data) => api.post('/payments/create_checkout_session/', data),
   myPayments: () => api.get('/payments/my_payments/'),
+  allPayments: () => api.get('/payments/'),
   detail: (id) => api.get(`/payments/${id}/`),
   recentPayments: (limit = 20) => api.get(`/payments/recent_payments/?limit=${limit}`),
 }
@@ -203,7 +257,7 @@ export const dashboardAPI = {
 // ── Blogs ─────────────────────────────────────────────────────────────────
 export const blogsAPI = {
   /** Public: paginated published blogs */
-  list: (params = {}) => api.get('/blogs/', { params }),
+  list: (params = {}) => dedupGet('/blogs/', { params }),
   /** Public: single blog by slug */
   detail: (slug) => api.get(`/blogs/${slug}/`),
   /** Blog manager / superadmin: all owned blogs */
@@ -250,6 +304,7 @@ export const salesAPI = {
   listOrders: () => api.get('/sales/orders/'),
   getOrder: (id) => api.get(`/sales/orders/${id}/`),
   markOrderCompleted: (id) => api.post(`/sales/orders/${id}/mark_completed/`),
+  partialOverdue: () => api.get('/sales/orders/partial_overdue/'),
 }
 
 export default api

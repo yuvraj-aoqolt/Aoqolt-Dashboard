@@ -32,8 +32,10 @@ class CaseViewSet(viewsets.ModelViewSet):
             # SuperAdmin can see all cases
             return Case.objects.all().select_related('client', 'assigned_admin', 'booking__service')
         elif user.is_admin:
-            # Admin can only see cases assigned to them
-            return Case.objects.filter(assigned_admin=user).select_related('client', 'booking__service')
+            # Admin sees cases assigned to them OR unassigned (received) cases they can pick up
+            return Case.objects.filter(
+                Q(assigned_admin=user) | Q(assigned_admin=None, status=Case.STATUS_RECEIVED)
+            ).select_related('client', 'booking__service')
         else:
             # Clients can only see their own cases
             return Case.objects.filter(client=user).select_related('assigned_admin', 'booking__service')
@@ -42,7 +44,15 @@ class CaseViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return CaseListSerializer
         return CaseSerializer
-    
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a case — SuperAdmin only."""
+        if not request.user.is_superadmin:
+            return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        case = self.get_object()
+        case.delete()
+        return Response({'success': True, 'message': 'Case deleted'}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
     def assign(self, request, pk=None):
         """
@@ -72,7 +82,14 @@ class CaseViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'error': 'Admin not found'
             }, status=status.HTTP_404_NOT_FOUND)
-        
+
+        # Block assignment until the client has submitted Form 2
+        if case.booking and not case.booking.form2_submitted:
+            return Response({
+                'success': False,
+                'error': 'Cannot assign this case — the client has not submitted Form 2 (service details) yet.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # Unassign previous admin if any
         if case.assigned_admin:
             CaseAssignment.objects.filter(case=case, is_active=True).update(
@@ -137,26 +154,41 @@ class CaseViewSet(viewsets.ModelViewSet):
         
         new_status = serializer.validated_data['status']
         notes = serializer.validated_data.get('notes', '')
+
+        # Only superadmin can mark a case as completed
+        if new_status == Case.STATUS_COMPLETED and not request.user.is_superadmin:
+            return Response(
+                {'success': False, 'error': 'Only superadmin can mark a case as completed.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         # Record status change
         old_status = case.status
         case.status = new_status
-        
+
         if new_status == Case.STATUS_WORKING and not case.started_at:
             case.started_at = timezone.now()
+            # Auto-assign to requesting admin if still unassigned
+            if not case.assigned_admin and request.user.is_admin:
+                case.assigned_admin = request.user
+                case.assigned_at = timezone.now()
         elif new_status == Case.STATUS_COMPLETED and not case.completed_at:
             case.completed_at = timezone.now()
-        
+
         case.save()
 
         # Auto-create draft quote when case is completed
         if new_status == Case.STATUS_COMPLETED:
             if not SalesQuote.objects.filter(case=case, status__in=[SalesQuote.STATUS_DRAFT, SalesQuote.STATUS_PENDING]).exists():
+                try:
+                    service_name = case.booking.service.name if case.booking and case.booking.service else 'Service'
+                except Exception:
+                    service_name = 'Service'
                 SalesQuote.objects.create(
                     case=case,
                     client=case.client,
                     created_by=request.user,
-                    title=f"Treatment for {case.booking.service.name if case.booking and case.booking.service else 'Service'}",
+                    title=f"Treatment for {service_name}",
                     description='',
                     amount=0,
                 )

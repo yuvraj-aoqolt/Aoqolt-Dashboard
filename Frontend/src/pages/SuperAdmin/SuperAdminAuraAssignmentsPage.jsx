@@ -2,16 +2,22 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-import { FiUsers, FiCalendar, FiClock, FiUser, FiX } from 'react-icons/fi'
+import { FiUsers, FiCalendar, FiClock, FiUser, FiX, FiTag, FiTrash2 } from 'react-icons/fi'
 import { casesAPI, accountsAPI } from '../../api'
 import SuperAdminLayout from './SuperAdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
 
-const TABS = [
-  { key: 'all',      label: 'All' },
-  { key: 'received', label: 'Pending' },
-  { key: 'working',  label: 'Working' },
-  { key: 'completed',label: 'Completed' },
+const STATUS_TABS = [
+  { key: 'all',       label: 'All' },
+  { key: 'received',  label: 'Pending' },
+  { key: 'working',   label: 'Working' },
+  { key: 'completed', label: 'Completed' },
+]
+
+const SOURCE_TABS = [
+  { key: 'all',     label: 'All Types' },
+  { key: 'booking', label: 'Booking' },
+  { key: 'sales',   label: 'Sales' },
 ]
 
 const STATUS_META = {
@@ -20,20 +26,17 @@ const STATUS_META = {
   completed: { label: 'Completed',   dot: 'bg-green-400',  badgeCls: 'bg-green-500/15 text-green-400 border border-green-900/30' },
 }
 
-function caseShortId(caseNumber) {
-  if (!caseNumber) return 'C-???'
-  const parts = caseNumber.split('-')
-  return `C- ${parts[parts.length - 1]}`
-}
-
 export default function SuperAdminAuraAssignmentsPage() {
   const [cases, setCases] = useState([])
   const [admins, setAdmins] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('all')
+  const [statusTab, setStatusTab] = useState('all')
+  const [sourceTab, setSourceTab] = useState('all')
   const [assignModal, setAssignModal] = useState(null)
   const [selectedAdmin, setSelectedAdmin] = useState('')
   const [assigning, setAssigning] = useState(false)
+  const [deleting, setDeleting]   = useState(null)
+  const [confirmDel, setConfirmDel] = useState(null)
 
   useEffect(() => {
     Promise.allSettled([casesAPI.allCases(), accountsAPI.adminUsers()])
@@ -52,7 +55,10 @@ export default function SuperAdminAuraAssignmentsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = tab === 'all' ? cases : cases.filter(c => c.status === tab)
+  // Apply both filters
+  const filtered = cases
+    .filter(c => sourceTab === 'all' || c.source === sourceTab)
+    .filter(c => statusTab === 'all' || c.status === statusTab)
 
   const handleAssign = async () => {
     if (!selectedAdmin) { toast.error('Please select an admin'); return }
@@ -68,10 +74,25 @@ export default function SuperAdminAuraAssignmentsPage() {
       toast.success('Case assigned successfully')
       setAssignModal(null)
       setSelectedAdmin('')
-    } catch {
-      toast.error('Failed to assign case')
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to assign case'
+      toast.error(msg)
     } finally {
       setAssigning(false)
+    }
+  }
+
+  const deleteCase = async (id) => {
+    setConfirmDel(null)
+    setDeleting(id)
+    try {
+      await casesAPI.deleteCase(id)
+      setCases(prev => prev.filter(c => c.id !== id))
+      toast.success('Case deleted')
+    } catch {
+      toast.error('Failed to delete case')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -82,25 +103,49 @@ export default function SuperAdminAuraAssignmentsPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Aura Assignments</h1>
-        <p className="text-white/35 text-sm mt-1">Manage and track aura scan assignments</p>
+        <p className="text-white/35 text-sm mt-1">Manage and assign aura reading cases</p>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {TABS.map(({ key, label }) => {
-          const count = key === 'all' ? cases.length : cases.filter(c => c.status === key).length
+      {/* Source filter (Booking / Sales / All) */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        {SOURCE_TABS.map(({ key, label }) => {
+          const count = key === 'all' ? cases.length : cases.filter(c => c.source === key).length
           return (
             <button
               key={key}
-              onClick={() => setTab(key)}
-              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
-                tab === key
-                  ? 'bg-red-900/30 text-red-400 border border-red-900/40'
+              onClick={() => setSourceTab(key)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                sourceTab === key
+                  ? key === 'sales'
+                    ? 'bg-purple-900/30 text-purple-400 border border-purple-900/40'
+                    : 'bg-red-900/30 text-red-400 border border-red-900/40'
                   : 'text-white/30 hover:text-white/60 hover:bg-white/5'
               }`}
             >
               {label}
-              {count > 0 && <span className="ml-1.5 opacity-60">({count})</span>}
+              {count > 0 && <span className="ml-1.5 opacity-50">({count})</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Status filter */}
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {STATUS_TABS.map(({ key, label }) => {
+          const base = sourceTab === 'all' ? cases : cases.filter(c => c.source === sourceTab)
+          const count = key === 'all' ? base.length : base.filter(c => c.status === key).length
+          return (
+            <button
+              key={key}
+              onClick={() => setStatusTab(key)}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
+                statusTab === key
+                  ? 'bg-white/10 text-white border border-white/15'
+                  : 'text-white/30 hover:text-white/60 hover:bg-white/5'
+              }`}
+            >
+              {label}
+              {count > 0 && <span className="ml-1.5 opacity-50">({count})</span>}
             </button>
           )
         })}
@@ -108,11 +153,12 @@ export default function SuperAdminAuraAssignmentsPage() {
 
       {/* Cards grid */}
       {filtered.length === 0 ? (
-        <div className="py-20 text-center text-white/15 text-sm">No cases found</div>
+        <div className="py-20 text-center text-white/15 text-sm border border-white/5 rounded-2xl">No cases found</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((c, i) => {
             const meta = STATUS_META[c.status] || STATUS_META.received
+            const isSales = c.source === 'sales'
             return (
               <motion.div
                 key={c.id}
@@ -127,17 +173,29 @@ export default function SuperAdminAuraAssignmentsPage() {
                   {meta.label}
                 </span>
 
-                {/* Case ID */}
-                <p className="text-white/40 text-xs font-medium -mb-1">{caseShortId(c.case_number)}</p>
+                {/* ID row: booking shows BOOK-XXXXX, sales shows CASE-... */}
+                <div className="flex items-center gap-1.5 -mb-1">
+                  <FiTag size={10} className={isSales ? 'text-purple-400' : 'text-white/30'} />
+                  <p className={`text-xs font-semibold ${isSales ? 'text-purple-400' : 'text-white/40'}`}>
+                    {isSales ? c.case_number || '—' : c.booking_id || c.case_number || '—'}
+                  </p>
+                  {isSales && (
+                    <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-900/30">
+                      Sales
+                    </span>
+                  )}
+                </div>
 
                 {/* Client name */}
                 <h3 className="text-white font-bold text-base leading-tight">{c.client_name || '—'}</h3>
 
-                {/* Service */}
-                <div className="flex items-center gap-1.5 text-white/35 text-xs">
-                  <FiUsers size={12} className="shrink-0" />
-                  <span className="truncate">{c.service_name || '—'}</span>
-                </div>
+                {/* Service (booking only) */}
+                {c.service_name && (
+                  <div className="flex items-center gap-1.5 text-white/35 text-xs">
+                    <FiUsers size={12} className="shrink-0" />
+                    <span className="truncate">{c.service_name}</span>
+                  </div>
+                )}
 
                 {/* Date & time */}
                 <div className="flex items-center gap-4">
@@ -159,8 +217,8 @@ export default function SuperAdminAuraAssignmentsPage() {
                   </div>
                 )}
 
-                {/* Action button — pushed to bottom */}
-                <div className="mt-auto pt-1">
+                {/* Action */}
+                <div className="mt-auto pt-1 flex flex-col gap-2">
                   {c.status === 'received' ? (
                     <button
                       onClick={() => { setAssignModal(c.id); setSelectedAdmin('') }}
@@ -171,6 +229,21 @@ export default function SuperAdminAuraAssignmentsPage() {
                   ) : (
                     <button className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/55 hover:text-white/85 text-sm font-medium rounded-xl transition-colors">
                       View Progress
+                    </button>
+                  )}
+                  {confirmDel === c.id ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-400 text-xs flex-1">Delete case?</span>
+                      <button onClick={() => deleteCase(c.id)} className="px-3 py-1.5 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">Yes</button>
+                      <button onClick={() => setConfirmDel(null)} className="px-3 py-1.5 text-xs bg-white/5 text-white/50 rounded-lg transition-colors">No</button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDel(c.id)}
+                      disabled={deleting === c.id}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-white/20 hover:text-red-400 hover:bg-red-900/15 rounded-xl transition-all disabled:opacity-40"
+                    >
+                      <FiTrash2 size={12} /> Delete
                     </button>
                   )}
                 </div>

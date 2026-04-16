@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.apple',
     'dj_rest_auth',
     'dj_rest_auth.registration',
     
@@ -65,6 +64,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    # GZipMiddleware compresses API JSON responses — must come after WhiteNoise
+    'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -139,6 +140,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# WhiteNoise: serve pre-compressed .gz / .br files if they exist alongside originals
+WHITENOISE_MAX_AGE = 31536000  # 1 year cache for hashed static assets
+WHITENOISE_ALLOW_ALL_ORIGINS = True
+
 # Media files
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -186,7 +191,7 @@ REST_FRAMEWORK = {
 }
 
 # Minutes a booking initiation token (Form 1 link) remains valid after generation.
-BOOKING_TOKEN_EXPIRY_MINUTES = int(os.getenv('BOOKING_TOKEN_EXPIRY_MINUTES', '15'))
+BOOKING_TOKEN_EXPIRY_MINUTES = int(os.getenv('BOOKING_TOKEN_EXPIRY_MINUTES', '60'))
 
 # Hours a guest session JWT remains valid.
 GUEST_SESSION_EXPIRY_HOURS = int(os.getenv('GUEST_SESSION_EXPIRY_HOURS', '2'))
@@ -244,12 +249,6 @@ SOCIALACCOUNT_PROVIDERS = {
         'APP': {
             'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
             'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
-        }
-    },
-    'apple': {
-        'APP': {
-            'client_id': os.getenv('APPLE_CLIENT_ID', ''),
-            'secret': os.getenv('APPLE_CLIENT_SECRET', ''),
         }
     },
     'yahoo': {

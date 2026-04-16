@@ -1,13 +1,39 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { FiArrowLeft, FiSend, FiUpload, FiCheck } from 'react-icons/fi'
-import { casesAPI, chatAPI } from '../../api'
-import { useAuth } from '../../context/AuthContext'
+import { FiArrowLeft, FiUser, FiMapPin, FiPhone, FiMail, FiCalendar, FiInfo, FiPackage, FiFileText, FiUpload, FiCheck } from 'react-icons/fi'
+import { casesAPI } from '../../api'
 import AdminLayout from './AdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
 import toast from 'react-hot-toast'
-import { format } from 'date-fns'
+
+function InfoRow({ label, value }) {
+  if (!value) return null
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-white/35 text-[11px] uppercase tracking-wide">{label}</span>
+      <span className="text-white text-sm">{value}</span>
+    </div>
+  )
+}
+
+function Section({ icon, title, children }) {
+  return (
+    <div className="bg-white/[0.04] border border-white/8 rounded-xl p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-red-400">{icon}</span>
+        <h3 className="text-white font-semibold text-sm">{title}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-4">{children}</div>
+    </div>
+  )
+}
+
+const STATUS_COLORS = {
+  received:  'bg-yellow-900/30 text-yellow-400 border-yellow-900/40',
+  working:   'bg-blue-900/30   text-blue-400   border-blue-900/40',
+  completed: 'bg-green-900/30  text-green-400  border-green-900/40',
+  cancelled: 'bg-red-900/30    text-red-400    border-red-900/40',
+}
 
 export default function AdminCaseDetailPage() {
   const { id } = useParams()
@@ -31,7 +57,7 @@ export default function AdminCaseDetailPage() {
         const { data: c } = await casesAPI.detail(id)
         setCaseData(c)
         try {
-          const { data: msgs } = await chatAPI.getMessages(id)
+          const { data: msgs } = await chatAPI.getMessages({ caseId: id })
           setMessages(Array.isArray(msgs) ? msgs : msgs.results || [])
         } catch {}
       } catch {

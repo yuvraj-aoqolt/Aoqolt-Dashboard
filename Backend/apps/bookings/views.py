@@ -77,7 +77,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         elif self.action == 'list':
             return BookingListSerializer
         return BookingSerializer
-    
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a booking — SuperAdmin only."""
+        if not request.user.is_superadmin:
+            return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        booking.delete()
+        return Response({'success': True, 'message': 'Booking deleted'}, status=status.HTTP_200_OK)
+
     def create(self, request, *args, **kwargs):
         """Create a new booking with custom response format"""
         serializer = self.get_serializer(data=request.data)
@@ -117,6 +125,23 @@ class BookingViewSet(viewsets.ModelViewSet):
             # Mark form2 as permanently submitted
             booking.form2_submitted = True
             booking.save(update_fields=['form2_submitted'])
+
+            # Auto-create a Case for this booking if one doesn't exist yet
+            try:
+                from apps.cases.models import Case as CaseModel
+                if not CaseModel.objects.filter(booking=booking).exists():
+                    CaseModel.objects.create(
+                        booking=booking,
+                        client=booking.user,
+                        source=CaseModel.SOURCE_BOOKING,
+                        status=CaseModel.STATUS_RECEIVED,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    'Case auto-creation failed for booking %s: %s',
+                    booking.booking_id, exc
+                )
+
             try:
                 _send_booking_confirmation_email(booking)
             except Exception as exc:

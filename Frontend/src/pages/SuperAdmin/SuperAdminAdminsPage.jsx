@@ -6,14 +6,16 @@ import LoadingScreen from '../../components/LoadingScreen'
 import CreateUserModal from './CreateUserModal'
 import ManageInviteModal from './ManageInviteModal'
 import toast from 'react-hot-toast'
-import { FiSearch, FiShield, FiUserPlus, FiLink } from 'react-icons/fi'
+import { FiSearch, FiShield, FiUserPlus, FiLink, FiTrash2 } from 'react-icons/fi'
 
 export default function SuperAdminAdminsPage() {
   const [admins, setAdmins]         = useState([])
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
   const [createOpen, setCreateOpen] = useState(false)
-  const [manageUser, setManageUser] = useState(null) // user to manage invites for
+  const [manageUser, setManageUser] = useState(null)
+  const [deleting, setDeleting]     = useState(null)
+  const [confirmId, setConfirmId]   = useState(null)
 
   useEffect(() => {
     accountsAPI.adminUsers()
@@ -31,6 +33,20 @@ export default function SuperAdminAdminsPage() {
     a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     a.email?.toLowerCase().includes(search.toLowerCase())
   )
+
+  const deleteAdmin = async (id) => {
+    setConfirmId(null)
+    setDeleting(id)
+    try {
+      await accountsAPI.deleteUser(id)
+      setAdmins((prev) => prev.filter((a) => a.id !== id))
+      toast.success('Admin deleted')
+    } catch {
+      toast.error('Failed to delete admin')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   if (loading) return <LoadingScreen />
 
@@ -103,6 +119,22 @@ export default function SuperAdminAdminsPage() {
                 <FiLink size={11} />
                 {a.is_active ? 'Reset Password Link' : 'Manage Invite'}
               </button>
+              {/* Delete */}
+              {confirmId === a.id ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-red-400 text-xs flex-1">Delete admin?</span>
+                  <button onClick={() => deleteAdmin(a.id)} className="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">Yes</button>
+                  <button onClick={() => setConfirmId(null)} className="px-3 py-1 text-xs bg-white/5 hover:bg-white/10 text-white/60 rounded-lg transition-colors">No</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmId(a.id)}
+                  disabled={deleting === a.id}
+                  className="mt-1 w-full flex items-center justify-center gap-1.5 text-xs text-white/20 hover:text-red-400 hover:bg-red-900/15 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                >
+                  <FiTrash2 size={11} /> Delete
+                </button>
+              )}
             </motion.div>
           ))}
           {filtered.length === 0 && (

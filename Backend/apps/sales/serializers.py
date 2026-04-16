@@ -80,44 +80,80 @@ class SalesQuoteResponseSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
 
-class SalesOrderSerializer(serializers.ModelSerializer):
-    amount_display = serializers.ReadOnlyField()
-    client_name = serializers.CharField(source='client.full_name', read_only=True)
-    client_email = serializers.EmailField(source='client.email', read_only=True)
-    quote_number = serializers.CharField(source='quote.quote_number', read_only=True)
-    
-    class Meta:
-        model = SalesOrder
-        fields = [
-            'id', 'order_number', 'quote', 'quote_number', 'client',
-            'client_name', 'client_email', 'total_amount', 'amount_display',
-            'currency', 'payment_status', 'amount_paid', 'status', 'notes',
-            'created_at', 'updated_at', 'completed_at'
-        ]
-        read_only_fields = [
-            'id', 'order_number', 'client', 'total_amount', 'currency',
-            'created_at', 'updated_at', 'completed_at'
-        ]
-
-
 class SalesOrderListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for listing orders"""
+    """Full serializer for the invoice page — mirrors PaymentListSerializer fields"""
     amount_display = serializers.ReadOnlyField()
     client_name = serializers.CharField(source='client.full_name', read_only=True)
     client_email = serializers.EmailField(source='client.email', read_only=True)
     quote_number = serializers.CharField(source='quote.quote_number', read_only=True)
+    quote_title = serializers.CharField(source='quote.title', read_only=True, default='')
+    case_number = serializers.SerializerMethodField()
     service_name = serializers.SerializerMethodField()
+    customer_phone = serializers.SerializerMethodField()
+    customer_city = serializers.SerializerMethodField()
+    customer_country = serializers.SerializerMethodField()
+    booking_ref = serializers.SerializerMethodField()
+
+    def get_case_number(self, obj):
+        try:
+            return obj.quote.case.case_number
+        except Exception:
+            return ''
 
     def get_service_name(self, obj):
         try:
             return obj.quote.case.booking.service.name
+        except Exception:
+            return obj.quote.title or ''
+
+    def get_customer_phone(self, obj):
+        try:
+            b = obj.quote.case.booking
+            return f"{b.phone_country_code}{b.phone_number}".strip()
+        except Exception:
+            return ''
+
+    def get_customer_city(self, obj):
+        try:
+            return obj.quote.case.booking.city
+        except Exception:
+            return ''
+
+    def get_customer_country(self, obj):
+        try:
+            return obj.quote.case.booking.country
+        except Exception:
+            return ''
+
+    def get_booking_ref(self, obj):
+        try:
+            return obj.quote.case.booking.booking_id or ''
         except Exception:
             return ''
 
     class Meta:
         model = SalesOrder
         fields = [
-            'id', 'order_number', 'quote_number', 'client_name', 'client_email',
-            'amount_display', 'total_amount', 'currency',
-            'payment_status', 'amount_paid', 'status', 'service_name', 'created_at'
+            'id', 'order_number', 'quote_number', 'quote_title',
+            'client_name', 'client_email', 'customer_phone',
+            'customer_city', 'customer_country', 'booking_ref', 'case_number',
+            'service_name',
+            'total_amount', 'amount_display', 'amount_paid', 'currency',
+            'payment_status', 'status', 'notes',
+            'created_at', 'updated_at', 'completed_at',
         ]
+
+
+class SalesOrderSerializer(SalesOrderListSerializer):
+    """Detail serializer — same as list for now, extended with quote relation"""
+    quote = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta(SalesOrderListSerializer.Meta):
+        fields = SalesOrderListSerializer.Meta.fields + ['quote']
+        read_only_fields = [
+            'id', 'order_number', 'client', 'total_amount', 'currency',
+            'created_at', 'updated_at', 'completed_at',
+        ]
+
+
+

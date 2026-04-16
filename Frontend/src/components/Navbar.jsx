@@ -66,9 +66,11 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-900 rounded-lg flex items-center justify-center shadow-lg shadow-red-900/40 group-hover:shadow-red-600/50 transition-all">
-              <span className="text-white font-display font-bold text-sm">A</span>
-            </div>
+            <img
+              src="/Aoqolt logo 1-01-02.png"
+              alt="Aoqolt"
+              className="h-9 w-9 object-contain flex-shrink-0"
+            />
             <span className="text-white font-display font-bold text-xl tracking-wider">
               AO<span className="text-red-500">QOLT</span>
             </span>

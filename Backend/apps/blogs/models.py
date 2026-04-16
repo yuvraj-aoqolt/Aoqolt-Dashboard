@@ -33,6 +33,7 @@ class Blog(models.Model):
     description = models.CharField(max_length=500, help_text='Short preview text shown on cards')
     content = models.TextField(help_text='Full rich-text / HTML content')
     poster_image = models.ImageField(upload_to=blog_poster_upload, blank=True, null=True)
+    poster_image_alt = models.CharField(max_length=255, blank=True, help_text='Alt text for the poster image (SEO)')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=DRAFT, db_index=True)
 
     author = models.ForeignKey(

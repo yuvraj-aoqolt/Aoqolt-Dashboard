@@ -116,13 +116,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Authentication method
     AUTH_MANUAL = 'manual'
     AUTH_GOOGLE = 'google'
-    AUTH_APPLE = 'apple'
     AUTH_YAHOO = 'yahoo'
     
     AUTH_CHOICES = [
         (AUTH_MANUAL, 'Manual'),
         (AUTH_GOOGLE, 'Google'),
-        (AUTH_APPLE, 'Apple'),
         (AUTH_YAHOO, 'Yahoo'),
     ]
     

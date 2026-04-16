@@ -57,8 +57,9 @@ export default function SuperAdminCasesPage() {
       toast.success('Admin assigned')
       setAssignTarget(null)
       setSelectedAdmin('')
-    } catch {
-      toast.error('Failed to assign admin')
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Failed to assign admin'
+      toast.error(msg)
     } finally {
       setAssigning(false)
     }

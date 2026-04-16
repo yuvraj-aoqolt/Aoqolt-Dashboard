@@ -18,9 +18,9 @@ class CaseMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = CaseMessage
         fields = [
-            'id', 'case', 'sender', 'sender_name', 'sender_role',
+            'id', 'case', 'booking', 'source_type', 'sender', 'sender_name', 'sender_role',
             'message_type', 'message', 'file_url', 'is_read', 'is_edited',
-            'created_at', 'updated_at'
+            'conversation_type', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'sender', 'is_read', 'created_at', 'updated_at']
 
@@ -30,15 +30,32 @@ class MessageCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CaseMessage
-        fields = ['case', 'message_type', 'message', 'file_url']
-    
+        fields = ['case', 'booking', 'source_type', 'message_type', 'message', 'file_url', 'conversation_type']
+
+    def validate(self, data):
+        src = data.get('source_type', 'CASE')
+        if src == 'BOOKING':
+            if not data.get('booking'):
+                raise serializers.ValidationError('booking is required for source_type=BOOKING')
+            # Booking chats are always admin-only
+            data['conversation_type'] = 'ADMIN'
+            data['case'] = None
+        else:
+            if not data.get('case'):
+                raise serializers.ValidationError('case is required for source_type=CASE')
+            data['booking'] = None
+        return data
+
     def create(self, validated_data):
         request = self.context.get('request')
-        message = CaseMessage.objects.create(
-            sender=request.user,
-            **validated_data
-        )
-        return message
+        src = validated_data.get('source_type', 'CASE')
+        # Auto-set conversation_type for CASE threads based on sender role
+        if src == 'CASE' and not validated_data.get('conversation_type'):
+            if request.user.is_admin:
+                validated_data['conversation_type'] = 'ADMIN'
+            else:
+                validated_data.setdefault('conversation_type', 'CLIENT')
+        return CaseMessage.objects.create(sender=request.user, **validated_data)
 
 
 class MessageReadStatusSerializer(serializers.ModelSerializer):

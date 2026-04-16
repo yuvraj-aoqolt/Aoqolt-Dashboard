@@ -29,6 +29,15 @@ class Booking(models.Model):
     # Relations
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
     service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name='bookings')
+    assigned_admin = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='booking_assignments',
+        limit_choices_to={'role': 'admin'},
+        help_text='Admin responsible for this booking (used for booking-level chat).',
+    )
     
     # Booking Form Fields (First Form)
     full_name = models.CharField(max_length=255)

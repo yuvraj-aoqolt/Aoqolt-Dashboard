@@ -1,30 +1,16 @@
-import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 
 export default function AuthLayout({ children, title, subtitle }) {
   return (
-    <div className="min-h-screen bg-dark flex">
+    <div className="min-h-screen flex" style={{ background: '#111111' }}>
       {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-[45%] relative bg-gradient-to-br from-[var(--color-bg-auth-from)] to-dark items-center justify-center overflow-hidden">
-        {/* Grid */}
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage: `linear-gradient(var(--color-auth-grid) 1px, transparent 1px),linear-gradient(90deg, var(--color-auth-grid) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px',
-          }}
-        />
+      <div
+        className="hidden lg:flex lg:w-[45%] relative items-center justify-center overflow-hidden"
+        style={{ background: 'linear-gradient(to bottom, #0a0a0a 0%, #1a0000 55%, #6b0000 100%)' }}
+      >
         {/* Orbs */}
-        <motion.div
-          animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1.6, 0.8] }}
-          transition={{ duration: 8, repeat: Infinity }}
-          className="absolute top-1/4 left-1/3 w-72 h-72 bg-red-900/20 rounded-full blur-3xl"
-        />
-        <motion.div
-          animate={{ scale: [1.2, 1, 1.2], opacity: [0.6, 1.0, 0.6] }}
-          transition={{ duration: 10, repeat: Infinity }}
-          className="absolute bottom-1/2 right-1/3 w-64 h-64 bg-red-700/15 rounded-full blur-3xl"
-        />
+        <div className="auth-orb-1 absolute top-1/4 left-1/4 w-80 h-80 bg-red-900/25 rounded-full blur-3xl" />
+        <div className="auth-orb-2 absolute bottom-1/3 right-1/4 w-72 h-72 bg-red-700/20 rounded-full blur-3xl" />
 
         <div className="relative z-10 text-center px-12">
           <img
@@ -32,40 +18,31 @@ export default function AuthLayout({ children, title, subtitle }) {
             alt="Aoqolt"
             width="400"
             height="320"
-            className="w-100 h-80 mx-auto -mt-30 mb-5 object-contain drop-shadow-2xl"
-            fetchpriority="high"
+            className="w-96 h-80 mx-auto object-contain drop-shadow-2xl"
+            fetchPriority="high"
           />
-          <h2 className="font-display text-3xl font-bold text-white mb-3">
-            Unlock Your Energy
-          </h2>
-          <p className="text-white/40 text-sm leading-relaxed max-w-xs mx-auto">
-            Join thousands who have discovered their spiritual path through Aoqolt's expert readings.
-          </p>
         </div>
       </div>
 
       {/* Right panel — form */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center px-6 py-10" style={{ background: '#000000' }}>
+        <div className="w-full max-w-lg">
           {/* Mobile logo */}
-          <Link to="/" className="flex items-center gap-2 justify-center mb-10 lg:hidden">
-            <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-900 rounded-lg flex items-center justify-center">
-              <span className="text-white font-display font-bold text-sm">A</span>
-            </div>
+          <Link to="/" className="flex items-center gap-2 justify-center mb-8 lg:hidden">
             <span className="text-white font-display font-bold text-xl tracking-wider">
               AO<span className="text-red-500">QOLT</span>
             </span>
           </Link>
 
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+          {/* Card */}
+          <div
+            className="rounded-2xl px-8 py-8"
+            style={{ background: 'rgba(30,30,30,0.95)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
-            <h1 className="font-display text-3xl font-bold text-white mb-2 text-center lg:text-left">{title}</h1>
-            {subtitle && <p className="text-white/40 text-sm mb-4 text-center lg:text-left">{subtitle}</p>}
+            <h1 className="font-display text-3xl font-bold text-white mb-1">{title}</h1>
+            {subtitle && <p className="text-white/50 text-sm mb-6">{subtitle}</p>}
             {children}
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>

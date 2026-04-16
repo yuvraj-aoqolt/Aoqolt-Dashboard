@@ -8,24 +8,15 @@
     <title>Aoqolt — Spiritual Services</title>
 
     <!-- Preconnect to font CDNs as early as possible -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!--
-      Load Google Fonts asynchronously (non-render-blocking).
-      Uses only the exact weights the app needs instead of a full variable font range.
-      The media="print" trick: browser fetches it without blocking paint,
-      then onload flips it to 'all' so it applies normally.
-    -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&family=Cinzel:wght@400;700&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&family=Cinzel:wght@400;700&display=swap" />
-    </noscript>
+    <!-- Local Satoshi font — served from /fonts/ -->
+    <!-- (No CDN needed; preloading critical weights for fast first paint) -->
+    <link rel="preload" href="/fonts/Satoshi-Regular.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/fonts/Satoshi-Medium.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/fonts/Satoshi-Bold.otf" as="font" type="font/otf" crossorigin />
+
+    <!-- Preload hero logo so it renders immediately with the page -->
+    <link rel="preload" href="/Aoqolt logo 1-01-02.png" as="image" />
 
     <!-- Apple Sign In SDK — deferred so it never blocks page rendering -->
     <script defer src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>

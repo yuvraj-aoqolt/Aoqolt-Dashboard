@@ -1,11 +1,12 @@
 /**
  * NotificationContext
  * Polls chat conversations (unread counts) + recent payments every 15s.
+ * Also polls partial-overdue sales orders (15+ days since first partial payment) every 5 min.
  * Only active when the logged-in user is superadmin.
  */
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { chatAPI, paymentsAPI } from '../api'
+import { chatAPI, paymentsAPI, salesAPI } from '../api'
 import { useAuth } from './AuthContext'
 
 const NotificationContext = createContext(null)
@@ -24,18 +25,25 @@ function fmtAmount(amount, currency = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount / 100)
 }
 
+function fmtDollar(amount, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(parseFloat(amount) || 0)
+}
+
 // ── provider ──────────────────────────────────────────────────────────────────
 export function NotificationProvider({ children }) {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'superadmin'
 
-  const [chatNotifs, setChatNotifs]       = useState([])   // { case_id, admin_name, unread_count, last_message_at }
-  const [paymentNotifs, setPaymentNotifs] = useState([])   // { id, user_name, service_name, amount, currency, paid_at }
-  // Track which payment IDs we have already "seen" on first load so we only badge new ones
-  const seenPaymentIds = useRef(new Set())
-  const [newPayments, setNewPayments]     = useState([])   // subset with truly new payments
-  const pollRef = useRef(null)
+  const [chatNotifs, setChatNotifs]         = useState([])
+  const [paymentNotifs, setPaymentNotifs]   = useState([])
+  const [partialNotifs, setPartialNotifs]   = useState([])   // overdue partial payment orders
 
+  const seenPaymentIds = useRef(new Set())
+  const [newPayments, setNewPayments]       = useState([])
+  const pollRef        = useRef(null)
+  const partialPollRef = useRef(null)
+
+  // ── fetch chat + recent payments (every 15 s) ─────────────────────────────
   const fetchAll = useCallback(async () => {
     if (!isSuperAdmin) return
     try {
@@ -46,13 +54,10 @@ export function NotificationProvider({ children }) {
       const convs = convRes.data?.data || []
       const pays  = payRes.data?.data  || []
 
-      // Chat: keep only those with unread messages
       setChatNotifs(convs.filter(c => c.unread_count > 0))
 
-      // Payments: on first load, seed "seen" so everything looks old
       const fetchedIds = new Set(pays.map(p => p.id))
       if (seenPaymentIds.current.size === 0) {
-        // first fetch — mark all as seen, no badge
         seenPaymentIds.current = fetchedIds
         setPaymentNotifs(pays)
         setNewPayments([])
@@ -65,16 +70,32 @@ export function NotificationProvider({ children }) {
     } catch { /* silent */ }
   }, [isSuperAdmin])
 
+  // ── fetch partial-overdue orders (every 5 min) ────────────────────────────
+  const fetchPartial = useCallback(async () => {
+    if (!isSuperAdmin) return
+    try {
+      const res = await salesAPI.partialOverdue()
+      setPartialNotifs(res.data?.data || [])
+    } catch { /* silent */ }
+  }, [isSuperAdmin])
+
   useEffect(() => {
     if (!isSuperAdmin) return
     fetchAll()
-    pollRef.current = setInterval(fetchAll, 15000)
-    return () => clearInterval(pollRef.current)
-  }, [isSuperAdmin, fetchAll])
+    fetchPartial()
+    pollRef.current        = setInterval(fetchAll,    15000)
+    partialPollRef.current = setInterval(fetchPartial, 5 * 60 * 1000)
+    return () => {
+      clearInterval(pollRef.current)
+      clearInterval(partialPollRef.current)
+    }
+  }, [isSuperAdmin, fetchAll, fetchPartial])
 
-  const totalUnread = chatNotifs.reduce((s, c) => s + c.unread_count, 0) + newPayments.length
+  const totalUnread = chatNotifs.reduce((s, c) => s + c.unread_count, 0)
+    + newPayments.length
+    + partialNotifs.length
 
-  // Build unified notification list for the dropdown
+  // ── unified notification list ─────────────────────────────────────────────
   const notifications = [
     ...chatNotifs.map(c => ({
       type: 'chat',
@@ -94,6 +115,17 @@ export function NotificationProvider({ children }) {
       amount: fmtAmount(p.amount, p.currency),
       time: timeAgo(p.paid_at),
     })),
+    ...partialNotifs.map(o => ({
+      type: 'partial',
+      key: `partial-${o.id}`,
+      dot: 'bg-orange-400',
+      title: `Partial payment overdue — ${o.days_overdue} day${o.days_overdue !== 1 ? 's' : ''}`,
+      body: `${o.client_name} · ${o.service_name || o.order_number}`,
+      amount: `${fmtDollar(o.amount_paid, o.currency)} of ${fmtDollar(o.total_amount, o.currency)}`,
+      time: timeAgo(o.partial_since),
+      order_id: o.id,
+      order_number: o.order_number,
+    })),
   ]
 
   const clearNewPayments = () => setNewPayments([])
@@ -104,11 +136,14 @@ export function NotificationProvider({ children }) {
       chatNotifs,
       paymentNotifs,
       newPayments,
+      partialNotifs,
       totalUnread,
       clearNewPayments,
       refresh: fetchAll,
+      refreshPartial: fetchPartial,
       timeAgo,
       fmtAmount,
+      fmtDollar,
     }}>
       {children}
     </NotificationContext.Provider>

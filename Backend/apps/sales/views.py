@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.utils import timezone
+from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -42,7 +43,7 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'send_quote']:
             return [IsSuperAdmin()]
-        if self.action in ['public_quote', 'quote_payment', 'quote_payment_success']:
+        if self.action in ['public_quote', 'quote_payment', 'quote_payment_success', 'confirm_payment']:
             return [AllowAny()]
         return super().get_permissions()
 
@@ -155,21 +156,19 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
             return Response({'success': False, 'error': 'Quote not found'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'success': True, 'data': SalesQuoteSerializer(quote).data})
 
-    # ── Client: pay quote (partial or full) via Stripe ───────────────────────
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated],
+    # ── Public: pay quote (partial or full) via Stripe — no login required ────
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny],
             url_path='pay/(?P<token>[^/.]+)')
     def quote_payment(self, request, token=None):
         """
         POST /api/v1/sales/quotes/pay/{token}/
         { "payment_type": "full" | "partial" }
+        Public endpoint — no authentication required.
         """
         try:
             quote = SalesQuote.objects.get(access_token=token)
         except SalesQuote.DoesNotExist:
             return Response({'success': False, 'error': 'Quote not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        if quote.client != request.user:
-            return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
 
         if quote.status not in [SalesQuote.STATUS_PENDING, SalesQuote.STATUS_DRAFT]:
             return Response({'success': False, 'error': 'Quote is not payable'}, status=status.HTTP_400_BAD_REQUEST)
@@ -178,12 +177,34 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
         total_cents = int(float(quote.amount) * 100)
         amount_cents = total_cents // 2 if payment_type == 'partial' else total_cents
 
+        # Use the real email from the booking form, not the internal guest address
+        booking_email = None
+        try:
+            booking_email = quote.case.booking.email
+        except Exception:
+            pass
+        real_email = booking_email or (quote.client.email if not quote.client.is_guest else None)
+
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
-        success_url = f"{frontend_url}/quote/payment/success?session_id={{CHECKOUT_SESSION_ID}}&quote_id={quote.id}&type={payment_type}"
+        success_url = f"{frontend_url}/quote/payment/success?session_id={{CHECKOUT_SESSION_ID}}&quote_id={quote.id}&type={payment_type}&token={token}"
         cancel_url  = f"{frontend_url}/quote/{token}"
 
         try:
-            session = stripe.checkout.Session.create(
+            # Create or retrieve a Stripe Customer so the email is locked (non-editable)
+            stripe_customer = None
+            if real_email:
+                existing = stripe.Customer.list(email=real_email, limit=1)
+                if existing.data:
+                    stripe_customer = existing.data[0].id
+                else:
+                    cust = stripe.Customer.create(
+                        email=real_email,
+                        name=quote.client.full_name if not quote.client.is_guest else quote.client_name or real_email,
+                        metadata={'quote_id': str(quote.id)},
+                    )
+                    stripe_customer = cust.id
+
+            session_params = dict(
                 payment_method_types=['card'],
                 line_items=[{
                     'price_data': {
@@ -201,47 +222,67 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
                 cancel_url=cancel_url,
                 metadata={
                     'quote_id': str(quote.id),
-                    'user_id': str(request.user.id),
                     'payment_type': payment_type,
+                    'access_token': token,
                 },
             )
+            if stripe_customer:
+                session_params['customer'] = stripe_customer  # locks the email field
+            elif real_email:
+                session_params['customer_email'] = real_email  # fallback: pre-fill only
+
+            session = stripe.checkout.Session.create(**session_params)
             return Response({'success': True, 'session_url': session.url, 'session_id': session.id})
         except Exception as e:
             logger.error(f"Stripe session error for quote {quote.id}: {e}")
             return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # ── Webhook / success: confirm quote payment ─────────────────────────────
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated],
+    # ── Public: confirm quote payment after Stripe redirect ─────────────────
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny],
             url_path='confirm_payment')
     def confirm_payment(self, request):
         """
         POST /api/v1/sales/quotes/confirm_payment/
         { "session_id": "...", "quote_id": "...", "payment_type": "full|partial" }
-        Called from frontend after Stripe redirect.
+        Public endpoint — called from frontend after Stripe redirect (no login needed).
+        Returns client_has_account so frontend can decide whether to show login prompt.
         """
         session_id   = request.data.get('session_id')
         quote_id     = request.data.get('quote_id')
         payment_type = request.data.get('payment_type', 'full')
 
         try:
-            quote = SalesQuote.objects.get(id=quote_id, client=request.user)
+            quote = SalesQuote.objects.select_related('client', 'case').get(id=quote_id)
         except SalesQuote.DoesNotExist:
             return Response({'success': False, 'error': 'Quote not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Verify Stripe session
-        try:
-            session = stripe.checkout.Session.retrieve(session_id)
-            if session.payment_status != 'paid':
-                return Response({'success': False, 'error': 'Payment not confirmed'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        # Verify Stripe session (skip for already-accepted quotes to avoid re-processing)
+        if quote.status != SalesQuote.STATUS_ACCEPTED:
+            try:
+                session = stripe.checkout.Session.retrieve(session_id)
+                if session.payment_status != 'paid':
+                    return Response({'success': False, 'error': 'Payment not confirmed'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'success': False, 'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Mark quote accepted
-        quote.status = SalesQuote.STATUS_ACCEPTED
-        quote.responded_at = timezone.now()
-        quote.save(update_fields=['status', 'responded_at'])
+            # Mark quote accepted
+            quote.status = SalesQuote.STATUS_ACCEPTED
+            quote.responded_at = timezone.now()
+            quote.save(update_fields=['status', 'responded_at'])
 
-        # Create or update sales order
+            # Create a new treatment Case (sales-based, no booking FK)
+            try:
+                Case.objects.create(
+                    booking=None,
+                    client=quote.client,
+                    source='sales',
+                    status=Case.STATUS_RECEIVED,
+                    admin_notes=f"Treatment case from quote {quote.quote_number}",
+                )
+            except Exception as exc:
+                logger.warning(f"Sales case creation failed for quote {quote.id}: {exc}")
+
+        # Create or update sales order (idempotent)
         order, created = SalesOrder.objects.get_or_create(
             quote=quote,
             defaults={
@@ -252,16 +293,20 @@ class SalesQuoteViewSet(viewsets.ModelViewSet):
                 'amount_paid': float(quote.amount) / 2 if payment_type == 'partial' else float(quote.amount),
             }
         )
-        if not created:
+        if not created and order.payment_status != 'paid':
             order.payment_status = 'paid'
             order.amount_paid = float(quote.amount)
             order.save(update_fields=['payment_status', 'amount_paid'])
+
+        # True only for real registered accounts — guests have is_guest=True
+        client_has_account = bool(quote.client_id) and not quote.client.is_guest
 
         return Response({
             'success': True,
             'payment_type': payment_type,
             'case_number': quote.case.case_number,
             'order_number': order.order_number,
+            'client_has_account': client_has_account,
         })
 
     @action(detail=True, methods=['post'])
@@ -305,8 +350,13 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.is_superadmin:
-            return SalesOrder.objects.all().select_related('client', 'quote__case__booking__service')
-        return SalesOrder.objects.filter(client=user).select_related('quote')
+            return SalesOrder.objects.all().select_related(
+                'client', 'quote', 'quote__case', 'quote__case__booking',
+                'quote__case__booking__service',
+            )
+        return SalesOrder.objects.filter(client=user).select_related(
+            'quote', 'quote__case', 'quote__case__booking', 'quote__case__booking__service',
+        )
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -331,3 +381,49 @@ class SalesOrderViewSet(viewsets.ModelViewSet):
         orders = SalesOrder.objects.filter(client=request.user)
         serializer = SalesOrderListSerializer(orders, many=True)
         return Response({'success': True, 'count': orders.count(), 'data': serializer.data})
+
+    @action(detail=False, methods=['get'], permission_classes=[IsSuperAdmin])
+    def partial_overdue(self, request):
+        """
+        GET /api/v1/sales/orders/partial_overdue/
+        Returns sales orders where:
+          - payment_status = 'partial'
+          - partial_since is at least 15 days ago
+        SuperAdmin only.
+        """
+        threshold = timezone.now() - timedelta(days=15)
+        orders = SalesOrder.objects.filter(
+            payment_status='partial',
+            partial_since__lte=threshold,
+        ).select_related(
+            'client', 'quote', 'quote__case', 'quote__case__booking',
+            'quote__case__booking__service',
+        ).order_by('partial_since')
+
+        data = []
+        for o in orders:
+            days_overdue = (timezone.now() - o.partial_since).days
+            service_name = ''
+            try:
+                service_name = o.quote.case.booking.service.name
+            except Exception:
+                pass
+            if not service_name:
+                try:
+                    service_name = o.quote.title
+                except Exception:
+                    pass
+            data.append({
+                'id':            str(o.id),
+                'order_number':  o.order_number,
+                'client_name':   o.client.full_name,
+                'client_email':  o.client.email,
+                'service_name':  service_name,
+                'total_amount':  str(o.total_amount),
+                'amount_paid':   str(o.amount_paid),
+                'currency':      o.currency,
+                'partial_since': o.partial_since.isoformat(),
+                'days_overdue':  days_overdue,
+            })
+
+        return Response({'success': True, 'count': len(data), 'data': data})

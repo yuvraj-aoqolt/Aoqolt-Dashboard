@@ -119,6 +119,16 @@ class UserViewSet(viewsets.ModelViewSet):
             'data': serializer.data
         })
 
+    def destroy(self, request, *args, **kwargs):
+        """Delete a user — SuperAdmin only."""
+        if not request.user.is_superadmin:
+            return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
+        user = self.get_object()
+        if user == request.user:
+            return Response({'success': False, 'error': 'You cannot delete your own account'}, status=status.HTTP_400_BAD_REQUEST)
+        user.delete()
+        return Response({'success': True, 'message': 'User deleted'}, status=status.HTTP_200_OK)
+
 
 class ProfileView(generics.RetrieveUpdateAPIView):
     """View for managing user profile"""

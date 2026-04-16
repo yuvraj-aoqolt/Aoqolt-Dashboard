@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import {
-  MdDashboard, MdCalendarToday, MdFolder, MdPerson, MdLogout, MdMenu, MdClose
+  MdDashboard, MdCalendarToday, MdFolder, MdPerson, MdLogout, MdMenu, MdClose, MdChat
 } from 'react-icons/md'
 import { FiArrowLeft } from 'react-icons/fi'
 
@@ -11,6 +11,7 @@ const CLIENT_NAV = [
   { to: '/dashboard', icon: <MdDashboard size={20} />, label: 'Overview' },
   { to: '/dashboard/bookings', icon: <MdCalendarToday size={20} />, label: 'My Bookings' },
   { to: '/dashboard/cases', icon: <MdFolder size={20} />, label: 'My Cases' },
+  { to: '/dashboard/chat', icon: <MdChat size={20} />, label: 'Support Chat' },
   { to: '/dashboard/profile', icon: <MdPerson size={20} />, label: 'Profile' },
 ]
 

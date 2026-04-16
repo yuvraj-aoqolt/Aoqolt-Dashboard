@@ -2,6 +2,7 @@
 Sales Models - Quotes and Orders
 """
 from django.db import models
+from django.utils import timezone
 from apps.accounts.models import User
 from apps.cases.models import Case
 import uuid
@@ -167,7 +168,13 @@ class SalesOrder(models.Model):
     
     # Notes
     notes = models.TextField(blank=True)
-    
+
+    # Partial-payment tracking: set once when payment_status first becomes 'partial'
+    partial_since = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Timestamp of the first partial payment; used for 15-day overdue alerts.",
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -192,18 +199,22 @@ class SalesOrder(models.Model):
         return f"${self.total_amount:.2f}"
     
     def save(self, *args, **kwargs):
-        """Generate order number on creation"""
+        """Generate order number on creation and track first partial-payment timestamp."""
         if not self.order_number:
             import datetime
             today = datetime.date.today().strftime('%Y%m%d')
             last_order = SalesOrder.objects.filter(order_number__startswith=f'ORD-{today}').order_by('-order_number').first()
-            
+
             if last_order:
                 last_num = int(last_order.order_number.split('-')[-1])
                 new_num = last_num + 1
             else:
                 new_num = 1
-            
+
             self.order_number = f'ORD-{today}-{new_num:05d}'
-        
+
+        # Set partial_since the first time payment_status becomes 'partial'
+        if self.payment_status == 'partial' and not self.partial_since:
+            self.partial_since = timezone.now()
+
         super().save(*args, **kwargs)

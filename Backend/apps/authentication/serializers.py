@@ -71,7 +71,7 @@ class OTPVerifySerializer(serializers.Serializer):
 
 class SocialAuthSerializer(serializers.Serializer):
     """Serializer for social authentication"""
-    provider = serializers.ChoiceField(choices=['google', 'apple', 'yahoo'])
+    provider = serializers.ChoiceField(choices=['google', 'yahoo'])
     access_token = serializers.CharField()
     email = serializers.EmailField(required=False)
     full_name = serializers.CharField(required=False)

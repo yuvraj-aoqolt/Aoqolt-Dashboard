@@ -2,96 +2,175 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
-import { MdDashboard, MdFolder, MdLogout, MdMenu } from 'react-icons/md'
-import { FiArrowLeft, FiMessageSquare } from 'react-icons/fi'
+import { MdDashboard, MdMenu, MdClose } from 'react-icons/md'
+import { MdLogout } from 'react-icons/md'
+import {
+  FiMessageSquare, FiBell,
+  FiSearch, FiCheckCircle, FiBriefcase, FiInbox,
+} from 'react-icons/fi'
 
 const ADMIN_NAV = [
-  { to: '/admin', icon: <MdDashboard size={20} />, label: 'Overview' },
-  { to: '/admin/cases', icon: <MdFolder size={20} />, label: 'Cases' },
-  { to: '/admin/chat', icon: <FiMessageSquare size={18} />, label: 'Chat' },
+  { to: '/admin',       icon: <MdDashboard size={19} />,    label: 'Dashboard'  },
+  { to: '/admin/cases', icon: <FiInbox size={17} />,         label: 'Assigned',  exact: false },
+  { to: '/admin/work',  icon: <FiBriefcase size={17} />,     label: 'Working',   exact: false },
+  { to: '/admin/done',  icon: <FiCheckCircle size={17} />,   label: 'Completed', exact: false },
+  { to: '/admin/chat',  icon: <FiMessageSquare size={17} />, label: 'Chat',      exact: false },
 ]
 
-export default function AdminLayout({ children }) {
+
+export default function AdminLayout({ children, pageTitle = 'Baba Dashboard' }) {
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   const handleLogout = async () => { await logout(); navigate('/') }
 
-  const NavItem = ({ to, icon, label }) => {
-    const active = location.pathname === to
+  const isActive = (to, exact = true) =>
+    exact ? location.pathname === to : location.pathname.startsWith(to)
+
+  const NavItem = ({ to, icon, label, exact = true, onClick }) => {
+    const active = isActive(to, exact)
     return (
-      <Link to={to} onClick={() => setSidebarOpen(false)}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${active ? 'bg-red-900/30 text-red-400 border border-red-900/40' : 'text-white/50 hover:text-white hover:bg-white/5'}`}>
-        <span className={active ? 'text-red-400' : 'text-white/35'}>{icon}</span>
+      <Link
+        to={to}
+        onClick={() => { setSidebarOpen(false); onClick?.() }}
+        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-150
+          ${active
+            ? 'bg-red-600 text-white shadow-md shadow-red-900/40'
+            : 'text-white/45 hover:text-white hover:bg-white/6'
+          }`}
+      >
+        <span className={active ? 'text-white' : 'text-white/35'}>{icon}</span>
         {label}
       </Link>
     )
   }
 
+  // Avatar: use uploaded image or coloured initial
+  const avatarUrl = user?.avatar
+  const userInitial = user?.full_name?.[0]?.toUpperCase() || 'A'
+
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-white/5">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-900 rounded-lg flex items-center justify-center">
-            <span className="text-white font-display font-bold text-sm">A</span>
-          </div>
-          <span className="text-white font-display font-bold text-lg tracking-wider">AO<span className="text-red-500">QOLT</span></span>
-        </Link>
-        <div className="mt-2">
-          <span className="text-xs bg-orange-900/30 text-orange-400 border border-orange-900/40 px-2 py-0.5 rounded-full">Admin Panel</span>
-        </div>
-      </div>
-      <div className="p-4 mx-3 mt-4 glass rounded-xl border border-red-900/20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-700 to-red-900 rounded-full flex items-center justify-center text-white font-bold">
-            {user?.full_name?.[0]?.toUpperCase() || 'A'}
-          </div>
+    <div className="flex flex-col h-full bg-[#111111]">
+      {/* Logo */}
+      <div className="px-5 pt-6 pb-5">
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src="/Aoqolt logo 1-01-02.png" alt="Aoqolt" className="h-8 w-8 object-contain" />
           <div>
-            <p className="text-white font-medium text-sm truncate">{user?.full_name}</p>
-            <span className="text-xs text-orange-400/80">Admin (Baba)</span>
+            <span className="text-white font-display font-bold text-base tracking-wider leading-none block">
+              Aoqolt
+            </span>
+            <span className="text-red-500 text-[10px] italic leading-none">Spiritual Insights</span>
           </div>
-        </div>
-      </div>
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {ADMIN_NAV.map((item) => <NavItem key={item.to} {...item} />)}
-      </nav>
-      <div className="p-3 border-t border-white/5 space-y-1">
-        <Link to="/" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-all">
-          <FiArrowLeft size={18} /> Back to Site
         </Link>
-        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400/70 hover:text-red-400 hover:bg-red-900/20 transition-all">
-          <MdLogout size={20} /> Sign Out
+      </div>
+
+      {/* Main nav */}
+      <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+        {ADMIN_NAV.map((item) => (
+          <NavItem key={item.to} {...item} />
+        ))}
+      </nav>
+
+      {/* Logout */}
+      <div className="px-3 pb-5 pt-3 border-t border-white/5">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-white/45 hover:text-white hover:bg-red-600/20 transition-all duration-150"
+        >
+          <MdLogout size={18} className="text-white/35" />
+          Logout
         </button>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-dark flex">
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-sidebar border-r border-white/5">
+    <div className="min-h-screen bg-[#1a1a1a] flex">
+
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-48 lg:fixed lg:inset-y-0 border-r border-white/5">
         <SidebarContent />
       </aside>
+
+      {/* ── Mobile sidebar overlay ── */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-black/60 z-40 lg:hidden" />
-            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-white/5 z-50 lg:hidden">
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="fixed inset-0 bg-black/70 z-40 lg:hidden"
+            />
+            <motion.aside
+              initial={{ x: -220 }} animate={{ x: 0 }} exit={{ x: -220 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+              className="fixed inset-y-0 left-0 w-52 z-50 lg:hidden border-r border-white/5"
+            >
               <SidebarContent />
             </motion.aside>
           </>
         )}
       </AnimatePresence>
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-          <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-sidebar border-b border-white/5 sticky top-0 z-30">
-          <button onClick={() => setSidebarOpen(true)} className="text-white/60 hover:text-white transition-colors"><MdMenu size={24} /></button>
-          <span className="text-white font-display font-bold tracking-wider">AO<span className="text-red-500">QOLT</span> <span className="text-orange-400 text-xs">Admin</span></span>
-          <div className="w-8 h-8 bg-gradient-to-br from-orange-700 to-red-900 rounded-full flex items-center justify-center text-white font-bold text-sm">
-            {user?.full_name?.[0]?.toUpperCase() || 'A'}
+
+      {/* ── Main area ── */}
+      <div className="flex-1 lg:ml-48 flex flex-col min-h-screen">
+
+        {/* Top header */}
+        <header className="sticky top-0 z-30 bg-[#111111] border-b border-white/5 px-4 sm:px-6 h-14 flex items-center gap-4">
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setSidebarOpen((o) => !o)}
+            className="lg:hidden text-white/50 hover:text-white transition-colors mr-1"
+          >
+            {sidebarOpen ? <MdClose size={22} /> : <MdMenu size={22} />}
+          </button>
+
+          {/* Page title */}
+          <h1 className="text-white font-semibold text-base whitespace-nowrap hidden sm:block">
+            {pageTitle}
+          </h1>
+
+          {/* Search */}
+          <div className="flex-1 max-w-sm mx-auto relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" size={14} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search insights, clients or reports..."
+              className="w-full bg-white/5 border border-white/8 focus:border-white/20 rounded-lg pl-9 pr-4 py-2 text-white/70 placeholder:text-white/25 outline-none transition-all text-xs"
+            />
           </div>
-        </div>
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+
+          {/* Right: bell + user */}
+          <div className="flex items-center gap-3 ml-auto">
+            <button className="relative text-white/40 hover:text-white/80 transition-colors">
+              <FiBell size={18} />
+            </button>
+
+            <div className="flex items-center gap-2.5">
+              <div className="text-right hidden sm:block">
+                <p className="text-white text-xs font-medium leading-tight">{user?.full_name || 'Admin'}</p>
+                <p className="text-white/35 text-[10px] leading-tight">Chief Intuitive</p>
+              </div>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={user?.full_name} className="w-8 h-8 rounded-full object-cover ring-1 ring-white/10" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-600 to-red-700 flex items-center justify-center text-white text-xs font-bold ring-1 ring-white/10">
+                  {userInitial}
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-4 sm:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

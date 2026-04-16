@@ -16,9 +16,9 @@ export function AuthProvider({ children }) {
     } else {
       setLoading(false)
     }
-    // Safety fallback: never let the app stay on a loading screen forever.
-    // The axios timeout (10s) is the primary guard; this is a last-resort backstop.
-    const timer = setTimeout(() => setLoading(false), 12000)
+    // Hard ceiling: axios timeout is 10s — if the network hasn't responded in 3s
+    // on a local/fast connection something is wrong; unblock the UI immediately.
+    const timer = setTimeout(() => setLoading(false), 3000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -93,22 +93,6 @@ export function AuthProvider({ children }) {
       full_name  = userInfo.name
       social_id  = userInfo.sub
       access_token = tokenResponse.access_token
-
-    } else if (provider === 'apple') {
-      // Apple returns a signed id_token JWT — decode the payload to get sub & email
-      const idToken = tokenResponse.authorization?.id_token
-      if (!idToken) throw new Error('Apple id_token missing')
-      const jwtPayload = JSON.parse(
-        atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
-      )
-      social_id    = jwtPayload.sub
-      email        = jwtPayload.email || tokenResponse.user?.email
-      // Apple only sends name on first sign-in
-      const nameObj = tokenResponse.user?.name
-      full_name    = nameObj
-        ? `${nameObj.firstName || ''} ${nameObj.lastName || ''}`.trim()
-        : (email || social_id)
-      access_token = idToken
 
     } else if (provider === 'yahoo') {
       // tokenResponse = { access_token } from the PKCE exchange performed in YahooCallbackPage

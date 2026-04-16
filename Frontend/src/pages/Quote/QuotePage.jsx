@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { salesAPI } from '../../api/index'
-import { useAuth } from '../../context/AuthContext'
 
 function Spinner() {
   return (
@@ -13,22 +12,13 @@ function Spinner() {
 
 export default function QuotePage() {
   const { token } = useParams()
-  const navigate   = useNavigate()
-  const location   = useLocation()
-  const { user, loading: authLoading } = useAuth()
 
-  const [quote, setQuote]     = useState(null)
-  const [error, setError]     = useState('')
-  const [loadingQ, setLoadQ]  = useState(true)
-  const [paying, setPaying]   = useState(null) // 'partial' | 'full' | null
+  const [quote, setQuote]    = useState(null)
+  const [error, setError]    = useState('')
+  const [loadingQ, setLoadQ] = useState(true)
+  const [paying, setPaying]  = useState(null) // 'partial' | 'full' | null
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate(`/login?next=${encodeURIComponent(location.pathname)}`, { replace: true })
-    }
-  }, [authLoading, user, navigate, location.pathname])
-
+  // Public page — no auth required
   useEffect(() => {
     if (!token) return
     const load = async () => {
@@ -64,7 +54,6 @@ export default function QuotePage() {
     }
   }
 
-  if (authLoading || (!user && !authLoading)) return <Spinner />
   if (loadingQ) return <Spinner />
 
   if (error) {
@@ -73,16 +62,16 @@ export default function QuotePage() {
         <div className="text-5xl mb-4">🔍</div>
         <h1 className="text-xl font-bold mb-2">Quote Not Found</h1>
         <p className="text-white/50 text-sm mb-6">{error}</p>
-        <button onClick={() => navigate('/')} className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-semibold transition-colors">
+        <a href="/" className="px-5 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-semibold transition-colors">
           Go Home
-        </button>
+        </a>
       </div>
     )
   }
 
-  const isPayable = quote?.status === 'pending' || quote?.status === 'draft'
   const total = Number(quote?.amount || 0)
   const partial = total / 2
+  const isPayable = (quote?.status === 'pending' || quote?.status === 'draft') && total > 0
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex items-start justify-center py-10 px-4">
@@ -147,7 +136,12 @@ export default function QuotePage() {
           </div>
 
           {/* Payment options */}
-          {isPayable ? (
+          {(quote?.status === 'pending' || quote?.status === 'draft') && total === 0 ? (
+            <div className="px-8 py-8 text-center">
+              <p className="text-yellow-400/80 text-sm font-medium">Quote amount not set yet</p>
+              <p className="text-white/40 text-xs mt-1">The team is preparing your quote. You'll be notified when it's ready.</p>
+            </div>
+          ) : isPayable ? (
             <div className="px-8 py-7 space-y-4">
               <p className="text-sm text-white/60 text-center mb-5">Choose your payment option</p>
               <div className="grid grid-cols-2 gap-4">

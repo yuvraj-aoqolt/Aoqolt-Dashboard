@@ -1,18 +1,16 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ServicesProvider } from './context/ServicesContext'
 import { NotificationProvider } from './context/NotificationContext'
-
-// Layout & guards — eagerly loaded (tiny, needed on every render)
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import LoadingScreen from './components/LoadingScreen'
-import ProtectedRoute from './routes/ProtectedRoute'
 import RoleRoute from './routes/RoleRoute'
 
-// ── Lazy-loaded pages (each becomes its own JS chunk) ────────────────────────
+// ── Lazy-loaded layout chrome (keeps initial bundle minimal) ─────────────────
+const Navbar = lazy(() => import('./components/Navbar'))
+const Footer = lazy(() => import('./components/Footer'))
+
+// ── All pages lazy (each is its own JS chunk) ────────────────────────────────
 const HomePage           = lazy(() => import('./pages/Home/HomePage'))
 const ServicesPage       = lazy(() => import('./pages/Services/ServicesPage'))
 const ServiceDetailPage  = lazy(() => import('./pages/Services/ServiceDetailPage'))
@@ -36,6 +34,8 @@ const AdminDashboardPage  = lazy(() => import('./pages/Admin/AdminDashboardPage'
 const AdminCasesPage      = lazy(() => import('./pages/Admin/AdminCasesPage'))
 const AdminCaseDetailPage = lazy(() => import('./pages/Admin/AdminCaseDetailPage'))
 const AdminChatPage       = lazy(() => import('./pages/Admin/AdminChatPage'))
+const AdminWorkPage       = lazy(() => import('./pages/Admin/AdminWorkPage'))
+const AdminDonePage       = lazy(() => import('./pages/Admin/AdminDonePage'))
 
 // SuperAdmin
 const SuperAdminDashboardPage       = lazy(() => import('./pages/SuperAdmin/SuperAdminDashboardPage'))
@@ -61,16 +61,28 @@ const BlogDetailPage     = lazy(() => import('./pages/Blog/BlogDetailPage'))
 const CreateEditBlogPage = lazy(() => import('./pages/Blog/CreateEditBlogPage'))
 const MyBlogsPage        = lazy(() => import('./pages/Blog/MyBlogsPage'))
 
-// Quote (client-facing)
+// Quote
 const QuotePage               = lazy(() => import('./pages/Quote/QuotePage'))
 const QuotePaymentSuccessPage = lazy(() => import('./pages/Quote/QuotePaymentSuccessPage'))
+
+// Client dashboard
+const ChatListPage        = lazy(() => import('./pages/Dashboard/chat/ChatListPage'))
+const CaseChatPage        = lazy(() => import('./pages/Dashboard/chat/CaseChatPage'))
+const BookingChatPage     = lazy(() => import('./pages/Dashboard/chat/BookingChatPage'))
+const ClientDashboardPage = lazy(() => import('./pages/Dashboard/ClientDashboardPage'))
+const MyBookingsPage      = lazy(() => import('./pages/Dashboard/MyBookingsPage'))
+const MyCasesPage         = lazy(() => import('./pages/Dashboard/MyCasesPage'))
+const CaseDetailPage      = lazy(() => import('./pages/Dashboard/CaseDetailPage'))
+const ProfilePage         = lazy(() => import('./pages/Dashboard/ProfilePage'))
+
+// Zero-cost fallback — renders nothing, blocks nothing
+const Noop = null
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <ServicesProvider>
-          <NotificationProvider>
           <Toaster
             position="top-right"
             toastOptions={{
@@ -83,85 +95,99 @@ export default function App() {
               error:   { iconTheme: { primary: 'var(--color-accent)',  secondary: '#fff' } },
             }}
           />
-          <Suspense fallback={<LoadingScreen />}>
+          {/* No global Suspense — each route is individually wrapped */}
           <Routes>
             {/* Public pages with Navbar + Footer */}
             <Route element={<PublicLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/services" element={<ServicesPage />} />
-              <Route path="/services/:id" element={<ServiceDetailPage />} />
-              <Route path="/blogs" element={<BlogsPage />} />
-              <Route path="/blogs/:slug" element={<BlogDetailPage />} />
+              <Route path="/"             element={<S><HomePage /></S>} />
+              <Route path="/services"     element={<S><ServicesPage /></S>} />
+              <Route path="/services/:id" element={<S><ServiceDetailPage /></S>} />
+              <Route path="/blogs"        element={<S><BlogsPage /></S>} />
+              <Route path="/blogs/:slug"  element={<S><BlogDetailPage /></S>} />
             </Route>
 
             {/* Auth pages — no navbar */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/verify-otp" element={<VerifyOtpPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            {/* Admin-invitation routes — public, token-protected by the backend */}
-            <Route path="/invite/:token" element={<SetPasswordPage />} />
-            <Route path="/admin-reset/:token" element={<SetPasswordPage />} />
-            <Route path="/oauth/yahoo/callback" element={<YahooCallbackPage />} />
+            <Route path="/login"              element={<S><LoginPage /></S>} />
+            <Route path="/register"           element={<S><RegisterPage /></S>} />
+            <Route path="/verify-otp"         element={<S><VerifyOtpPage /></S>} />
+            <Route path="/forgot-password"    element={<S><ForgotPasswordPage /></S>} />
+            <Route path="/reset-password"     element={<S><ResetPasswordPage /></S>} />
+            <Route path="/invite/:token"      element={<S><SetPasswordPage /></S>} />
+            <Route path="/admin-reset/:token" element={<S><SetPasswordPage /></S>} />
+            <Route path="/oauth/yahoo/callback" element={<S><YahooCallbackPage /></S>} />
 
-            {/* Quote pages — login-gated but accessible from email link */}
-            <Route path="/quote/payment/success" element={<QuotePaymentSuccessPage />} />
-            <Route path="/quote/:token" element={<QuotePage />} />
+            {/* Quote pages */}
+            <Route path="/quote/payment/success" element={<S><QuotePaymentSuccessPage /></S>} />
+            <Route path="/quote/:token"          element={<S><QuotePage /></S>} />
 
-            {/* Protected — requires auth */}
-            <Route element={<ProtectedRoute />}>
+            {/* Protected — requires auth; NotificationProvider only mounts here */}
+            <Route element={<ProtectedLayout />}>
+              {/* ── Client dashboard ── */}
+              <Route path="/dashboard"           element={<S><ClientDashboardPage /></S>} />
+              <Route path="/dashboard/bookings"  element={<S><MyBookingsPage /></S>} />
+              <Route path="/dashboard/cases"     element={<S><MyCasesPage /></S>} />
+              <Route path="/dashboard/cases/:id" element={<S><CaseDetailPage /></S>} />
+              <Route path="/dashboard/chat"                   element={<S><ChatListPage /></S>} />
+              <Route path="/dashboard/chat/case/:id"          element={<S><CaseChatPage /></S>} />
+              <Route path="/dashboard/chat/booking/:id"       element={<S><BookingChatPage /></S>} />
+              <Route path="/dashboard/profile"   element={<S><ProfilePage /></S>} />
+
               {/* ── Core booking flow ── */}
-              <Route path="/booking/:token" element={<BookingPage />} />
-              <Route path="/payment/success" element={<PaymentSuccessPage />} />
-              <Route path="/payment/cancel" element={<PaymentCancelPage />} />
-              <Route path="/booking-form/:form2Token" element={<DetailsFormPage />} />
-              <Route path="/booking/success" element={<BookingSuccessPage />} />
+              <Route path="/booking/:token"           element={<S><BookingPage /></S>} />
+              <Route path="/payment/success"          element={<S><PaymentSuccessPage /></S>} />
+              <Route path="/payment/cancel"           element={<S><PaymentCancelPage /></S>} />
+              <Route path="/booking-form/:form2Token" element={<S><DetailsFormPage /></S>} />
+              <Route path="/booking/success"          element={<S><BookingSuccessPage /></S>} />
 
               {/* ── Admin dashboard ── */}
               <Route element={<RoleRoute allowedRoles={['admin', 'superadmin']} />}>
-                <Route path="/admin" element={<AdminDashboardPage />} />
-                <Route path="/admin/cases" element={<AdminCasesPage />} />
-                <Route path="/admin/cases/:id" element={<AdminCaseDetailPage />} />
-                <Route path="/admin/chat" element={<AdminChatPage />} />
+                <Route path="/admin"           element={<S><AdminDashboardPage /></S>} />
+                <Route path="/admin/cases"     element={<S><AdminCasesPage /></S>} />
+                <Route path="/admin/cases/:id" element={<S><AdminCaseDetailPage /></S>} />
+                <Route path="/admin/chat"      element={<S><AdminChatPage /></S>} />
+                <Route path="/admin/work"      element={<S><AdminWorkPage /></S>} />
+                <Route path="/admin/done"      element={<S><AdminDonePage /></S>} />
               </Route>
 
               {/* ── Blog manager routes ── */}
               <Route element={<BlogManagerRoute />}>
-                <Route path="/blogs/create"   element={<CreateEditBlogPage />} />
-                <Route path="/blogs/edit/:id" element={<CreateEditBlogPage />} />
-                <Route path="/blogs/my"       element={<MyBlogsPage />} />
+                <Route path="/blogs/create"   element={<S><CreateEditBlogPage /></S>} />
+                <Route path="/blogs/edit/:id" element={<S><CreateEditBlogPage /></S>} />
+                <Route path="/blogs/my"       element={<S><MyBlogsPage /></S>} />
               </Route>
 
               {/* ── SuperAdmin dashboard ── */}
               <Route element={<RoleRoute allowedRoles={['superadmin']} />}>
-                <Route path="/superadmin"                       element={<SuperAdminDashboardPage />} />
-                <Route path="/superadmin/bookings"              element={<SuperAdminBookingsPage />} />
-                <Route path="/superadmin/cases"                 element={<SuperAdminCasesPage />} />
-                <Route path="/superadmin/users"                 element={<SuperAdminUsersPage />} />
-                <Route path="/superadmin/clients"               element={<SuperAdminClientsPage />} />
-                <Route path="/superadmin/aura-assignments"      element={<SuperAdminAuraAssignmentsPage />} />
-                <Route path="/superadmin/chat"                  element={<SuperAdminChatPage />} />
-                <Route path="/superadmin/sales-quotes"          element={<SuperAdminSalesQuotesPage />} />
-                <Route path="/superadmin/sales-orders"          element={<SuperAdminSalesOrdersPage />} />
-                <Route path="/superadmin/invoice"               element={<SuperAdminInvoicePage />} />
-                <Route path="/superadmin/reports"               element={<SuperAdminReportsPage />} />
-                <Route path="/superadmin/admins"                element={<SuperAdminAdminsPage />} />
-                <Route path="/superadmin/settings"              element={<SuperAdminSettingsPage />} />
-                <Route path="/superadmin/blogs"                 element={<SuperAdminBlogsPage />} />
-                <Route path="/superadmin/blog-permissions"      element={<SuperAdminBlogPermissionsPage />} />
-                <Route path="/superadmin/notifications"         element={<SuperAdminNotificationsPage />} />
+                <Route path="/superadmin"                  element={<S><SuperAdminDashboardPage /></S>} />
+                <Route path="/superadmin/bookings"         element={<S><SuperAdminBookingsPage /></S>} />
+                <Route path="/superadmin/cases"            element={<S><SuperAdminCasesPage /></S>} />
+                <Route path="/superadmin/users"            element={<S><SuperAdminUsersPage /></S>} />
+                <Route path="/superadmin/clients"          element={<S><SuperAdminClientsPage /></S>} />
+                <Route path="/superadmin/aura-assignments" element={<S><SuperAdminAuraAssignmentsPage /></S>} />
+                <Route path="/superadmin/chat"             element={<S><SuperAdminChatPage /></S>} />
+                <Route path="/superadmin/sales-quotes"     element={<S><SuperAdminSalesQuotesPage /></S>} />
+                <Route path="/superadmin/sales-orders"     element={<S><SuperAdminSalesOrdersPage /></S>} />
+                <Route path="/superadmin/invoice"          element={<S><SuperAdminInvoicePage /></S>} />
+                <Route path="/superadmin/reports"          element={<S><SuperAdminReportsPage /></S>} />
+                <Route path="/superadmin/admins"           element={<S><SuperAdminAdminsPage /></S>} />
+                <Route path="/superadmin/settings"         element={<S><SuperAdminSettingsPage /></S>} />
+                <Route path="/superadmin/blogs"            element={<S><SuperAdminBlogsPage /></S>} />
+                <Route path="/superadmin/blog-permissions" element={<S><SuperAdminBlogPermissionsPage /></S>} />
+                <Route path="/superadmin/notifications"    element={<S><SuperAdminNotificationsPage /></S>} />
               </Route>
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-          </Suspense>
-          </NotificationProvider>
         </ServicesProvider>
       </AuthProvider>
     </BrowserRouter>
   )
+}
+
+// Lightweight per-route Suspense wrapper — zero fallback, no paint block
+function S({ children }) {
+  return <Suspense fallback={Noop}>{children}</Suspense>
 }
 
 // Blog manager guard — requires can_manage_blogs OR superadmin
@@ -172,13 +198,26 @@ function BlogManagerRoute() {
   return <Navigate to="/" replace />
 }
 
-// Layout wrapper that includes Navbar and Footer
+// Combines auth guard + NotificationProvider — only mounts for logged-in users
+function ProtectedLayout() {
+  const { isAuthenticated, loading } = useAuth()
+  const location = useLocation()
+  if (loading) return null
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />
+  return (
+    <NotificationProvider>
+      <Outlet />
+    </NotificationProvider>
+  )
+}
+
+// Lazy Navbar/Footer so their JS is excluded from the initial bundle
 function PublicLayout() {
   return (
     <>
-      <Navbar />
+      <Suspense fallback={Noop}><Navbar /></Suspense>
       <Outlet />
-      <Footer />
+      <Suspense fallback={Noop}><Footer /></Suspense>
     </>
   )
 }

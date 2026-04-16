@@ -67,6 +67,23 @@ function QuoteEditor({ quote, onSaved, onSent }) {
     if (!window.confirm(`Send quote to ${quote.client_email}?`)) return
     setSending(true)
     try {
+      // Always save items first so amount is up to date before sending
+      const saveRes = await salesAPI.saveItems(quote.id, {
+        title,
+        valid_until: validUntil || null,
+        items: items.map(i => ({
+          description: i.description,
+          quantity: Number(i.quantity) || 1,
+          unit_price: String(Number(i.unit_price) || 0),
+        })),
+      })
+      if (!saveRes.data?.success) {
+        showToast('Failed to save items before sending', false)
+        setSending(false)
+        return
+      }
+      onSaved(saveRes.data.data)
+
       const res = await salesAPI.sendQuote(quote.id)
       if (res.data?.success) {
         setQuoteUrl(res.data.quote_url)
@@ -83,6 +100,23 @@ function QuoteEditor({ quote, onSaved, onSent }) {
     if (!window.confirm(`Resend quote to ${quote.client_email}?`)) return
     setSending(true)
     try {
+      // Re-save items to ensure amount is current before resending
+      const saveRes = await salesAPI.saveItems(quote.id, {
+        title,
+        valid_until: validUntil || null,
+        items: items.map(i => ({
+          description: i.description,
+          quantity: Number(i.quantity) || 1,
+          unit_price: String(Number(i.unit_price) || 0),
+        })),
+      })
+      if (!saveRes.data?.success) {
+        showToast('Failed to save items before resending', false)
+        setSending(false)
+        return
+      }
+      onSaved(saveRes.data.data)
+
       const res = await salesAPI.sendQuote(quote.id)
       if (res.data?.success) {
         setQuoteUrl(res.data.quote_url)

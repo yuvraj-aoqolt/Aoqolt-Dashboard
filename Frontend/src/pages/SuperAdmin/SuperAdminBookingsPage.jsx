@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import {
   FiSearch, FiChevronDown, FiChevronUp, FiCheck,
   FiEdit2, FiSave, FiUser, FiUsers, FiCalendar, FiClock, FiMapPin, FiImage,
-  FiPhone, FiMail, FiGlobe, FiX, FiExternalLink
+  FiPhone, FiMail, FiGlobe, FiX, FiExternalLink, FiTrash2
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { bookingsAPI } from '../../api'
@@ -36,6 +36,8 @@ export default function SuperAdminBookingsPage() {
   const [form1Data, setForm1Data] = useState({})
   const [form2Data, setForm2Data] = useState({})
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting]     = useState(null)
+  const [confirmDel, setConfirmDel] = useState(null)
 
   useEffect(() => {
     bookingsAPI.allBookings()
@@ -56,6 +58,20 @@ export default function SuperAdminBookingsPage() {
   })
 
   const toggleExpand = (id) => setExpanded((prev) => (prev === id ? null : id))
+
+  const deleteBooking = async (id) => {
+    setConfirmDel(null)
+    setDeleting(id)
+    try {
+      await bookingsAPI.deleteBooking(id)
+      setBookings((prev) => prev.filter((b) => b.id !== id))
+      toast.success('Booking deleted')
+    } catch {
+      toast.error('Failed to delete booking')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const openEditForm1 = (booking) => {
     setEditForm1Modal(booking)
@@ -234,6 +250,18 @@ export default function SuperAdminBookingsPage() {
                       </button>
                     )}
                     {isOpen ? <FiChevronUp size={16} className="text-white/30" /> : <FiChevronDown size={16} className="text-white/30" />}
+                    {confirmDel === booking.id ? (
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <span className="text-red-400 text-xs">Delete?</span>
+                        <button onClick={() => deleteBooking(booking.id)} className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg">Yes</button>
+                        <button onClick={() => setConfirmDel(null)} className="px-2 py-1 text-xs bg-white/5 text-white/50 rounded-lg">No</button>
+                      </div>
+                    ) : (
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDel(booking.id) }} disabled={deleting === booking.id}
+                        className="p-1.5 text-white/15 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all disabled:opacity-40">
+                        <FiTrash2 size={13} />
+                      </button>
+                    )}
                   </div>
                 </div>
 

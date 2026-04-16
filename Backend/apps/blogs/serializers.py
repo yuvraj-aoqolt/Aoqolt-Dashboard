@@ -50,7 +50,7 @@ class BlogDetailSerializer(serializers.ModelSerializer):
         model = Blog
         fields = [
             'id', 'title', 'slug', 'description', 'content',
-            'poster_image_url', 'gallery_images', 'author',
+            'poster_image_url', 'poster_image_alt', 'gallery_images', 'author',
             'status', 'meta_title', 'meta_description',
             'created_at', 'updated_at', 'published_at',
         ]
@@ -71,7 +71,7 @@ class BlogWriteSerializer(serializers.ModelSerializer):
         model = Blog
         fields = [
             'title', 'description', 'content',
-            'poster_image', 'status',
+            'poster_image', 'poster_image_alt', 'status',
             'meta_title', 'meta_description',
         ]
 

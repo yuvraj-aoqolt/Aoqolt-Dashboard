@@ -72,18 +72,62 @@ class CaseSerializer(serializers.ModelSerializer):
 
 
 class CaseListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for listing cases"""
-    client_name = serializers.CharField(source='client.full_name', read_only=True)
-    client_email = serializers.EmailField(source='client.email', read_only=True)
-    admin_name = serializers.CharField(source='assigned_admin.full_name', read_only=True)
-    service_name = serializers.CharField(source='booking.service.name', read_only=True)
-    
+    """Simplified serializer for listing cases — uses booking form 1 data as primary source"""
+    client_name  = serializers.SerializerMethodField()
+    client_email = serializers.SerializerMethodField()
+    client_phone = serializers.SerializerMethodField()
+    admin_name   = serializers.CharField(source='assigned_admin.full_name', read_only=True)
+    service_name = serializers.SerializerMethodField()
+    booking_id   = serializers.SerializerMethodField()
+
+    def get_client_name(self, obj):
+        """Prefer booking Form 1 full_name, fall back to user account name"""
+        try:
+            if obj.booking and obj.booking.full_name:
+                return obj.booking.full_name
+        except Exception:
+            pass
+        return obj.client.full_name if obj.client else ''
+
+    def get_client_email(self, obj):
+        """Prefer booking Form 1 email, fall back to user account email"""
+        try:
+            if obj.booking and obj.booking.email:
+                return obj.booking.email
+        except Exception:
+            pass
+        return obj.client.email if obj.client else ''
+
+    def get_client_phone(self, obj):
+        try:
+            if obj.booking:
+                cc = obj.booking.phone_country_code or ''
+                ph = obj.booking.phone_number or ''
+                return f"{cc}{ph}".strip() or None
+        except Exception:
+            pass
+        return None
+
+    def get_service_name(self, obj):
+        try:
+            return obj.booking.service.name if obj.booking and obj.booking.service else None
+        except Exception:
+            return None
+
+    def get_booking_id(self, obj):
+        try:
+            return obj.booking.booking_id if obj.booking else None
+        except Exception:
+            return None
+
     class Meta:
         model = Case
         fields = [
-            'id', 'case_number', 'client_name', 'client_email',
+            'id', 'case_number', 'source', 'booking_id',
+            'client_name', 'client_email', 'client_phone',
             'admin_name', 'service_name', 'status', 'priority',
-            'created_at', 'expected_completion_date'
+            'created_at', 'updated_at', 'assigned_at', 'started_at', 'completed_at',
+            'expected_completion_date',
         ]
 
 

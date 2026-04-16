@@ -29,9 +29,9 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         
         if user.is_superadmin:
-            return Payment.objects.all().select_related('user', 'booking__service')
+            return Payment.objects.all().select_related('user', 'booking__service', 'booking__case')
         else:
-            return Payment.objects.filter(user=user).select_related('booking__service')
+            return Payment.objects.filter(user=user).select_related('booking__service', 'booking__case')
     
     def get_serializer_class(self):
         if self.action == 'list':

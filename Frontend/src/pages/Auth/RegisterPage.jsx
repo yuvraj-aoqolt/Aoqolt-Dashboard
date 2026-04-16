@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { FiUser, FiMail, FiPhone, FiLock, FiEye, FiEyeOff, FiGlobe } from 'react-icons/fi'
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 import { FcGoogle } from 'react-icons/fc'
-import { useGoogleLogin } from '@react-oauth/google'
+import { useGoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout from './AuthLayout'
 
@@ -20,7 +19,7 @@ async function sha256Base64url(plain) {
   return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const { register: authRegister, socialLogin, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -28,7 +27,6 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [appleLoading, setAppleLoading]   = useState(false)
   const [yahooLoading, setYahooLoading]   = useState(false)
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm()
@@ -87,29 +85,6 @@ export default function RegisterPage() {
     onError: () => toast.error('Google sign-up was cancelled.'),
   })
 
-  const handleAppleSignUp = async () => {
-    setAppleLoading(true)
-    try {
-      window.AppleID.auth.init({
-        clientId:    import.meta.env.VITE_APPLE_CLIENT_ID,
-        redirectURI: `${window.location.origin}/register`,
-        scope:       'name email',
-        usePopup:    true,
-      })
-      const result = await window.AppleID.auth.signIn()
-      await socialLogin('apple', result)
-      toast.success('Welcome to Aoqolt.')
-      navigate(from, { replace: true })
-    } catch (err) {
-      if (err?.error !== 'popup_closed_by_user') {
-        const msg = err.response?.data?.error || 'Apple sign-up failed.'
-        toast.error(msg)
-      }
-    } finally {
-      setAppleLoading(false)
-    }
-  }
-
   const handleYahooSignUp = async () => {
     setYahooLoading(true)
     try {
@@ -138,67 +113,67 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthLayout title="Create Account" subtitle="Join Aoqolt and begin your spiritual journey">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
+    <AuthLayout title="Sign up" subtitle="Sign in to access your spiritual journey">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Full Name */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-1">Full Name</label>
-          <div className="relative">
-            <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-            <input
-              {...register('full_name', { required: 'Full name is required', minLength: { value: 2, message: 'At least 2 chars' } })}
-              placeholder="Your full name"
-              className="input-field pl-10"
-            />
-          </div>
+          <input
+            {...register('full_name', { required: 'Full name is required', minLength: { value: 2, message: 'At least 2 chars' } })}
+            placeholder="Name*"
+            className="input-field"
+            style={{ paddingLeft: '1rem' }}
+          />
           {errors.full_name && <p className="text-red-400 text-xs mt-1">{errors.full_name.message}</p>}
-        </div>
-
-        {/* Email */}
-        <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-1">Email</label>
-          <div className="relative">
-            <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-            <input
-              {...register('email', { required: 'Email required', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })}
-              type="email"
-              placeholder="you@example.com"
-              className="input-field pl-10"
-            />
-          </div>
-          {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
         </div>
 
         {/* Phone */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-1">Phone Number</label>
           <div className="flex gap-2">
-            <div className="relative w-28">
-              <FiGlobe className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/30" size={14} />
-              <input
+            <div className="relative">
+              <select
                 {...register('country_code')}
                 defaultValue="+1"
-                placeholder="+1"
-                className="input-field pl-8 text-sm"
-              />
+                className="input-field appearance-none pr-7 text-sm"
+                style={{ paddingLeft: '0.75rem', width: '90px' }}
+              >
+                <option value="+1">+1</option>
+                <option value="+44">+44</option>
+                <option value="+91">+91</option>
+                <option value="+61">+61</option>
+                <option value="+49">+49</option>
+                <option value="+33">+33</option>
+                <option value="+55">+55</option>
+                <option value="+86">+86</option>
+                <option value="+81">+81</option>
+                <option value="+82">+82</option>
+              </select>
+              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/40 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </div>
-            <div className="relative flex-1">
-              <FiPhone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
-              <input
-                {...register('phone_number', { required: 'Phone is required', pattern: { value: /^\d{7,15}$/, message: 'Invalid phone' } })}
-                placeholder="1234567890"
-                className="input-field pl-10"
-              />
-            </div>
+            <input
+              {...register('phone_number', { required: 'Phone is required', pattern: { value: /^\d{7,15}$/, message: 'Invalid phone' } })}
+              placeholder="Phone*"
+              className="input-field flex-1"
+              style={{ paddingLeft: '1rem' }}
+            />
           </div>
           {errors.phone_number && <p className="text-red-400 text-xs mt-1">{errors.phone_number.message}</p>}
         </div>
 
+        {/* Email */}
+        <div>
+          <input
+            {...register('email', { required: 'Email required', pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email' } })}
+            type="email"
+            placeholder="Email*"
+            className="input-field"
+            style={{ paddingLeft: '1rem' }}
+          />
+          {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
+        </div>
+
         {/* Password */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-1">Password</label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
             <input
               {...register('password', {
                 required: 'Password required',
@@ -206,64 +181,65 @@ export default function RegisterPage() {
                 pattern: { value: /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])/, message: 'Must contain uppercase, number and special char' },
               })}
               type={showPw ? 'text' : 'password'}
-              placeholder="Min 8 chars, uppercase, number, symbol"
-              className="input-field pl-10 pr-10"
+              placeholder="Password"
+              className="input-field pr-10"
+              style={{ paddingLeft: '1rem' }}
             />
             <button type="button" onClick={() => setShowPw(!showPw)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
               {showPw ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
           </div>
-          {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>}
+          {errors.password && <p className="text-red-400 text-xs mt-1 text-right">{errors.password.message}</p>}
         </div>
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-1">Confirm Password</label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
             <input
               {...register('confirm_password', {
                 required: 'Please confirm password',
                 validate: (v) => v === password || 'Passwords do not match',
               })}
               type={showConfirm ? 'text' : 'password'}
-              placeholder="Repeat password"
-              className="input-field pl-10 pr-10"
+              placeholder="Confirm password"
+              className="input-field pr-10"
+              style={{ paddingLeft: '1rem' }}
             />
             <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
               {showConfirm ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
           </div>
-          {errors.confirm_password && <p className="text-red-400 text-xs mt-1">{errors.confirm_password.message}</p>}
+          {errors.confirm_password && <p className="text-red-400 text-xs mt-1 text-right">{errors.confirm_password.message}</p>}
         </div>
 
-        <motion.button
+        <button
           type="submit"
           disabled={loading}
-          whileHover={!loading ? { scale: 1.02 } : {}}
-          whileTap={!loading ? { scale: 0.98 } : {}}
-          className="w-full btn-primary py-2.5 mt-1 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full btn-primary py-3 mt-1 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <>
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-              Creating account...
-            </>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</>
           ) : (
-            'Create Account'
+            'Create account'
           )}
-        </motion.button>
+        </button>
 
-        <p className="text-center text-white/40 text-sm">
+        <button
+          type="button"
+          className="w-full py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm transition-all flex items-center justify-center gap-2"
+        >
+          Continue as Guest
+        </button>
+
+        <p className="text-center text-white/50 text-sm">
           Already have an account?{' '}
-          <Link to="/login" className="text-red-400 hover:text-red-300 font-medium transition-colors">Sign in</Link>
+          <Link to="/login" className="text-red-400 hover:text-red-300 font-medium transition-colors">Log in</Link>
         </p>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 !mt-2 !mb-0">
+        <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-white/30 text-xs">or</span>
           <div className="flex-1 h-px bg-white/10" />
@@ -272,51 +248,43 @@ export default function RegisterPage() {
         {/* Social sign-up — icon-only row */}
         <div className="flex items-center justify-center gap-4">
           {/* Google */}
-          <motion.button
+          <button
             type="button"
             onClick={() => handleGoogleSignUp()}
             disabled={googleLoading || loading}
-            whileHover={!googleLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!googleLoading && !loading ? { scale: 0.94 } : {}}
             title="Continue with Google"
             className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {googleLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+              ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               : <FcGoogle size={22} />}
-          </motion.button>
+          </button>
 
-          {/* Apple */}
-          <motion.button
+          {/* Microsoft */}
+          <button
             type="button"
-            onClick={handleAppleSignUp}
-            disabled={appleLoading || loading}
-            whileHover={!appleLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!appleLoading && !loading ? { scale: 0.94 } : {}}
-            title="Continue with Apple"
-            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Continue with Microsoft"
+            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
           >
-            {appleLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-              : <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>}
-          </motion.button>
-
-          {/* Yahoo */}
-          <motion.button
-            type="button"
-            onClick={handleYahooSignUp}
-            disabled={yahooLoading || loading}
-            whileHover={!yahooLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!yahooLoading && !loading ? { scale: 0.94 } : {}}
-            title="Continue with Yahoo"
-            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {yahooLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-              : <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#6001D2]" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 2l5.5 8.5L3 18h3.5l3.25-5.25L13 18h3.5l-5.5-7.5L16.5 2H13l-3.25 5.25L6.5 2zm13.5 11c0 2.21 1.79 4 4 4s4-1.79 4-4-1.79-4-4-4-4 1.79-4 4z"/></svg>}
-          </motion.button>
+            <svg viewBox="0 0 21 21" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+          </button>
         </div>
       </form>
     </AuthLayout>
+  )
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
+export default function RegisterPage() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <RegisterPageInner />
+    </GoogleOAuthProvider>
   )
 }

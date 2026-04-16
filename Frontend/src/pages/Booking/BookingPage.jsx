@@ -9,6 +9,106 @@ import {
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { bookingsAPI, paymentsAPI } from '../../api'
+
+const COUNTRY_CODES = [
+  { code: '+1', label: '+1 United States' },
+  { code: '+7', label: '+7 Russia' },
+  { code: '+20', label: '+20 Egypt' },
+  { code: '+27', label: '+27 South Africa' },
+  { code: '+30', label: '+30 Greece' },
+  { code: '+31', label: '+31 Netherlands' },
+  { code: '+32', label: '+32 Belgium' },
+  { code: '+33', label: '+33 France' },
+  { code: '+34', label: '+34 Spain' },
+  { code: '+36', label: '+36 Hungary' },
+  { code: '+39', label: '+39 Italy' },
+  { code: '+40', label: '+40 Romania' },
+  { code: '+41', label: '+41 Switzerland' },
+  { code: '+43', label: '+43 Austria' },
+  { code: '+44', label: '+44 United Kingdom' },
+  { code: '+45', label: '+45 Denmark' },
+  { code: '+46', label: '+46 Sweden' },
+  { code: '+47', label: '+47 Norway' },
+  { code: '+48', label: '+48 Poland' },
+  { code: '+49', label: '+49 Germany' },
+  { code: '+51', label: '+51 Peru' },
+  { code: '+52', label: '+52 Mexico' },
+  { code: '+53', label: '+53 Cuba' },
+  { code: '+54', label: '+54 Argentina' },
+  { code: '+55', label: '+55 Brazil' },
+  { code: '+56', label: '+56 Chile' },
+  { code: '+57', label: '+57 Colombia' },
+  { code: '+58', label: '+58 Venezuela' },
+  { code: '+60', label: '+60 Malaysia' },
+  { code: '+61', label: '+61 Australia' },
+  { code: '+62', label: '+62 Indonesia' },
+  { code: '+63', label: '+63 Philippines' },
+  { code: '+64', label: '+64 New Zealand' },
+  { code: '+65', label: '+65 Singapore' },
+  { code: '+66', label: '+66 Thailand' },
+  { code: '+81', label: '+81 Japan' },
+  { code: '+82', label: '+82 South Korea' },
+  { code: '+84', label: '+84 Vietnam' },
+  { code: '+86', label: '+86 China' },
+  { code: '+90', label: '+90 Turkey' },
+  { code: '+91', label: '+91 India' },
+  { code: '+92', label: '+92 Pakistan' },
+  { code: '+93', label: '+93 Afghanistan' },
+  { code: '+94', label: '+94 Sri Lanka' },
+  { code: '+95', label: '+95 Myanmar' },
+  { code: '+98', label: '+98 Iran' },
+  { code: '+212', label: '+212 Morocco' },
+  { code: '+213', label: '+213 Algeria' },
+  { code: '+216', label: '+216 Tunisia' },
+  { code: '+218', label: '+218 Libya' },
+  { code: '+220', label: '+220 Gambia' },
+  { code: '+221', label: '+221 Senegal' },
+  { code: '+224', label: '+224 Guinea' },
+  { code: '+225', label: '+225 Ivory Coast' },
+  { code: '+233', label: '+233 Ghana' },
+  { code: '+234', label: '+234 Nigeria' },
+  { code: '+237', label: '+237 Cameroon' },
+  { code: '+251', label: '+251 Ethiopia' },
+  { code: '+254', label: '+254 Kenya' },
+  { code: '+255', label: '+255 Tanzania' },
+  { code: '+256', label: '+256 Uganda' },
+  { code: '+260', label: '+260 Zambia' },
+  { code: '+263', label: '+263 Zimbabwe' },
+  { code: '+351', label: '+351 Portugal' },
+  { code: '+352', label: '+352 Luxembourg' },
+  { code: '+353', label: '+353 Ireland' },
+  { code: '+354', label: '+354 Iceland' },
+  { code: '+358', label: '+358 Finland' },
+  { code: '+380', label: '+380 Ukraine' },
+  { code: '+381', label: '+381 Serbia' },
+  { code: '+385', label: '+385 Croatia' },
+  { code: '+386', label: '+386 Slovenia' },
+  { code: '+389', label: '+389 North Macedonia' },
+  { code: '+420', label: '+420 Czech Republic' },
+  { code: '+421', label: '+421 Slovakia' },
+  { code: '+880', label: '+880 Bangladesh' },
+  { code: '+961', label: '+961 Lebanon' },
+  { code: '+962', label: '+962 Jordan' },
+  { code: '+963', label: '+963 Syria' },
+  { code: '+964', label: '+964 Iraq' },
+  { code: '+965', label: '+965 Kuwait' },
+  { code: '+966', label: '+966 Saudi Arabia' },
+  { code: '+967', label: '+967 Yemen' },
+  { code: '+968', label: '+968 Oman' },
+  { code: '+970', label: '+970 Palestine' },
+  { code: '+971', label: '+971 UAE' },
+  { code: '+972', label: '+972 Israel' },
+  { code: '+973', label: '+973 Bahrain' },
+  { code: '+974', label: '+974 Qatar' },
+  { code: '+975', label: '+975 Bhutan' },
+  { code: '+976', label: '+976 Mongolia' },
+  { code: '+977', label: '+977 Nepal' },
+  { code: '+992', label: '+992 Tajikistan' },
+  { code: '+994', label: '+994 Azerbaijan' },
+  { code: '+995', label: '+995 Georgia' },
+  { code: '+996', label: '+996 Kyrgyzstan' },
+  { code: '+998', label: '+998 Uzbekistan' },
+]
 import { useAuth } from '../../context/AuthContext'
 import LoadingScreen from '../../components/LoadingScreen'
 import Navbar from '../../components/Navbar'
@@ -147,13 +247,19 @@ export default function BookingPage() {
       }
     } catch (err) {
       const data = err.response?.data
-      // Backend error envelope: { success: false, error: { field: [...] } }
-      const errObj = data?.error || data
-      if (errObj && typeof errObj === 'object') {
-        const msgs = Object.entries(errObj)
-          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)
-          .join('\n')
-        toast.error(msgs || 'Booking failed')
+      // Backend custom exception handler wraps errors as:
+      // { success: false, error: { message: string, details: { field: [...] } } }
+      const errEnvelope = data?.error
+      if (errEnvelope) {
+        const details = errEnvelope.details
+        if (details && typeof details === 'object' && Object.keys(details).length > 0) {
+          const msgs = Object.entries(details)
+            .map(([, v]) => Array.isArray(v) ? v[0] : v)
+            .join('\n')
+          toast.error(msgs || errEnvelope.message || 'Booking failed')
+        } else {
+          toast.error(errEnvelope.message || 'Booking failed')
+        }
       } else {
         toast.error('Booking failed. Please try again.')
       }
@@ -206,19 +312,23 @@ export default function BookingPage() {
 
                   <div>
                     <label className="block text-white/60 text-xs uppercase tracking-wider mb-1.5">Phone Number</label>
-                    <div className="flex">
-                      <div className="relative shrink-0">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30"><FiPhone size={15} /></span>
-                        <input
-                          {...register('phone_country_code', { required: 'Required' })}
-                          placeholder="+1"
-                          className="input-field pl-9 !w-20 !rounded-r-none !border-r-0"
-                        />
-                      </div>
+                    <div className="flex items-center h-11 rounded-lg border border-[var(--color-input-border-focus)] bg-[var(--color-input-bg)] focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_var(--color-input-glow-focus)] transition-all duration-300 overflow-hidden">
+                      <span className="pl-3.5 text-white/30 shrink-0"><FiPhone size={15} /></span>
+                      <select
+                        {...register('phone_country_code', { required: 'Required' })}
+                        defaultValue="+1"
+                        className="h-full bg-transparent text-white text-sm pl-2 pr-1 border-none outline-none appearance-none cursor-pointer shrink-0 w-[2rem]"
+                        style={{ background: 'transparent' }}
+                      >
+                        {COUNTRY_CODES.map(({ code, label }) => (
+                          <option key={code} value={code} className="bg-[#0a0a0a] text-white">{label}</option>
+                        ))}
+                      </select>
+                      <span className="w-px self-stretch bg-white/10 mx-1 shrink-0" />
                       <input
                         {...register('phone_number', { required: 'Required' })}
                         placeholder="Phone number"
-                        className="input-field flex-1 min-w-0 !rounded-l-none"
+                        className="flex-1 h-full bg-transparent text-white text-sm px-3 border-none outline-none placeholder:text-white/30 min-w-0"
                       />
                     </div>
                     {(errors.phone_country_code || errors.phone_number) && (
@@ -308,16 +418,12 @@ export default function BookingPage() {
               <div className="glass rounded-2xl border border-red-900/20 p-6 sticky top-24">
                 <h3 className="text-white font-semibold mb-5 text-sm uppercase tracking-wider">Order Summary</h3>
 
-                <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/5">
+                <div className="flex items-start gap-4 mb-2 pb-2  border-white/5">
                   <div className="w-12 h-12 bg-red-950/40 border border-red-900/30 rounded-xl flex items-center justify-center text-red-400 shrink-0">
                     <GiCrystalBall size={22} />
                   </div>
                   <div>
                     <p className="text-white font-medium text-sm">{service?.name}</p>
-                    <p className="text-white/40 text-xs mt-1 flex items-center gap-1">
-                      <FiClock size={11} />
-                      {service?.duration_days} day delivery
-                    </p>
                   </div>
                 </div>
 
@@ -328,14 +434,14 @@ export default function BookingPage() {
                   </div>
                 ))}
 
-                <div className="mt-6 pt-5 border-t border-white/5">
+                <div className="mt-4 pt-4 border-t border-white/5">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-white/40 text-sm">Service</span>
                     <span className="text-white text-sm">{priceDisplay}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-white/40 text-sm">Processing</span>
-                    <span className="text-white/40 text-sm">$0.00</span>
+                    <span className="text-white/40 text-sm">Tax</span>
+                    <span className="text-white/40 text-sm">Will be included</span>
                   </div>
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
                     <span className="text-white font-semibold">Total</span>

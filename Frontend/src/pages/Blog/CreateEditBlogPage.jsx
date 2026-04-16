@@ -87,6 +87,7 @@ export default function CreateEditBlogPage() {
           title: blog.title,
           description: blog.description,
           status: blog.status,
+          poster_image_alt: blog.poster_image_alt || '',
           meta_title: blog.meta_title || '',
           meta_description: blog.meta_description || '',
         })
@@ -131,6 +132,7 @@ export default function CreateEditBlogPage() {
       fd.append('description', formValues.description)
       fd.append('content', html)
       fd.append('status', formValues.status)
+      if (formValues.poster_image_alt) fd.append('poster_image_alt', formValues.poster_image_alt)
       if (formValues.meta_title)       fd.append('meta_title', formValues.meta_title)
       if (formValues.meta_description) fd.append('meta_description', formValues.meta_description)
       if (posterFile)                  fd.append('poster_image', posterFile)
@@ -228,6 +230,16 @@ export default function CreateEditBlogPage() {
             <input ref={posterInput} type="file" accept="image/*" className="hidden" onChange={handlePosterChange} />
           </div>
 
+          {/* Poster Image Alt Text */}
+          <div>
+            <label className="block text-white/55 text-xs uppercase tracking-wider mb-2">Image Alt Text</label>
+            <input
+              {...register('poster_image_alt')}
+              placeholder="Describe the poster image for SEO and accessibility…"
+              className="w-full bg-white/5 border border-white/10 focus:border-red-600/30 rounded-xl px-4 py-3 text-white placeholder:text-white/20 outline-none transition-all text-sm"
+            />
+          </div>
+
           {/* Rich-text editor */}
           <div>
             <label className="block text-white/55 text-xs uppercase tracking-wider mb-2">
@@ -275,25 +287,7 @@ export default function CreateEditBlogPage() {
             </label>
           </div>
 
-          {/* SEO — collapsible */}
-          <details className="group">
-            <summary className="cursor-pointer text-white/40 text-xs uppercase tracking-wider select-none hover:text-white/60 transition-colors">
-              SEO Options (optional)
-            </summary>
-            <div className="mt-3 space-y-3 pl-2">
-              <input
-                {...register('meta_title')}
-                placeholder="Meta title (defaults to post title)"
-                className="w-full bg-white/5 border border-white/8 focus:border-red-600/20 rounded-xl px-4 py-2.5 text-white/70 placeholder:text-white/20 outline-none text-sm transition-all"
-              />
-              <textarea
-                {...register('meta_description')}
-                rows={2}
-                placeholder="Meta description (defaults to short description)"
-                className="w-full bg-white/5 border border-white/8 focus:border-red-600/20 rounded-xl px-4 py-2.5 text-white/70 placeholder:text-white/20 outline-none text-sm transition-all resize-none"
-              />
-            </div>
-          </details>
+
 
           {/* Status + Submit */}
           <div className="flex items-center gap-4 pt-2">

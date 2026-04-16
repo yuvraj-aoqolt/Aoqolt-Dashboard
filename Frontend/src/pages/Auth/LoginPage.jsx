@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
-import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi'
 import { FcGoogle } from 'react-icons/fc'
@@ -28,7 +27,6 @@ function LoginPageInner() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [appleLoading, setAppleLoading]   = useState(false)
   const [yahooLoading, setYahooLoading]   = useState(false)
   const [guestLoading, setGuestLoading]   = useState(false)
 
@@ -91,7 +89,16 @@ function LoginPageInner() {
       await navigateAfterLogin(data)
     } catch (err) {
       isLoggingIn.current = false
-      const msg = err.response?.data?.detail || err.response?.data?.error || 'Login failed. Check your credentials.'
+      const raw = err.response?.data
+      // Backend shape: { success, error: { error: ["msg"] } } or { detail: "msg" }
+      const errObj = raw?.error
+      const msg =
+        raw?.detail ||
+        (typeof errObj === 'string' ? errObj : null) ||
+        (Array.isArray(errObj) ? errObj[0] : null) ||
+        (typeof errObj?.error === 'string' ? errObj.error : null) ||
+        (Array.isArray(errObj?.error) ? errObj.error[0] : null) ||
+        'Invalid email or password.'
       toast.error(msg)
     } finally {
       setLoading(false)
@@ -120,31 +127,6 @@ function LoginPageInner() {
     },
     onError: () => toast.error('Google sign-in was cancelled.'),
   })
-
-  const handleAppleLogin = async () => {
-    isLoggingIn.current = true
-    setAppleLoading(true)
-    try {
-      window.AppleID.auth.init({
-        clientId:    import.meta.env.VITE_APPLE_CLIENT_ID,
-        redirectURI: `${window.location.origin}/login`,
-        scope:       'name email',
-        usePopup:    true,
-      })
-      const result = await window.AppleID.auth.signIn()
-      const data = await socialLogin('apple', result)
-      toast.success('Welcome back!')
-      await navigateAfterLogin(data)
-    } catch (err) {
-      isLoggingIn.current = false
-      if (err?.error !== 'popup_closed_by_user') {
-        const msg = err.response?.data?.error || 'Apple sign-in failed.'
-        toast.error(msg)
-      }
-    } finally {
-      setAppleLoading(false)
-    }
-  }
 
   const handleGuestLogin = async () => {
     isLoggingIn.current = true
@@ -203,38 +185,34 @@ function LoginPageInner() {
   }
 
   return (
-    <AuthLayout title="Welcome Back" subtitle="Sign in to access your spiritual journey">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <AuthLayout title="Welcome back" subtitle="Sign in to access your spiritual journey">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Email */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">Email</label>
-          <div className="relative ">
-            <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={16} />
-            <input
-              {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })}
-              type="email"
-              placeholder="you@example.com"
-              className="input-field pl-10"
-            />
-          </div>
+          <input
+            {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })}
+            type="email"
+            placeholder="Email*"
+            className="input-field"
+            style={{ paddingLeft: '1rem' }}
+          />
           {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
         </div>
 
         {/* Password */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">Password</label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={16} />
             <input
               {...register('password', { required: 'Password is required' })}
               type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              className="input-field pl-10 pr-10"
+              placeholder="Password"
+              className="input-field pr-10"
+              style={{ paddingLeft: '1rem' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
             >
               {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
@@ -243,33 +221,24 @@ function LoginPageInner() {
         </div>
 
         <div className="flex justify-end">
-          <Link to="/forgot-password" className="text-red-400 hover:text-red-300 text-xs transition-colors">
-            Forgot password?
+          <Link to="/forgot-password" className="text-white/50 hover:text-white/80 text-xs transition-colors">
+            Forgot password ?
           </Link>
         </div>
 
-        <motion.button
+        <button
           type="submit"
           disabled={loading}
-          whileHover={!loading ? { scale: 1.02 } : {}}
-          whileTap={!loading ? { scale: 0.98 } : {}}
           className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-              />
-              Signing in...
-            </>
+            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Signing in...</>
           ) : (
-            'Sign In'
+            'Sign in'
           )}
-        </motion.button>
+        </button>
 
-        <p className="text-center text-white/40 text-sm">
+        <p className="text-center text-white/50 text-sm">
           Don't have an account?{' '}
           <Link to="/register" state={{ from: fromState }} className="text-red-400 hover:text-red-300 font-medium transition-colors">
             Create one
@@ -286,73 +255,46 @@ function LoginPageInner() {
         {/* Social sign-in — icon-only row */}
         <div className="flex items-center justify-center gap-4">
           {/* Google */}
-          <motion.button
+          <button
             type="button"
             onClick={() => handleGoogleLogin()}
             disabled={googleLoading || loading}
-            whileHover={!googleLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!googleLoading && !loading ? { scale: 0.94 } : {}}
             title="Continue with Google"
             className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {googleLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
+              ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               : <FcGoogle size={22} />}
-          </motion.button>
+          </button>
 
-          {/* Apple */}
-          <motion.button
+          {/* Microsoft */}
+          <button
             type="button"
-            onClick={handleAppleLogin}
-            disabled={appleLoading || loading}
-            whileHover={!appleLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!appleLoading && !loading ? { scale: 0.94 } : {}}
-            title="Continue with Apple"
-            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Continue with Microsoft"
+            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
           >
-            {appleLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-              : <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>}
-          </motion.button>
-
-          {/* Yahoo */}
-          <motion.button
-            type="button"
-            onClick={handleYahooLogin}
-            disabled={yahooLoading || loading}
-            whileHover={!yahooLoading && !loading ? { scale: 1.08 } : {}}
-            whileTap={!yahooLoading && !loading ? { scale: 0.94 } : {}}
-            title="Continue with Yahoo"
-            className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {yahooLoading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full" />
-              : <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#6001D2]" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M3 2l5.5 8.5L3 18h3.5l3.25-5.25L13 18h3.5l-5.5-7.5L16.5 2H13l-3.25 5.25L6.5 2zm13.5 11c0 2.21 1.79 4 4 4s4-1.79 4-4-1.79-4-4-4-4 1.79-4 4z"/></svg>}
-          </motion.button>
-        </div>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-white/30 text-xs">or</span>
-          <div className="flex-1 h-px bg-white/10" />
+            <svg viewBox="0 0 21 21" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+              <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+              <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+          </button>
         </div>
 
         {/* Guest access */}
-        <motion.button
+        <button
           type="button"
           onClick={handleGuestLogin}
           disabled={guestLoading || loading}
-          whileHover={!guestLoading && !loading ? { scale: 1.02 } : {}}
-          whileTap={!guestLoading && !loading ? { scale: 0.98 } : {}}
           className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {guestLoading ? (
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             'Continue as Guest'
           )}
-        </motion.button>
+        </button>
       </form>
     </AuthLayout>
   )

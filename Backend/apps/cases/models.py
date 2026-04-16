@@ -24,11 +24,24 @@ class Case(models.Model):
         (STATUS_CANCELLED, 'Cancelled'),
     ]
     
+    SOURCE_BOOKING = 'booking'
+    SOURCE_SALES   = 'sales'
+    SOURCE_CHOICES = [
+        (SOURCE_BOOKING, 'Booking'),
+        (SOURCE_SALES,   'Sales'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     case_number = models.CharField(max_length=20, unique=True, editable=False)
-    
+
+    # Source: 'booking' = came from booking form 2; 'sales' = created after sales-quote payment
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_BOOKING)
+
     # Relations
-    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='case')
+    booking = models.OneToOneField(
+        Booking, on_delete=models.CASCADE, related_name='case',
+        null=True, blank=True
+    )
     client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cases_as_client')
     assigned_admin = models.ForeignKey(
         User, 

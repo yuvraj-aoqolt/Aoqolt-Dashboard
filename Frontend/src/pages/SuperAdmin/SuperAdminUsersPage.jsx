@@ -4,7 +4,7 @@ import { accountsAPI } from '../../api'
 import SuperAdminLayout from './SuperAdminLayout'
 import LoadingScreen from '../../components/LoadingScreen'
 import toast from 'react-hot-toast'
-import { FiUser, FiShield, FiSearch } from 'react-icons/fi'
+import { FiUser, FiShield, FiSearch, FiTrash2 } from 'react-icons/fi'
 
 const ROLE_TABS = ['all', 'client', 'admin', 'superadmin']
 
@@ -20,6 +20,8 @@ export default function SuperAdminUsersPage() {
   const [tab, setTab] = useState('all')
   const [search, setSearch] = useState('')
   const [promoting, setPromoting] = useState(null)
+  const [deleting, setDeleting]   = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
 
   useEffect(() => {
     const load = async () => {
@@ -51,6 +53,20 @@ export default function SuperAdminUsersPage() {
       toast.error('Failed to promote user')
     } finally {
       setPromoting(null)
+    }
+  }
+
+  const deleteUser = async (userId) => {
+    setConfirmId(null)
+    setDeleting(userId)
+    try {
+      await accountsAPI.deleteUser(userId)
+      setUsers((prev) => prev.filter((u) => u.id !== userId))
+      toast.success('User deleted')
+    } catch {
+      toast.error('Failed to delete user')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -112,6 +128,18 @@ export default function SuperAdminUsersPage() {
                 <button onClick={() => promoteToAdmin(u.id)} disabled={promoting === u.id}
                   className="px-4 py-2 text-xs text-yellow-400/70 hover:text-yellow-400 border border-yellow-900/20 hover:border-yellow-900/50 rounded-xl transition-all flex items-center gap-1.5 disabled:opacity-50">
                   <FiShield size={12} /> {promoting === u.id ? 'Promoting...' : 'Promote to Admin'}
+                </button>
+              )}
+              {confirmId === u.id ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-red-400 text-xs">Delete?</span>
+                  <button onClick={() => deleteUser(u.id)} className="px-3 py-1.5 text-xs bg-red-700 hover:bg-red-600 text-white rounded-lg transition-colors">Yes</button>
+                  <button onClick={() => setConfirmId(null)} className="px-3 py-1.5 text-xs bg-white/5 hover:bg-white/10 text-white/60 rounded-lg transition-colors">No</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmId(u.id)} disabled={deleting === u.id}
+                  className="p-2 text-white/20 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all disabled:opacity-50">
+                  <FiTrash2 size={14} />
                 </button>
               )}
             </motion.div>
