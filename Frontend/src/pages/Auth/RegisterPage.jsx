@@ -53,8 +53,8 @@ function RegisterPageInner() {
         password: values.password,
         confirm_password: values.confirm_password,
       })
-      toast.success('Account created! Please verify your phone number.')
-      navigate('/verify-otp', { state: { phone: values.phone_number, from } })
+      toast.success('Account created! Please check your email for the verification code.')
+      navigate('/verify-otp', { state: { email: values.email, from } })
     } catch (err) {
       const data = err.response?.data
       if (typeof data === 'object') {

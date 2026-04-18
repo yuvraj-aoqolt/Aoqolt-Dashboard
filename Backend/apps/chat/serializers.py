@@ -51,7 +51,17 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         src = validated_data.get('source_type', 'CASE')
         # Auto-set conversation_type for CASE threads based on sender role
         if src == 'CASE' and not validated_data.get('conversation_type'):
-            if request.user.is_admin:
+            case = validated_data.get('case')
+            # For guest cases, prevent CLIENT thread - only allow ADMIN thread
+            if case and hasattr(case, 'client') and case.client and getattr(case.client, 'is_guest', False):
+                # Guest clients cannot send messages to their cases
+                if request.user == case.client:
+                    raise serializers.ValidationError({
+                        'error': 'Guest users cannot send messages. Please contact support for assistance.'
+                    })
+                # Admins/superadmins can only use ADMIN thread for guest cases
+                validated_data['conversation_type'] = 'ADMIN'
+            elif request.user.is_admin:
                 validated_data['conversation_type'] = 'ADMIN'
             else:
                 validated_data.setdefault('conversation_type', 'CLIENT')

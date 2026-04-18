@@ -145,7 +145,7 @@ export default function QuotePaymentSuccessPage() {
             </a>
           </>
         )}
-        <p className="text-xs text-white/20 mt-6">Aoqolt Spiritual Insights - contact@aoqolt.com</p>
+        <p className="text-xs text-white/20 mt-6">Aoqolt - contact@aoqolt.com</p>
       </div>
     </div>
   )

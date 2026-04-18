@@ -6,7 +6,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     register_view, login_view, verify_otp_view, resend_otp_view,
     social_auth_view, logout_view, change_password_view, update_phone_view,
-    forgot_password_view, reset_password_view, guest_login_view
+    forgot_password_view, reset_password_view, guest_login_view,
+    self_forgot_password_view, self_reset_password_view,
 )
 
 urlpatterns = [
@@ -27,8 +28,12 @@ urlpatterns = [
     # JWT Token
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
 
-    # Password Management
+    # Password Management (admin/OTP-based — existing flow, do not remove)
     path('change-password/', change_password_view, name='change-password'),
     path('forgot-password/', forgot_password_view, name='forgot-password'),
     path('reset-password/', reset_password_view, name='reset-password'),
+
+    # Password Reset for self-registered users (email link-based)
+    path('self-forgot-password/', self_forgot_password_view, name='self-forgot-password'),
+    path('self-reset-password/', self_reset_password_view, name='self-reset-password'),
 ]

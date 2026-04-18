@@ -510,7 +510,7 @@ export default function SuperAdminBookingsPage() {
                       </select>
                     </ModalField>
                     <div className="sm:col-span-2">
-                      <ModalField label="Main Aspect to Focus" icon={<FiSearch size={13} />}>
+                      <ModalField label="Main Aspects to Focus" icon={<FiSearch size={13} />}>
                         <input value={form2Data.scan_focus || ''} onChange={e => setForm2Data(p => ({ ...p, scan_focus: e.target.value }))} className="modal-input" placeholder="e.g. Health, Finance, Career…" />
                       </ModalField>
                     </div>
@@ -548,6 +548,43 @@ export default function SuperAdminBookingsPage() {
                   </div>
                 )
               })()}
+
+              {/* Uploaded Images */}
+              {editForm2Modal.attachments?.length > 0 && (
+                <div className="mb-6 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                  <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <FiImage size={12} /> Uploaded Images ({editForm2Modal.attachments.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {editForm2Modal.attachments.map((att) => (
+                      <a
+                        key={att.id}
+                        href={att.file}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 transition-all"
+                      >
+                        <img
+                          src={att.file}
+                          alt={att.description || att.file_name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none'
+                            e.target.parentElement.classList.add('flex', 'items-center', 'justify-center')
+                            e.target.parentElement.innerHTML = `<div class="text-center p-3"><div class="text-white/20 mb-1"><svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div><p class="text-white/30 text-xs truncate">${att.file_name}</p></div>`
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <FiExternalLink className="text-white" size={20} />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                          <p className="text-white text-xs truncate">{att.description || att.file_name}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handleSaveForm2}

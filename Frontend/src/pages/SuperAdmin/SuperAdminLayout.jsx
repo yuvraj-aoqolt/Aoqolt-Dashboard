@@ -36,13 +36,13 @@ function NavItem({ to, icon: Icon, label, end, onNav }) {
       to={to} end={end}
       onClick={onNav}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group ${
+        `flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-sm font-medium transition-all duration-200 group ${
           isActive
-            ? 'text-white border border-red-800/40 shadow-lg shadow-red-900/20'
-            : 'text-white hover:text-white hover:bg-white/5'
+            ? 'text-[#F6F5F6] '
+            : 'text-[#F6F5F6] hover:text-[#F6F5F6] hover:bg-white/5'
         }`
       }
-      style={({ isActive }) => isActive ? { background: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)' } : {}}
+      style={({ isActive }) => isActive ? { background: 'linear-gradient(to right, #F20000 0%, #262524 100%)' } : {}}
     >
       {({ isActive }) => (
         <>
@@ -60,7 +60,7 @@ function NavItem({ to, icon: Icon, label, end, onNav }) {
 export default function SuperAdminLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { notifications, totalUnread, clearNewPayments } = useNotifications() || {}
+  const { notifications, totalUnread, markAsRead, markAllAsRead } = useNotifications() || {}
   const [sideOpen, setSideOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -79,17 +79,13 @@ export default function SuperAdminLayout({ children }) {
   const SidebarContent = (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-5 flex-shrink-0">
+      <div className="px-6 pt-8 pb-7 flex-shrink-0">
         <div className="flex items-center gap-3">
           <img
             src="/Aoqolt logo 1-01-02.png"
             alt="Aoqolt"
-            className="h-10 w-10 object-contain flex-shrink-0"
+            className="h-14 w-14 object-contain flex-shrink-0"
           />
-          <div>
-            <h2 className="font-bold text-white text-[15px] leading-tight">Aoqolt</h2>
-            <span className="text-[11px] text-red-400 font-medium leading-none">Spiritual Insights</span>
-          </div>
         </div>
       </div>
 
@@ -178,11 +174,14 @@ export default function SuperAdminLayout({ children }) {
               className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors hover:bg-white/8"
               style={{ backgroundColor: 'var(--color-input-bg)' }}
             >
-              <FiBell size={17} className="text-white/60" />
+              <FiBell size={17} className={`transition-colors ${totalUnread > 0 ? 'text-white animate-pulse' : 'text-white/60'}`} />
               {totalUnread > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center shadow shadow-red-500/50">
-                  {totalUnread > 9 ? '9+' : totalUnread}
-                </span>
+                <>
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center shadow shadow-red-500/50 animate-pulse">
+                    {totalUnread > 9 ? '9+' : totalUnread}
+                  </span>
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 rounded-full bg-red-500/30 animate-ping" />
+                </>
               )}
             </button>
 
@@ -205,10 +204,10 @@ export default function SuperAdminLayout({ children }) {
                     </div>
                     {totalUnread > 0 && (
                       <button
-                        onClick={clearNewPayments}
+                        onClick={() => markAllAsRead && markAllAsRead()}
                         className="text-white/30 hover:text-white/60 text-xs transition-colors"
                       >
-                        Clear
+                        Mark all read
                       </button>
                     )}
                   </div>
@@ -223,19 +222,41 @@ export default function SuperAdminLayout({ children }) {
                         <div
                           key={n.key}
                           onClick={() => {
-                            if (n.type === 'chat') {
+                            // Mark as read if it has an ID
+                            if (n.id && markAsRead) {
+                              markAsRead(n.id)
+                            }
+                            
+                            // Navigate based on notification type
+                            if (n.type === 'chat' && n.case_id) {
                               setNotifOpen(false)
                               navigate('/superadmin/chat', { state: { openCaseId: n.case_id } })
+                            } else if (n.type === 'payment' && n.payment_id) {
+                              setNotifOpen(false)
+                              navigate('/superadmin/invoice')
+                            } else if (n.type === 'booking' && n.booking_id) {
+                              setNotifOpen(false)
+                              navigate('/superadmin/bookings')
+                            } else if (n.type === 'case_update' && n.case_id) {
+                              setNotifOpen(false)
+                              navigate('/superadmin/aura-assignments')
                             }
                           }}
-                          className={`px-4 py-3 border-b border-white/4 transition-colors ${
-                            n.type === 'chat' ? 'cursor-pointer hover:bg-white/5' : 'cursor-default'
+                          className={`px-4 py-3 border-b border-white/4 transition-colors cursor-pointer hover:bg-white/5 ${
+                            n.is_read === false ? 'bg-white/3' : ''
                           }`}
                         >
                           <div className="flex items-start gap-3">
-                            <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${n.dot}`} />
+                            <div className="relative flex-shrink-0">
+                              <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${n.dot}`} />
+                              {n.is_read === false && (
+                                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                              )}
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-white/85 text-xs font-medium">{n.title}</p>
+                              <p className={`text-xs font-medium ${n.is_read === false ? 'text-white' : 'text-white/85'}`}>
+                                {n.title}
+                              </p>
                               <p className="text-white/40 text-xs truncate mt-0.5">{n.body}</p>
                               {n.amount && (
                                 <p className="text-green-400 text-xs font-semibold mt-0.5">{n.amount}</p>

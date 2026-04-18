@@ -55,15 +55,9 @@ export default function AdminLayout({ children, pageTitle = 'Baba Dashboard' }) 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-[#111111]">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-5">
+      <div className="px-6 pt-8 pb-7">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/Aoqolt logo 1-01-02.png" alt="Aoqolt" className="h-8 w-8 object-contain" />
-          <div>
-            <span className="text-white font-display font-bold text-base tracking-wider leading-none block">
-              Aoqolt
-            </span>
-            <span className="text-red-500 text-[10px] italic leading-none">Spiritual Insights</span>
-          </div>
+          <img src="/Aoqolt logo 1-01-02.png" alt="Aoqolt" className="h-12 w-12 object-contain" />
         </Link>
       </div>
 

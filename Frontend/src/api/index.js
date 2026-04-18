@@ -5,7 +5,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const api = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 10000,
+  timeout: 30000,
 })
 
 // ── In-flight GET deduplication ───────────────────────────────────────────
@@ -99,6 +99,9 @@ export const authAPI = {
   changePassword: (data) => api.post('/auth/change-password/', data),
   refreshToken: (data) => api.post('/auth/token/refresh/', data),
   socialLogin: (data) => api.post('/auth/social-login/', data),
+  // Self-registered user email-based password reset
+  selfForgotPassword: (data) => api.post('/auth/self-forgot-password/', data),
+  selfResetPassword: (data) => api.post('/auth/self-reset-password/', data),
 }
 
 // ── Accounts ──────────────────────────────────────────────────────────────
@@ -308,6 +311,26 @@ export const salesAPI = {
   getOrder: (id) => api.get(`/sales/orders/${id}/`),
   markOrderCompleted: (id) => api.post(`/sales/orders/${id}/mark_completed/`),
   partialOverdue: () => api.get('/sales/orders/partial_overdue/'),
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────
+export const notificationsAPI = {
+  // Get all notifications for current user
+  list: (params = {}) => api.get('/notifications/', { params }),
+  // Get recent unread notifications (for notification panel)
+  recent: () => api.get('/notifications/recent/'),
+  // Get notification statistics
+  stats: () => api.get('/notifications/stats/'),
+  // Get single notification
+  get: (id) => api.get(`/notifications/${id}/`),
+  // Mark single notification as read
+  markRead: (id) => api.post(`/notifications/${id}/mark_read/`),
+  // Mark multiple notifications as read
+  markMultipleRead: (ids) => api.post('/notifications/mark_multiple_read/', { ids }),
+  // Mark all notifications as read
+  markAllRead: () => api.post('/notifications/mark_all_read/'),
+  // Delete all read notifications
+  clearRead: () => api.delete('/notifications/clear_read/'),
 }
 
 export default api

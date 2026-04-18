@@ -168,12 +168,14 @@ class AdminBookingSerializer(serializers.ModelSerializer):
     """
     Booking serializer for regular admin view.
     Exposes Form 2 details + attachments only — Form 1 personal/contact data is hidden.
+    Note: client_name is included for dashboard display purposes.
     """
     service_name = serializers.CharField(source='service.name', read_only=True)
     service_type = serializers.CharField(source='service.service_type', read_only=True)
     details = BookingDetailSerializer(read_only=True)
     attachments = BookingAttachmentSerializer(many=True, read_only=True)
     admin_name = serializers.CharField(source='assigned_admin.full_name', read_only=True)
+    client_name = serializers.CharField(source='user.full_name', read_only=True)
     work_started = serializers.BooleanField(read_only=True)
     work_completed = serializers.BooleanField(read_only=True)
 
@@ -183,7 +185,7 @@ class AdminBookingSerializer(serializers.ModelSerializer):
             'id', 'booking_id',
             'service_name', 'service_type', 'selected_service',
             'status', 'form2_submitted',
-            'admin_name', 'work_started', 'work_completed',
+            'admin_name', 'client_name', 'work_started', 'work_completed',
             'details', 'attachments',
             'created_at', 'updated_at',
         ]

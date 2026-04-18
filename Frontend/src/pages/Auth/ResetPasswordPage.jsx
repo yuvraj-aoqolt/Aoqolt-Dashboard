@@ -18,14 +18,20 @@ export default function ResetPasswordPage() {
   const password = watch('password')
 
   const onSubmit = async ({ password, confirm_password }) => {
-    if (!token) { toast.error('Invalid reset link'); return }
+    if (!token) { toast.error('Invalid or missing reset link. Please request a new one.'); return }
     setLoading(true)
     try {
-      await authAPI.resetPassword({ token, password, confirm_password })
-      toast.success('Password reset successful!')
+      await authAPI.selfResetPassword({ token, new_password: password, confirm_password })
+      toast.success('Password reset successful! You can now log in.')
       navigate('/login')
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Reset failed.')
+      const errData = err.response?.data
+      const msg =
+        (Array.isArray(errData?.error) ? errData.error.join(' ') : null) ||
+        errData?.error ||
+        errData?.detail ||
+        'Reset failed. The link may have expired.'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }

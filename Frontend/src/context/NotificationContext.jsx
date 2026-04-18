@@ -1,13 +1,14 @@
 /**
  * NotificationContext
- * Uses TanStack Query with refetchInterval for polling instead of manual setInterval.
- * - Chat + payments: every 15 s
+ * Uses TanStack Query with refetchInterval for polling.
+ * - New centralized notifications API: every 10s
+ * - Chat + payments (legacy): every 15s (backup)
  * - Partial-overdue orders: every 5 min
  * Only active when the logged-in user is superadmin.
  */
 import { createContext, useContext, useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { chatAPI, paymentsAPI, salesAPI } from '../api'
+import { chatAPI, paymentsAPI, salesAPI, notificationsAPI } from '../api'
 import { useAuth } from './AuthContext'
 
 const NotificationContext = createContext(null)
@@ -39,7 +40,19 @@ export function NotificationProvider({ children }) {
   const seenPaymentIds = useRef(new Set())
   const [newPayments, setNewPayments] = useState([])
 
-  // ── Chat conversations: poll every 15 s ───────────────────────────────────
+  // ── NEW: Centralized notifications from backend (poll every 10s) ─────────
+  const { data: notificationsData } = useQuery({
+    queryKey: ['notifications', 'recent'],
+    queryFn:  () => notificationsAPI.recent().then(r => r.data || { data: [], total_unread: 0 }),
+    enabled:  isSuperAdmin,
+    refetchInterval: isSuperAdmin ? 10_000 : false,
+    staleTime: 8_000,
+  })
+
+  const backendNotifications = notificationsData?.data || []
+  const backendTotalUnread = notificationsData?.total_unread || 0
+
+  // ── Chat conversations: poll every 15 s (backup/legacy) ──────────────────
   const { data: chatData = [] } = useQuery({
     queryKey: ['notifications', 'chat'],
     queryFn:  () => chatAPI.getConversations().then(r => r.data?.data || []),
@@ -84,13 +97,45 @@ export function NotificationProvider({ children }) {
   const paymentNotifs = paymentData
   const partialNotifs = partialData
 
-  const totalUnread = chatNotifs.reduce((s, c) => s + c.unread_count, 0)
-    + newPayments.length
-    + partialNotifs.length
+  // ── Convert backend notifications to unified format ───────────────────────
+  const convertedNotifications = backendNotifications.map(n => {
+    const dotColor = {
+      'CHAT': 'bg-blue-400',
+      'PAYMENT': 'bg-green-400',
+      'BOOKING': 'bg-purple-400',
+      'CASE_UPDATE': 'bg-yellow-400',
+      'PARTIAL_OVERDUE': 'bg-orange-400',
+      'ADMIN_ACTION': 'bg-red-400',
+      'SYSTEM': 'bg-gray-400',
+    }[n.notification_type] || 'bg-blue-400'
 
-  // ── Unified notification list ─────────────────────────────────────────────
-  const notifications = [
-    ...chatNotifs.map(c => ({
+    return {
+      type: n.notification_type.toLowerCase(),
+      key: `notif-${n.id}`,
+      id: n.id,
+      dot: dotColor,
+      title: n.title,
+      body: n.message,
+      amount: n.metadata?.amount ? fmtDollar(n.metadata.amount, n.metadata.currency || 'USD') : null,
+      time: n.time_ago || timeAgo(n.created_at),
+      case_id: n.case_id,
+      booking_id: n.booking_id,
+      payment_id: n.payment_id,
+      order_id: n.order_id,
+      is_read: n.is_read,
+    }
+  })
+
+  // Use backend count if available, otherwise fall back to legacy counting
+  const totalUnread = backendTotalUnread > 0 
+    ? backendTotalUnread 
+    : chatNotifs.reduce((s, c) => s + c.unread_count, 0) + newPayments.length + partialNotifs.length
+
+  // ── Unified notification list (prioritize backend, show legacy as backup) ─
+  const notifications = convertedNotifications.length > 0 
+    ? convertedNotifications
+    : [
+        ...chatNotifs.map(c => ({
       type: 'chat',
       key: `chat-${c.case_id}`,
       dot: 'bg-blue-400',
@@ -119,11 +164,30 @@ export function NotificationProvider({ children }) {
       order_id: o.id,
       order_number: o.order_number,
     })),
-  ]
+      ]
 
   const clearNewPayments = () => setNewPayments([])
 
+  const markAsRead = async (notificationId) => {
+    try {
+      await notificationsAPI.markRead(notificationId)
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    try {
+      await notificationsAPI.markAllRead()
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error)
+    }
+  }
+
   const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
     queryClient.invalidateQueries({ queryKey: ['notifications', 'chat'] })
     queryClient.invalidateQueries({ queryKey: ['notifications', 'payments'] })
   }
@@ -139,6 +203,8 @@ export function NotificationProvider({ children }) {
     partialNotifs,
     totalUnread,
     clearNewPayments,
+    markAsRead,
+    markAllAsRead,
     refresh,
     refreshPartial,
     timeAgo,

@@ -112,6 +112,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     is_guest = models.BooleanField(default=False)  # Temporary guest session
     requires_phone_verification = models.BooleanField(default=False)  # For social auth
+    is_self_registered = models.BooleanField(default=False)  # True if user registered themselves (not admin-created)
     
     # Authentication method
     AUTH_MANUAL = 'manual'

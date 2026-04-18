@@ -15,25 +15,28 @@ export default function ForgotPasswordPage() {
   const onSubmit = async ({ email }) => {
     setLoading(true)
     try {
-      await authAPI.forgotPassword({ email })
+      await authAPI.selfForgotPassword({ email })
       setSent(true)
-      toast.success('Password reset instructions sent!')
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send reset email.')
+      // Show generic message to avoid email enumeration
+      setSent(true)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <AuthLayout title="Reset Password" subtitle="Enter your email to receive reset instructions">
+    <AuthLayout title="Forgot Password" subtitle="Enter your email and we'll send a reset link">
       {sent ? (
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           className="text-center p-8 glass rounded-2xl">
           <div className="text-5xl mb-4">📧</div>
           <h3 className="text-white font-semibold text-xl mb-2">Check Your Email</h3>
-          <p className="text-white/40 text-sm mb-6">
-            We've sent password reset instructions to your email.
+          <p className="text-white/60 text-sm mb-2">
+            If this email belongs to a self-registered account, a reset link has been sent.
+          </p>
+          <p className="text-white/40 text-xs mb-6">
+            The link is valid for <span className="text-white/60 font-medium">15 minutes</span>. Check your spam folder if needed.
           </p>
           <Link to="/login" className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors flex items-center gap-1 justify-center">
             <FiArrowLeft size={14} /> Back to Sign In
@@ -54,6 +57,11 @@ export default function ForgotPasswordPage() {
             </div>
             {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
           </div>
+
+          <p className="text-white/40 text-xs">
+            Only accounts created via self-registration (manual or Gmail) can reset here.
+            If your account was set up by an administrator, contact them for a reset link.
+          </p>
 
           <motion.button type="submit" disabled={loading} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             className="w-full btn-primary py-3.5 flex items-center justify-center gap-2 disabled:opacity-60">

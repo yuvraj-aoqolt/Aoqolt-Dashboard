@@ -89,9 +89,9 @@ function TypeBadge({ type }) {
 // ─ CaseAccordion ─────────────────────────────────────────────────────────
 function CaseAccordion({ conv, selectedCaseId, onSelectCase }) {
   const { case_id, case_number, case_status, service_name, client_name, admin_name,
-          client_thread = {}, admin_thread = {}, last_activity } = conv
+          client_thread = {}, admin_thread = {}, last_activity, client_is_guest } = conv
   const isSel       = selectedCaseId === case_id
-  const totalUnread = (client_thread.unread_count || 0) + (admin_thread.unread_count || 0)
+  const totalUnread = (client_is_guest ? 0 : (client_thread.unread_count || 0)) + (admin_thread.unread_count || 0)
   const meta        = getCase(case_status)
 
   return (
@@ -141,7 +141,7 @@ function CaseAccordion({ conv, selectedCaseId, onSelectCase }) {
           {/* Row 4: per-thread unread counts */}
           {totalUnread > 0 && (
             <div className="mt-1 flex items-center gap-3">
-              {(client_thread.unread_count || 0) > 0 && (
+              {!conv.client_is_guest && (client_thread.unread_count || 0) > 0 && (
                 <span className="flex items-center gap-1 text-[10px] text-sky-400/70">
                   <FiUser size={9} /> {client_thread.unread_count} unread
                 </span>
@@ -543,10 +543,10 @@ function DualCaseChatPanel({ conv, onMarkComplete }) {
 
       {/* Two chat panels side by side */}
       <div className="flex-1 flex divide-x divide-white/[0.06] min-w-0 overflow-hidden">
-        <CaseChatPanel caseId={conv.case_id} conversationType="CLIENT" conv={conv} />
         {!conv.client_is_guest && (
-          <CaseChatPanel caseId={conv.case_id} conversationType="ADMIN" conv={conv} />
+          <CaseChatPanel caseId={conv.case_id} conversationType="CLIENT" conv={conv} />
         )}
+        <CaseChatPanel caseId={conv.case_id} conversationType="ADMIN" conv={conv} />
       </div>
     </div>
   )

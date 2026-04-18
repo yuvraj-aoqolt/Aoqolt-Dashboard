@@ -83,7 +83,7 @@ export default function AdminDashboardPage() {
       id:           b.id,
       case_number:  b.booking_id || '—',
       booking_id:   null,
-      client_name:  b.full_name || '—',
+      client_name:  b.client_name || '—',
       service_name: b.service_name || '—',
       created_at:   b.created_at,
       status:       bStatus,

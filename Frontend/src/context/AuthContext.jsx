@@ -8,6 +8,7 @@ export const PROFILE_QUERY_KEY = ['auth', 'profile']
 
 export function AuthProvider({ children }) {
   const [pendingPhone, setPendingPhone] = useState(null)
+  const [pendingEmail, setPendingEmail] = useState(null)
   const queryClient = useQueryClient()
 
   // ── Profile query: runs on mount, skips network if no token ───────────────
@@ -55,6 +56,8 @@ export function AuthProvider({ children }) {
   const registerMutation = useMutation({
     mutationFn: async (payload) => {
       const { data } = await authAPI.register(payload)
+      // Track the email for the OTP verify page (email OTP, not phone)
+      setPendingEmail(payload.email)
       setPendingPhone(payload.phone_number)
       return data
     },
@@ -63,29 +66,30 @@ export function AuthProvider({ children }) {
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
   const verifyOtpMutation = useMutation({
-    mutationFn: async ({ phone_number, otp_code }) => {
-      const { data } = await authAPI.verifyOtp({ phone_number, otp_code })
+    mutationFn: async ({ email, otp_code }) => {
+      const { data } = await authAPI.verifyOtp({ email, otp_code })
       const payload = data.data || data
       if (payload.tokens) {
         localStorage.setItem('access_token', payload.tokens.access)
         localStorage.setItem('refresh_token', payload.tokens.refresh)
         await setProfile()
       }
+      setPendingEmail(null)
       setPendingPhone(null)
       return data
     },
   })
-  const verifyOtp = (phone_number, otp_code) =>
-    verifyOtpMutation.mutateAsync({ phone_number, otp_code })
+  const verifyOtp = (email, otp_code) =>
+    verifyOtpMutation.mutateAsync({ email, otp_code })
 
   // ── Resend OTP ────────────────────────────────────────────────────────────
   const resendOtpMutation = useMutation({
-    mutationFn: async (phone_number) => {
-      const { data } = await authAPI.resendOtp({ phone_number })
+    mutationFn: async (email) => {
+      const { data } = await authAPI.resendOtp({ email })
       return data
     },
   })
-  const resendOtp = (phone_number) => resendOtpMutation.mutateAsync(phone_number)
+  const resendOtp = (email) => resendOtpMutation.mutateAsync(email)
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const logoutMutation = useMutation({
@@ -183,6 +187,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     pendingPhone,
+    pendingEmail,
     isAuthenticated,
     isGuest,
     isClient,
@@ -198,8 +203,9 @@ export function AuthProvider({ children }) {
     updateProfile,
     fetchProfile,
     setPendingPhone,
+    setPendingEmail,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, loading, pendingPhone, fetchProfile])
+  }), [user, loading, pendingPhone, pendingEmail, fetchProfile])
 
   return (
     <AuthContext.Provider value={val}>

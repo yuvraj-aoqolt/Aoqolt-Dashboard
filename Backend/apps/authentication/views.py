@@ -16,10 +16,11 @@ from apps.accounts.serializers import UserRegistrationSerializer, UserSerializer
 from .serializers import (
     LoginSerializer, OTPRequestSerializer, OTPVerifySerializer,
     SocialAuthSerializer, PasswordChangeSerializer,
-    PasswordResetRequestSerializer, PasswordResetConfirmSerializer
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+    SelfForgotPasswordSerializer, SelfResetPasswordSerializer,
 )
 from .utils import OTPService, TwilioService
-from .models import SocialAuthToken
+from .models import SocialAuthToken, SelfPasswordResetToken
 import logging
 
 logger = logging.getLogger(__name__)
@@ -114,13 +115,13 @@ def register_view(request):
             existing_user.set_password(password)
         
         existing_user.save()
-        
-        # Resend OTP to the updated phone number
-        otp, otp_code = OTPService.create_otp(existing_user, existing_user.phone_number)
-        
+
+        # Resend OTP to the user's email address
+        otp, otp_code = OTPService.create_email_otp(existing_user)
+
         response_data = {
             'success': True,
-            'message': 'Account details updated. OTP has been sent to your phone number for verification.',
+            'message': 'Account details updated. A verification code has been sent to your email.',
             'data': {
                 'user_id': str(existing_user.id),
                 'email': existing_user.email,
@@ -132,39 +133,36 @@ def register_view(request):
                 'details_updated': True
             }
         }
-        
-        # In development, include OTP in response
+
         if settings.DEBUG and otp_code:
             response_data['data']['otp_code'] = otp_code
             response_data['message'] += f' [DEV MODE - OTP: {otp_code}]'
-        
+
         return Response(response_data, status=status.HTTP_200_OK)
-    
+
     # Proceed with normal registration
     serializer = UserRegistrationSerializer(data=request.data)
-    
+
     if serializer.is_valid():
         user = serializer.save()
-        
-        # Generate and send OTP
-        otp, otp_code = OTPService.create_otp(user, user.phone_number)
-        
+
+        # Generate and send OTP via email (not SMS)
+        otp, otp_code = OTPService.create_email_otp(user)
+
         response_data = {
             'success': True,
-            'message': 'Registration successful. Please verify your phone number with the OTP sent.',
+            'message': 'Registration successful. Please check your email for the verification code.',
             'data': {
                 'user_id': str(user.id),
                 'email': user.email,
-                'phone_number': user.phone_number,
                 'otp_sent': True
             }
         }
-        
-        # In development, include OTP in response
+
         if settings.DEBUG and otp_code:
             response_data['data']['otp_code'] = otp_code
             response_data['message'] += f' [DEV MODE - OTP: {otp_code}]'
-        
+
         return Response(response_data, status=status.HTTP_201_CREATED)
     
     return Response({
@@ -213,50 +211,73 @@ def verify_otp_view(request):
     """
     Verify OTP endpoint
     POST /api/v1/auth/verify-otp/
-    
-    Request:
-    {
-        "phone_number": "9876543210",
-        "otp_code": "123456"
-    }
+
+    Email-based (manual signup):
+        { "email": "user@example.com", "otp_code": "123456" }
+
+    Phone-based (update-phone / legacy flows):
+        { "phone_number": "9876543210", "otp_code": "123456" }
     """
-    serializer = OTPVerifySerializer(data=request.data)
-    
-    if not serializer.is_valid():
-        return Response({
-            'success': False,
-            'error': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    phone_number = serializer.validated_data['phone_number']
-    otp_code = serializer.validated_data['otp_code']
-    
-    try:
-        user = User.objects.get(phone_number=phone_number)
-    except User.DoesNotExist:
-        return Response({
-            'success': False,
-            'error': 'User not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    # Verify OTP
-    success, message = OTPService.verify_otp(user, phone_number, otp_code)
-    
-    if success:
-        tokens = get_tokens_for_user(user)
-        return Response({
-            'success': True,
-            'message': message,
-            'data': {
-                'user': UserSerializer(user).data,
-                'tokens': tokens
-            }
-        }, status=status.HTTP_200_OK)
-    
-    return Response({
-        'success': False,
-        'error': message
-    }, status=status.HTTP_400_BAD_REQUEST)
+    otp_code = request.data.get('otp_code', '')
+    email = request.data.get('email')
+    phone_number = request.data.get('phone_number')
+
+    if not otp_code:
+        return Response({'success': False, 'error': 'otp_code is required'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # ── Email-based OTP (manual signup) ──────────────────────────────────────
+    if email:
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'success': False, 'error': 'User not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        success, message = OTPService.verify_email_otp(user, otp_code)
+
+        if success:
+            tokens = get_tokens_for_user(user)
+            return Response({
+                'success': True,
+                'message': message,
+                'data': {
+                    'user': UserSerializer(user).data,
+                    'tokens': tokens
+                }
+            }, status=status.HTTP_200_OK)
+
+        return Response({'success': False, 'error': message},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # ── Phone-based OTP (update-phone / legacy flows) ────────────────────────
+    if phone_number:
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response({'success': False, 'error': 'User not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        success, message = OTPService.verify_otp(user, phone_number, otp_code)
+
+        if success:
+            tokens = get_tokens_for_user(user)
+            return Response({
+                'success': True,
+                'message': message,
+                'data': {
+                    'user': UserSerializer(user).data,
+                    'tokens': tokens
+                }
+            }, status=status.HTTP_200_OK)
+
+        return Response({'success': False, 'error': message},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(
+        {'success': False, 'error': 'Provide either "email" or "phone_number" with "otp_code".'},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @api_view(['POST'])
@@ -265,53 +286,72 @@ def resend_otp_view(request):
     """
     Resend OTP endpoint
     POST /api/v1/auth/resend-otp/
-    
-    Request:
-    {
-        "phone_number": "9876543210"
-    }
+
+    Email-based (manual signup):
+        { "email": "user@example.com" }
+
+    Phone-based (update-phone / legacy flows):
+        { "phone_number": "9876543210" }
     """
+    email = request.data.get('email')
     phone_number = request.data.get('phone_number')
-    
-    if not phone_number:
-        return Response({
-            'success': False,
-            'error': 'Phone number is required'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        user = User.objects.get(phone_number=phone_number)
-    except User.DoesNotExist:
-        return Response({
-            'success': False,
-            'error': 'User not found'
-        }, status=status.HTTP_404_NOT_FOUND)
-    
-    # Check rate limiting
-    can_resend, error_msg = OTPService.can_resend_otp(user)
-    if not can_resend:
-        return Response({
-            'success': False,
-            'error': error_msg
-        }, status=status.HTTP_429_TOO_MANY_REQUESTS)
-    
-    # Generate and send new OTP
-    otp, otp_code = OTPService.create_otp(user, phone_number)
-    OTPService.mark_otp_resent(user)
-    
-    response_data = {
-        'success': True,
-        'message': 'OTP sent successfully',
-        'data': {
-            'otp_sent': True
+
+    # ── Email-based resend (manual signup) ───────────────────────────────────
+    if email:
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'success': False, 'error': 'User not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        can_resend, error_msg = OTPService.can_resend_otp(user)
+        if not can_resend:
+            return Response({'success': False, 'error': error_msg},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        otp, otp_code = OTPService.create_email_otp(user)
+        OTPService.mark_otp_resent(user)
+
+        response_data = {
+            'success': True,
+            'message': 'Verification code resent to your email.',
+            'data': {'otp_sent': True}
         }
-    }
-    
-    # In development, include OTP
-    if settings.DEBUG and otp_code:
-        response_data['data']['otp_code'] = otp_code
-    
-    return Response(response_data, status=status.HTTP_200_OK)
+        if settings.DEBUG and otp_code:
+            response_data['data']['otp_code'] = otp_code
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    # ── Phone-based resend (update-phone / legacy flows) ─────────────────────
+    if phone_number:
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response({'success': False, 'error': 'User not found'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        can_resend, error_msg = OTPService.can_resend_otp(user)
+        if not can_resend:
+            return Response({'success': False, 'error': error_msg},
+                            status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        otp, otp_code = OTPService.create_otp(user, phone_number)
+        OTPService.mark_otp_resent(user)
+
+        response_data = {
+            'success': True,
+            'message': 'OTP sent successfully',
+            'data': {'otp_sent': True}
+        }
+        if settings.DEBUG and otp_code:
+            response_data['data']['otp_code'] = otp_code
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+    return Response(
+        {'success': False, 'error': 'Provide either "email" or "phone_number".'},
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 
 @api_view(['POST'])
@@ -382,6 +422,7 @@ def social_auth_view(request):
                 role=User.CLIENT,
                 is_active=True,  # Social auth is sufficient - active immediately
                 is_verified=True,  # Social auth verified
+                is_self_registered=True,  # User registered themselves via social auth
                 requires_phone_verification=False  # No phone verification needed
             )
             created = True
@@ -678,3 +719,189 @@ def guest_login_view(request):
             'session_expires_in_hours': expiry_hours,
         },
     }, status=status.HTTP_201_CREATED)
+
+
+# ── Self-registered user password reset (email link) ─────────────────────
+
+class SelfForgotPasswordThrottle(AnonRateThrottle):
+    """Rate-limit self-service password reset requests — 5 per hour per IP."""
+    scope = 'self_forgot_password'
+
+
+def _build_self_reset_link(raw_token: str) -> str:
+    """Construct the frontend password reset URL containing the raw token."""
+    from django.conf import settings as _settings
+    frontend_url = getattr(_settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+    return f"{frontend_url}/reset-password?token={raw_token}"
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@throttle_classes([SelfForgotPasswordThrottle])
+def self_forgot_password_view(request):
+    """
+    Request a password reset email for self-registered users.
+    POST /api/v1/auth/self-forgot-password/
+
+    Eligible accounts: users who registered themselves (manual signup or
+    Gmail/social signup).  Accounts created by a superadmin are not eligible
+    and should use the admin-reset flow.
+
+    For security, the response is always the same success message regardless
+    of whether the email exists or is eligible, so that email enumeration is
+    not possible.
+
+    Request:  { "email": "user@example.com" }
+    Response: 200 + generic success message
+    """
+    serializer = SelfForgotPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': serializer.errors},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    email = serializer.validated_data['email']
+
+    logger.debug(f"[self_forgot_password] Request received for email: {email}")
+
+    try:
+        user = User.objects.get(email=email, is_active=True, is_verified=True,
+                                is_self_registered=True)
+        logger.debug(f"[self_forgot_password] Eligible user found: {user.id} ({user.email})")
+    except User.DoesNotExist:
+        # Log why it failed without exposing to client
+        try:
+            any_user = User.objects.get(email=email)
+            logger.warning(
+                f"[self_forgot_password] User found but NOT eligible — "
+                f"is_active={any_user.is_active}, is_verified={any_user.is_verified}, "
+                f"is_self_registered={any_user.is_self_registered}"
+            )
+        except User.DoesNotExist:
+            logger.warning(f"[self_forgot_password] No user exists with email: {email}")
+        return Response({
+            'success': True,
+            'message': 'If this email is registered, a password reset link has been sent.'
+        }, status=status.HTTP_200_OK)
+
+    # Generate a secure single-use token (stored as hash)
+    raw_token = SelfPasswordResetToken.create_for_user(user, expiry_minutes=15)
+    reset_link = _build_self_reset_link(raw_token)
+    logger.debug(f"[self_forgot_password] Reset link generated: {reset_link}")
+
+    # Send email
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings as _settings
+        import traceback
+
+        logger.debug(
+            f"[self_forgot_password] Email config — "
+            f"BACKEND={_settings.EMAIL_BACKEND}, "
+            f"HOST={_settings.EMAIL_HOST}, "
+            f"PORT={_settings.EMAIL_PORT}, "
+            f"TLS={_settings.EMAIL_USE_TLS}, "
+            f"USER={_settings.EMAIL_HOST_USER!r}"
+        )
+
+        subject = 'Reset Your Password – Aoqolt'
+        body = (
+            f"Hello {user.full_name},\n\n"
+            f"You requested a password reset for your Aoqolt account.\n\n"
+            f"Click the link below to set a new password (valid for 15 minutes):\n\n"
+            f"  {reset_link}\n\n"
+            f"If you did not request this, you can safely ignore this email.\n\n"
+            f"– The Aoqolt Team"
+        )
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=_settings.EMAIL_HOST_USER or 'noreply@aoqolt.com',
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        logger.info(f"[self_forgot_password] Email successfully sent to {user.email}")
+    except Exception as exc:
+        logger.error(
+            f"[self_forgot_password] FAILED to send email to {user.email}: {exc}\n"
+            f"{traceback.format_exc()}"
+        )
+        # Do not expose email delivery failures to the client
+        return Response({
+            'success': True,
+            'message': 'If this email is registered, a password reset link has been sent.'
+        }, status=status.HTTP_200_OK)
+
+    return Response({
+        'success': True,
+        'message': 'If this email is registered, a password reset link has been sent.'
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def self_reset_password_view(request):
+    """
+    Complete a self-registered user password reset using the emailed token.
+    POST /api/v1/auth/self-reset-password/
+
+    Request:
+    {
+        "token": "<raw token from email link>",
+        "new_password": "NewSecure123!",
+        "confirm_password": "NewSecure123!"
+    }
+    """
+    serializer = SelfResetPasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'error': serializer.errors},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    raw_token = serializer.validated_data['token']
+    new_password = serializer.validated_data['new_password']
+
+    # Hash the incoming raw token to look up the DB record
+    token_hash = SelfPasswordResetToken.hash_token(raw_token)
+
+    try:
+        token_obj = SelfPasswordResetToken.objects.select_related('user').get(
+            token_hash=token_hash
+        )
+    except SelfPasswordResetToken.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Invalid or expired reset link. Please request a new one.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    if not token_obj.is_valid():
+        return Response({
+            'success': False,
+            'error': 'This reset link has expired or has already been used. Please request a new one.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate password via Django's built-in validators
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    try:
+        validate_password(new_password, token_obj.user)
+    except DjangoValidationError as exc:
+        return Response({
+            'success': False,
+            'error': list(exc.messages)
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Update password and mark token as used
+    user = token_obj.user
+    user.set_password(new_password)
+    user.save(update_fields=['password'])
+
+    from django.utils import timezone as _tz
+    token_obj.is_used = True
+    token_obj.used_at = _tz.now()
+    token_obj.save(update_fields=['is_used', 'used_at'])
+
+    logger.info(f"Password reset completed for {user.email}")
+
+    return Response({
+        'success': True,
+        'message': 'Password has been reset successfully. You can now log in with your new password.'
+    }, status=status.HTTP_200_OK)

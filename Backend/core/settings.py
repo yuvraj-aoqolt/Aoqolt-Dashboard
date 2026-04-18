@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.sales',
     'apps.dashboard',
     'apps.blogs',
+    'apps.notifications.apps.NotificationsConfig',
 ]
 
 MIDDLEWARE = [
@@ -187,6 +188,7 @@ REST_FRAMEWORK = {
         'booking_initiate': '20/hour',
         'booking_create': '10/hour',
         'guest_login': '10/hour',
+        'self_forgot_password': '5/hour',
     },
 }
 
@@ -364,6 +366,11 @@ LOGGING = {
         'django': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.authentication': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
             'propagate': False,
         },
     },

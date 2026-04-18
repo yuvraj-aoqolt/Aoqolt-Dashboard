@@ -138,7 +138,6 @@ function generateInvoiceHTML(p) {
   <div class="header">
     <div>
       <div class="brand">Aoq<span>olt</span></div>
-      <div class="tagline">Spiritual Insights</div>
       <span class="type-badge">${isSales ? 'Sales Order' : 'Booking Payment'}</span>
     </div>
     <div class="invoice-label">
@@ -193,7 +192,7 @@ function generateInvoiceHTML(p) {
     </span>
   </div>
   <div class="footer">
-    <div class="footer-note">Thank you for your trust in Aoqolt Spiritual Insights.<br/>For queries, contact support.</div>
+    <div class="footer-note">Thank you for your trust in Aoqolt.<br/>For queries, contact support.</div>
     <div class="footer-brand">Aoqolt</div>
   </div>
 </div>

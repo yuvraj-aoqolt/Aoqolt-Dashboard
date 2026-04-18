@@ -79,7 +79,6 @@ export default function QuotePage() {
         {/* Logo / Brand */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black text-red-500 tracking-tight">AOQOLT</h1>
-          <p className="text-white/40 text-sm mt-1">Spiritual Insights</p>
         </div>
 
         <div className="bg-[#111] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
@@ -198,7 +197,7 @@ export default function QuotePage() {
           )}
         </div>
 
-        <p className="text-center text-xs text-white/20 mt-6">Aoqolt Spiritual Insights · contact@aoqolt.com</p>
+        <p className="text-center text-xs text-white/20 mt-6">Aoqolt · contact@aoqolt.com</p>
       </div>
     </div>
   )

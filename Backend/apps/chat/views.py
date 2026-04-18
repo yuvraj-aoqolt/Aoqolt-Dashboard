@@ -143,7 +143,21 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
             return Response({'success': False, 'error': 'You do not have access to this case'}, status=status.HTTP_403_FORBIDDEN)
 
         qs = CaseMessage.objects.filter(case=case, source_type='CASE', is_deleted=False)
-        if request.user.is_superadmin and conv_type in ('CLIENT', 'ADMIN'):
+        
+        # For guest cases, only allow ADMIN thread access
+        is_guest_case = case.client and getattr(case.client, 'is_guest', False)
+        
+        if is_guest_case:
+            # Guest cases: only ADMIN thread exists
+            # Block guest clients from accessing messages
+            if request.user == case.client:
+                return Response({
+                    'success': False,
+                    'error': 'Guest users cannot access case chat. Please contact support for assistance.'
+                }, status=status.HTTP_403_FORBIDDEN)
+            # Admins and superadmins see only ADMIN thread
+            qs = qs.filter(Q(conversation_type='ADMIN') | Q(conversation_type__isnull=True))
+        elif request.user.is_superadmin and conv_type in ('CLIENT', 'ADMIN'):
             qs = qs.filter(Q(conversation_type=conv_type) | Q(conversation_type__isnull=True))
         elif case.client == request.user:
             qs = qs.filter(Q(conversation_type='CLIENT') | Q(conversation_type__isnull=True))
@@ -170,10 +184,10 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 .select_related('assigned_admin', 'client', 'booking__service')
                 .order_by('-updated_at')
             )
-            # Only bookings WITHOUT a case — those with a case appear via the Case thread
+            # All bookings with assigned admin (remain visible even after case creation)
             bookings = list(
                 Booking.objects
-                .filter(assigned_admin__isnull=False, case__isnull=True)
+                .filter(assigned_admin__isnull=False)
                 .select_related('assigned_admin', 'user', 'service')
                 .order_by('-updated_at')
             )
@@ -185,10 +199,10 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 .select_related('assigned_admin', 'client', 'booking__service')
                 .order_by('-updated_at')
             )
-            # Bookings assigned to this admin that don't have a case yet
+            # Bookings assigned to this admin (remain visible even after case creation)
             bookings = list(
                 Booking.objects
-                .filter(assigned_admin=user, case__isnull=True)
+                .filter(assigned_admin=user)
                 .select_related('assigned_admin', 'user', 'service')
                 .order_by('-updated_at')
             )
@@ -228,6 +242,8 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
             result = []
             for case in cases:
                 cid = str(case.id)
+                is_guest_case = getattr(case.client, 'is_guest', False) if case.client else True
+                
                 try:
                     service_name = case.booking.service.name
                 except Exception:
@@ -255,8 +271,16 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                         'unread_count':    thread_unread.get((cid, ctype), 0),
                     }
 
-                ct = _thread('CLIENT')
-                at = _thread('ADMIN')
+                # For guest cases, don't include CLIENT thread
+                if is_guest_case:
+                    ct = {'last_message': '', 'last_message_at': fallback_time, 'unread_count': 0}
+                    at = _thread('ADMIN')
+                    last_activity = at['last_message_at']
+                else:
+                    ct = _thread('CLIENT')
+                    at = _thread('ADMIN')
+                    last_activity = max(ct['last_message_at'], at['last_message_at'])
+                
                 result.append({
                     'item_type':      'CASE',
                     'case_id':        cid,
@@ -266,14 +290,14 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                     'booking_ref':    booking_ref,
                     'client_name':    client_name,
                     'client_email':   client_email,
-                    'client_is_guest': getattr(case.client, 'is_guest', False) if case.client else True,
+                    'client_is_guest': is_guest_case,
                     'admin_id':       str(case.assigned_admin.id),
                     'admin_name':     case.assigned_admin.full_name,
                     'admin_email':    case.assigned_admin.email,
                     'service_name':   service_name,
                     'client_thread':  ct,
                     'admin_thread':   at,
-                    'last_activity':  max(ct['last_message_at'], at['last_message_at']),
+                    'last_activity':  last_activity,
                 })
 
             # ── Build BOOKING items ────────────────────────────────────────
@@ -451,6 +475,14 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
         except Case.DoesNotExist:
             return Response({'success': False, 'error': 'Case not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Block guest clients from accessing chat
+        is_guest_case = case.client and getattr(case.client, 'is_guest', False)
+        if is_guest_case and request.user == case.client:
+            return Response({
+                'success': False,
+                'error': 'Guest users cannot access case chat.'
+            }, status=status.HTTP_403_FORBIDDEN)
+
         if not (request.user.is_superadmin or case.assigned_admin == request.user or case.client == request.user):
             return Response({'success': False, 'error': 'Access denied'}, status=status.HTTP_403_FORBIDDEN)
 
@@ -459,7 +491,11 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
             .filter(case=case, source_type='CASE', is_read=False)
             .exclude(sender=request.user)
         )
-        if request.user.is_superadmin and conv_type in ('CLIENT', 'ADMIN'):
+        
+        # For guest cases, only ADMIN thread exists
+        if is_guest_case:
+            updated_qs = updated_qs.filter(Q(conversation_type='ADMIN') | Q(conversation_type__isnull=True))
+        elif request.user.is_superadmin and conv_type in ('CLIENT', 'ADMIN'):
             updated_qs = updated_qs.filter(Q(conversation_type=conv_type) | Q(conversation_type__isnull=True))
 
         updated = updated_qs.update(is_read=True, read_at=timezone.now())
@@ -502,8 +538,19 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
         Returns all active chat threads for the logged-in client:
         - BOOKING threads: bookings with assigned admin but no case yet
         - CASE threads: cases with assigned admin
+        Note: Guest clients are blocked from accessing case chats.
         """
         user = request.user
+        
+        # Block guest clients from accessing case chats
+        if getattr(user, 'is_guest', False):
+            return Response({
+                'success': True,
+                'count': 0,
+                'data': [],
+                'message': 'Guest users do not have access to chat. Please contact support for assistance.'
+            })
+        
         # Booking threads (no case yet, admin assigned)
         bookings = list(
             Booking.objects

@@ -83,6 +83,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             phone_number=validated_data['phone_number'],
             role=User.CLIENT,
             auth_provider=User.AUTH_MANUAL,
+            is_self_registered=True,
             is_active=False  # Will be activated after OTP verification
         )
         return user

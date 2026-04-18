@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, isToday } from 'date-fns'
-import { FiSearch, FiSliders, FiCalendar, FiChevronDown, FiX, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiClock } from 'react-icons/fi'
+import { FiSearch, FiSliders, FiCalendar, FiChevronDown, FiX, FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiClock, FiImage, FiExternalLink } from 'react-icons/fi'
 import { casesAPI, chatAPI, bookingsAPI } from '../../api'
 import AdminLayout from './AdminLayout'
 import toast from 'react-hot-toast'
@@ -61,14 +61,14 @@ function BookingModal({ caseId, bookingId, onClose }) {
         : Object.entries(value)
       if (entries.length === 0) return null
       return (
-        <div className="flex items-start gap-3">
-          <Icon size={14} className="text-white/30 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start gap-4">
+          <Icon size={18} className="text-white/30 mt-1 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="text-white/35 text-[11px] mb-1">{label}</p>
+            <p className="text-white/40 text-sm font-medium mb-2">{label}</p>
             {entries.map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-2 text-sm py-0.5">
-                <span className="text-white/40 capitalize">{String(k).replace(/_/g, ' ')}</span>
-                <span className="text-white/75">{String(v)}</span>
+              <div key={k} className="flex justify-between gap-3 text-base py-1">
+                <span className="text-white/50 capitalize">{String(k).replace(/_/g, ' ')}</span>
+                <span className="text-white/85 font-medium">{String(v)}</span>
               </div>
             ))}
           </div>
@@ -76,11 +76,11 @@ function BookingModal({ caseId, bookingId, onClose }) {
       )
     }
     return (
-      <div className="flex items-start gap-3">
-        <Icon size={14} className="text-white/30 mt-0.5 flex-shrink-0" />
-        <div className="min-w-0">
-          <p className="text-white/35 text-[11px] mb-0.5">{label}</p>
-          <p className="text-white/80 text-sm break-words">{String(value)}</p>
+      <div className="flex items-start gap-4">
+        <Icon size={18} className="text-white/30 mt-1 flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-white/40 text-sm font-medium mb-1">{label}</p>
+          <p className="text-white/85 text-base font-medium break-words">{String(value)}</p>
         </div>
       </div>
     )
@@ -100,24 +100,24 @@ function BookingModal({ caseId, bookingId, onClose }) {
           initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
-          className="relative bg-[#1c1c1c] border border-white/8 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl"
+          className="relative bg-[#1c1c1c] border border-white/8 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/8">
+          <div className="flex items-center justify-between px-8 py-5 border-b border-white/8">
             <div>
-              <h2 className="text-white font-bold text-lg">Client Details</h2>
-              <p className="text-white/35 text-xs mt-0.5">
+              <h2 className="text-white font-bold text-2xl">Client Details</h2>
+              <p className="text-white/40 text-sm mt-1">
                 {data?.case_number && <span>Case: {data.case_number}</span>}
                 {data?.booking_id && <span className="ml-2 opacity-60">· Booking: {data.booking_id}</span>}
               </p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 rounded-xl transition-all">
-              <FiX size={16} />
+            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/8 rounded-xl transition-all">
+              <FiX size={20} />
             </button>
           </div>
 
           {/* Body */}
-          <div className="overflow-y-auto px-6 py-5 space-y-6" style={{ maxHeight: 'calc(85vh - 80px)' }}>
+          <div className="overflow-y-auto px-8 py-6 space-y-8" style={{ maxHeight: 'calc(90vh - 90px)' }}>
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="w-6 h-6 border-2 border-white/10 border-t-red-500 rounded-full animate-spin" />
@@ -126,25 +126,11 @@ function BookingModal({ caseId, bookingId, onClose }) {
               <p className="text-white/30 text-sm text-center py-8">No booking data found</p>
             ) : (
               <>
-                {/* Form 1 — only shown for cases (admin cannot see booking personal data) */}
-                {data?._type !== 'BOOKING' ? (
-                  <div>
-                    <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest mb-3">Form 1 — Personal Details</p>
-                    <div className="space-y-3">
-                      <Row icon={FiUser}    label="Full Name"    value={b.full_name} />
-                      <Row icon={FiMail}    label="Email"        value={b.email} />
-                      <Row icon={FiPhone}   label="Phone"        value={`${b.phone_country_code || ''}${b.phone_number || ''}`} />
-                      <Row icon={FiMapPin}  label="Address"      value={[b.address, b.city, b.state, b.country, b.postal_code].filter(Boolean).join(', ')} />
-                      <Row icon={FiFileText} label="Special Note" value={b.special_note} />
-                    </div>
-                  </div>
-                ) : null}
-
                 {/* Form 2 */}
                 {f2 && (
                   <div>
-                    <p className="text-[11px] font-bold text-white/30 uppercase tracking-widest mb-3">Form 2 — Service Details</p>
-                    <div className="space-y-3">
+                    <p className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4">Form 2 — Service Details</p>
+                    <div className="space-y-4">
                       <Row icon={FiCalendar} label="Birth Date"         value={f2.birth_date} />
                       <Row icon={FiClock}    label="Birth Time"         value={f2.birth_time} />
                       <Row icon={FiMapPin}   label="Birth Place"        value={f2.birth_place} />
@@ -157,6 +143,43 @@ function BookingModal({ caseId, bookingId, onClose }) {
                 )}
                 {!f2 && (
                   <p className="text-white/20 text-xs text-center">Form 2 not submitted yet</p>
+                )}
+
+                {/* Uploaded Images */}
+                {b?.attachments?.length > 0 && (
+                  <div>
+                    <p className="text-sm font-bold text-white/40 uppercase tracking-wider mb-4 flex items-center gap-2">
+                      <FiImage size={16} /> Uploaded Images ({b.attachments.length})
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {b.attachments.map((att) => (
+                        <a
+                          key={att.id}
+                          href={att.file}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 transition-all"
+                        >
+                          <img
+                            src={att.file}
+                            alt={att.description || att.file_name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                              e.target.parentElement.classList.add('flex', 'items-center', 'justify-center')
+                              e.target.parentElement.innerHTML = `<div class="text-center p-3"><div class="text-white/20 mb-1"><svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div><p class="text-white/30 text-xs truncate">${att.file_name}</p></div>`
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <FiExternalLink className="text-white" size={20} />
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                            <p className="text-white text-sm truncate">{att.description || att.file_name}</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </>
             )}
@@ -316,7 +339,7 @@ export default function AdminCasesPage() {
     id:           b.id,
     case_number:  b.booking_id || '—',
     booking_id:   null,
-    client_name:  b.full_name || '—',
+    client_name:  b.client_name || '—',
     service_name: b.service_name || '—',
     created_at:   b.created_at,
     started_at:   b.work_started_at || null,

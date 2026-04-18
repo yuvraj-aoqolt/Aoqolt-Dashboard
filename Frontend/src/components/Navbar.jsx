@@ -62,18 +62,15 @@ export default function Navbar() {
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <img
               src="/Aoqolt logo 1-01-02.png"
               alt=""
               aria-hidden="true"
-              className="h-9 w-9 object-contain flex-shrink-0"
+              className="h-18 w-18 object-contain flex-shrink-0"
             />
-            <span className="text-white font-display font-bold text-xl tracking-wider">
-              AO<span className="text-red-500">QOLT</span>
-            </span>
           </Link>
 
           {/* Desktop Nav */}
@@ -82,7 +79,7 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`text-sm font-medium transition-colors relative group ${location.pathname === link.to ? 'text-red-400' : 'text-white/70 hover:text-white'
+                className={`text-md font-medium transition-colors relative group ${location.pathname === link.to ? 'text-red-400' : 'text-white/70 hover:text-white'
                   }`}
               >
                 {link.label}

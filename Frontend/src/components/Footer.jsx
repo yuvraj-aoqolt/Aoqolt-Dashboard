@@ -11,12 +11,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-9 h-9 bg-gradient-to-br from-red-600 to-red-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-display font-bold">A</span>
-              </div>
-              <span className="text-white font-display font-bold text-2xl tracking-wider">
-                AO<span className="text-red-500">QOLT</span>
-              </span>
+              <img
+                src="/Aoqolt logo 1-01-02.png"
+                alt="Aoqolt"
+                className="h-32 w-32 object-contain"
+              />
             </Link>
             <p className="text-white/40 text-sm leading-relaxed max-w-xs">
               Unlock the secrets of your energy field. Professional aura readings and

@@ -6,10 +6,10 @@ import { useAuth } from '../../context/AuthContext'
 import AuthLayout from './AuthLayout'
 
 export default function VerifyOtpPage() {
-  const { verifyOtp, resendOtp, pendingPhone } = useAuth()
+  const { verifyOtp, resendOtp, pendingEmail } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const phone = pendingPhone || location.state?.phone || ''
+  const email = pendingEmail || location.state?.email || ''
   const from  = location.state?.from  || '/services'
 
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -19,7 +19,7 @@ export default function VerifyOtpPage() {
   const refs = useRef([])
 
   useEffect(() => {
-    if (!phone) { navigate('/register'); return }
+    if (!email) { navigate('/register'); return }
     refs.current[0]?.focus()
   }, [])
 
@@ -54,14 +54,18 @@ export default function VerifyOtpPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const code = otp.join('')
-    if (code.length < 6) { toast.error('Enter 6-digit OTP'); return }
+    if (code.length < 6) { toast.error('Enter all 6 digits'); return }
     setLoading(true)
     try {
-      await verifyOtp(phone, code)
-      toast.success('Phone verified! Welcome to Aoqolt.')
+      await verifyOtp(email, code)
+      toast.success('Email verified! Welcome to Aoqolt.')
       navigate(from, { replace: true })
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Invalid OTP. Please try again.')
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.detail ||
+        'Invalid OTP. Please try again.'
+      toast.error(msg)
       setOtp(['', '', '', '', '', ''])
       refs.current[0]?.focus()
     } finally {
@@ -73,8 +77,8 @@ export default function VerifyOtpPage() {
     if (countdown > 0) return
     setResending(true)
     try {
-      await resendOtp(phone)
-      toast.success('OTP sent again')
+      await resendOtp(email)
+      toast.success('A new code has been sent to your email.')
       setCountdown(60)
     } catch {
       toast.error('Failed to resend OTP')
@@ -83,8 +87,13 @@ export default function VerifyOtpPage() {
     }
   }
 
+  // Mask the email for display: show first 2 chars + *** + domain
+  const maskedEmail = email
+    ? email.replace(/^(.{2})(.*)(@.*)$/, (_, a, b, c) => a + b.replace(/./g, '*') + c)
+    : ''
+
   return (
-    <AuthLayout title="Verify Your Phone" subtitle={`Enter the 6-digit code sent to ${phone}`}>
+    <AuthLayout title="Verify Your Email" subtitle={`Enter the 6-digit code sent to ${maskedEmail}`}>
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* OTP Boxes */}
         <div className="flex gap-3 justify-center" onPaste={handlePaste}>
@@ -142,6 +151,7 @@ export default function VerifyOtpPage() {
                 : resending ? 'Sending...' : 'Resend OTP'}
             </button>
           </p>
+          <p className="text-white/30 text-xs mt-2">Check your spam folder if you don't see it.</p>
         </div>
       </form>
     </AuthLayout>

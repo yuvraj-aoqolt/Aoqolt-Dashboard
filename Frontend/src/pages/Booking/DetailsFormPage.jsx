@@ -267,7 +267,7 @@ export default function DetailsFormPage() {
                     </Field>
 
                     {/* Scan Focus */}
-                    <Field label="Main Aspect to Focus *" error={errors.scan_focus?.message}>
+                    <Field label="Main Aspects to Focus *" error={errors.scan_focus?.message}>
                       <input
                         {...register('scan_focus', { required: 'Please specify the main aspect to focus on' })}
                         placeholder="e.g. Health, Finance, Career…"

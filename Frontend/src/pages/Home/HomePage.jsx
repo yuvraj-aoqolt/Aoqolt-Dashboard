@@ -247,11 +247,6 @@ export default function HomePage() {
           {/* ── Left: Text + CTAs ── */}
           <div className="flex-1 text-center lg:text-left">
 
-            {/* Eyebrow */}
-            <span className="inline-block text-red-500/75 text-[11px] font-semibold uppercase tracking-[0.35em] mb-8">
-              Spiritual Insights
-            </span>
-
             {/* Headline */}
             <div className="mb-8">
               <h1 className="font-display leading-none">
@@ -364,7 +359,7 @@ export default function HomePage() {
                     </div>
                     <h3 className="font-display text-xl font-semibold text-white mb-3">{service.title}</h3>
                     <p className="text-white/50 text-sm leading-relaxed mb-6">{service.desc}</p>
-                    <span className="inline-flex items-center gap-1 text-red-400 group-hover:text-red-300 text-sm font-medium transition-colors">
+                    <span className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
                       Book Now <FiArrowRight size={14} />
                     </span>
                   </div>
