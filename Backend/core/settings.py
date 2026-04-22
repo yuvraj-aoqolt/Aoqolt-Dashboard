@@ -411,3 +411,9 @@ SPECTACULAR_SETTINGS = {
     'COMPONENT_SPLIT_REQUEST': True,
 }
 
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://aoqolt.com",
+    "https://www.aoqolt.com"
+]
