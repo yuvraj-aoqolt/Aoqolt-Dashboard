@@ -24,28 +24,30 @@ export default defineConfig({
     },
   },
   build: {
-    // Target modern browsers — smaller output, no polyfills
     target: 'esnext',
-    // esbuild is 10-20x faster than terser and produces comparable output
     minify: 'esbuild',
     cssMinify: true,
-    // Skip reporting gzip size per-chunk (speeds up build)
+    sourcemap: false,
     reportCompressedSize: false,
-    chunkSizeWarningLimit: 1500,
+    // Inline assets smaller than 4KB as base64 (saves HTTP requests)
+    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        // Function form lets us catch every node_modules package individually
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
-          if (id.includes('framer-motion'))   return 'vendor-motion'
+          // Specific react-* packages first to avoid false matches from /react/ below
+          if (id.includes('framer-motion'))    return 'vendor-motion'
           if (id.includes('@react-oauth'))     return 'vendor-oauth'
-          if (id.includes('react-dom'))        return 'vendor-react'
           if (id.includes('react-router-dom')) return 'vendor-router'
           if (id.includes('react-hook-form'))  return 'vendor-forms'
           if (id.includes('react-hot-toast'))  return 'vendor-ui'
-          if (id.includes('date-fns'))         return 'vendor-dates'
           if (id.includes('react-icons'))      return 'vendor-icons'
+          if (id.includes('@tanstack'))        return 'vendor-query'
+          // react + react-dom together (core is small, colocation avoids waterfall)
+          if (id.includes('react-dom') || id.includes('/react/')) return 'vendor-react'
           if (id.includes('axios'))            return 'vendor-http'
+          if (id.includes('date-fns'))         return 'vendor-dates'
           return 'vendor-misc'
         },
       },
