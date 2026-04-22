@@ -117,12 +117,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Authentication method
     AUTH_MANUAL = 'manual'
     AUTH_GOOGLE = 'google'
-    AUTH_YAHOO = 'yahoo'
     
     AUTH_CHOICES = [
         (AUTH_MANUAL, 'Manual'),
         (AUTH_GOOGLE, 'Google'),
-        (AUTH_YAHOO, 'Yahoo'),
     ]
     
     auth_provider = models.CharField(max_length=20, choices=AUTH_CHOICES, default=AUTH_MANUAL)

@@ -25,7 +25,6 @@ const VerifyOtpPage      = lazy(() => import('./pages/Auth/VerifyOtpPage'))
 const ForgotPasswordPage = lazy(() => import('./pages/Auth/ForgotPasswordPage'))
 const ResetPasswordPage  = lazy(() => import('./pages/Auth/ResetPasswordPage'))
 const SetPasswordPage    = lazy(() => import('./pages/Auth/SetPasswordPage'))
-const YahooCallbackPage  = lazy(() => import('./pages/Auth/YahooCallbackPage'))
 
 // Admin
 const AdminDashboardPage  = lazy(() => import('./pages/Admin/AdminDashboardPage'))
@@ -118,7 +117,6 @@ export default function App() {
             <Route path="/reset-password"     element={<S><ResetPasswordPage /></S>} />
             <Route path="/invite/:token"      element={<S><SetPasswordPage /></S>} />
             <Route path="/admin-reset/:token" element={<S><SetPasswordPage /></S>} />
-            <Route path="/oauth/yahoo/callback" element={<S><YahooCallbackPage /></S>} />
 
             {/* Quote pages */}
             <Route path="/quote/payment/success" element={<S><QuotePaymentSuccessPage /></S>} />

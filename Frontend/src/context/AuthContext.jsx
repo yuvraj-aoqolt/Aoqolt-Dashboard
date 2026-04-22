@@ -122,16 +122,6 @@ export function AuthProvider({ children }) {
         full_name    = userInfo.name
         social_id    = userInfo.sub
         access_token = tokenResponse.access_token
-      } else if (provider === 'yahoo') {
-        const infoRes = await fetch('https://api.login.yahoo.com/openid/v1/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        })
-        if (!infoRes.ok) throw new Error('Failed to fetch Yahoo user info')
-        const userInfo = await infoRes.json()
-        email        = userInfo.email
-        full_name    = userInfo.name
-        social_id    = userInfo.sub
-        access_token = tokenResponse.access_token
       } else {
         throw new Error(`Unsupported provider: ${provider}`)
       }

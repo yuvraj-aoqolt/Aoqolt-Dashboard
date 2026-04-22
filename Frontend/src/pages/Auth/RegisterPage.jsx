@@ -113,7 +113,7 @@ function RegisterPageInner() {
   }
 
   return (
-    <AuthLayout title="Sign up" subtitle="Sign in to access your spiritual journey">
+    <AuthLayout title="Sign up" subtitle="Create your account to get started">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Full Name */}
         <div>

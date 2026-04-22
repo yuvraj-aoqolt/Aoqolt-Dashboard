@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { FiMail, FiPhone, FiMapPin } from 'react-icons/fi'
-import { FaTwitter, FaInstagram, FaFacebook } from 'react-icons/fa'
+import { FaInstagram, FaFacebook, FaYoutube, FaLinkedin } from 'react-icons/fa'
 import { motion } from 'framer-motion'
 
 export default function Footer() {
@@ -19,13 +19,20 @@ export default function Footer() {
             </Link>
             <p className="text-white/40 text-sm leading-relaxed max-w-xs">
               Unlock the secrets of your energy field. Professional aura readings and
-              astrology services tailored for your spiritual journey.
+              astrology services for your growth and healing.
             </p>
             <div className="flex gap-3 mt-6">
-              {[{icon: FaTwitter, name: 'Twitter'}, {icon: FaInstagram, name: 'Instagram'}, {icon: FaFacebook, name: 'Facebook'}].map(({icon: Icon, name}, i) => (
+              {[
+                {icon: FaInstagram, name: 'Instagram', url: 'https://www.instagram.com/aoqolt?igsh=eHE0bTdyY3M4bWw0'},
+                {icon: FaFacebook,  name: 'Facebook',  url: 'https://www.facebook.com/share/1NJf8hGzok/'},
+                {icon: FaYoutube,   name: 'YouTube',   url: 'https://youtube.com/@aoqolt?si=2imFGqJBVkEtZoun'},
+                {icon: FaLinkedin,  name: 'LinkedIn',  url: 'https://www.linkedin.com/company/aoqolt/'},
+              ].map(({icon: Icon, name, url}, i) => (
                 <motion.a
                   key={i}
-                  href="#"
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={name}
                   whileHover={{ scale: 1.15 }}
                   className="w-9 h-9 bg-white/5 hover:bg-red-900/30 border border-white/10 hover:border-red-900/50 rounded-lg flex items-center justify-center text-white/50 hover:text-red-400 transition-all"
@@ -63,7 +70,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2 text-white/40 text-sm">
                 <FiPhone size={14} className="text-red-600" />
-                +1 (555) 000-0000
+                +1 (437) 667-1588 
               </li>
               <li className="flex items-center gap-2 text-white/40 text-sm">
                 <FiMapPin size={14} className="text-red-600" />

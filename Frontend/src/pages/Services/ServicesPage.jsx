@@ -65,14 +65,14 @@ export default function ServicesPage() {
           transition={{ duration: 0.7 }}
           className="text-center"
         >
-          <span className="relative inline-flex items-center gap-2 text-xs text-red-400 uppercase tracking-widest font-medium bg-red-950/30 border border-red-900/40 rounded-full px-4 py-1.5 mb-6">
-            ✦ Spiritual Services
-          </span>
+          {/* <span className="relative inline-flex items-center gap-2 text-xs text-red-400 uppercase tracking-widest font-medium bg-red-950/30 border border-red-900/40 rounded-full px-4 py-1.5 mb-6">
+            ✦ Our Services
+          </span> */}
           <h1 className="font-display text-5xl sm:text-6xl font-bold text-white mb-5">
             Our <span className="gradient-text">Services</span>
           </h1>
           <p className="text-white/45 text-lg max-w-xl mx-auto leading-relaxed">
-            Choose your spiritual journey. Each reading is performed by experienced
+            Each reading is performed by experienced
             practitioners dedicated to your growth and healing.
           </p>
         </motion.div>
@@ -110,9 +110,9 @@ export default function ServicesPage() {
           className="glass rounded-2xl p-8 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center"
         >
           {[
-            { icon: '🔒', label: 'Secure Payments', desc: 'All payments are encrypted and secure' },
-            { icon: '⚡', label: 'Fast Delivery', desc: 'Results within the promised timeframe' },
-            { icon: '💬', label: 'Direct Chat', desc: 'Chat directly with your practitioner' },
+            { icon: '🔒', label: 'Secure Payments', desc: 'All transactions are fully encrypted and protected' },
+            { icon: '✨', label: 'Expert Readers', desc: 'Vetted practitioners with years of experience' },
+            { icon: '💬', label: 'Direct Chat', desc: 'Communicate directly with your assigned reader' },
           ].map((item, i) => (
             <div key={i}>
               <div className="text-3xl mb-2">{item.icon}</div>

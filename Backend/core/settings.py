@@ -279,13 +279,6 @@ SOCIALACCOUNT_PROVIDERS = {
             'secret': os.getenv('GOOGLE_CLIENT_SECRET', ''),
         }
     },
-    'yahoo': {
-        'SCOPE': ['openid', 'email', 'profile'],
-        'APP': {
-            'client_id': os.getenv('YAHOO_CLIENT_ID', ''),
-            'secret': os.getenv('YAHOO_CLIENT_SECRET', ''),
-        }
-    },
 }
 
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'

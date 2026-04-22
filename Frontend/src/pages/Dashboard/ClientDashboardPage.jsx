@@ -36,7 +36,7 @@ export default function ClientDashboardPage() {
           <h1 className="font-display text-3xl font-bold text-white mb-1">
             Welcome back, <span className="gradient-text">{user?.full_name?.split(' ')[0]}</span> 👋
           </h1>
-          <p className="text-white/40">Track your spiritual journey and manage your sessions</p>
+          <p className="text-white/40">Track and manage your sessions</p>
         </motion.div>
 
         {/* Stats */}

@@ -185,7 +185,7 @@ function LoginPageInner() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to access your spiritual journey">
+    <AuthLayout title="Welcome back" subtitle="Sign in to access your account">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Email */}
         <div>

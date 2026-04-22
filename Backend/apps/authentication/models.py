@@ -91,7 +91,7 @@ class SocialAuthToken(models.Model):
     Model to store social authentication tokens
     """
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='social_tokens')
-    provider = models.CharField(max_length=20)  # google, apple, yahoo
+    provider = models.CharField(max_length=20)  # google
     provider_user_id = models.CharField(max_length=255)
     access_token = models.TextField()
     refresh_token = models.TextField(blank=True)

@@ -358,7 +358,7 @@ def resend_otp_view(request):
 @permission_classes([AllowAny])
 def social_auth_view(request):
     """
-    Social authentication endpoint (Google, Apple, Yahoo)
+    Social authentication endpoint (Google)
     Social auth is sufficient verification - no phone OTP required
     POST /api/v1/auth/social-login/
     
