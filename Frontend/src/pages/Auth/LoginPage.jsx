@@ -150,33 +150,33 @@ function LoginPageInner() {
     }
   }
 
-  const handleYahooLogin = async () => {
-    setYahooLoading(true)
-    try {
-      const state        = randomBase64(16)
-      const codeVerifier = randomBase64(43)
-      const codeChallenge = await sha256Base64url(codeVerifier)
+  // const handleYahooLogin = async () => {
+  //   setYahooLoading(true)
+  //   try {
+  //     const state        = randomBase64(16)
+  //     const codeVerifier = randomBase64(43)
+  //     const codeChallenge = await sha256Base64url(codeVerifier)
 
-      sessionStorage.setItem('yahoo_oauth_state',    state)
-      sessionStorage.setItem('yahoo_code_verifier',  codeVerifier)
-      sessionStorage.setItem('yahoo_redirect_to', from)
-      if (serviceId) sessionStorage.setItem('yahoo_service_id', serviceId)
+  //     sessionStorage.setItem('yahoo_oauth_state',    state)
+  //     sessionStorage.setItem('yahoo_code_verifier',  codeVerifier)
+  //     sessionStorage.setItem('yahoo_redirect_to', from)
+  //     if (serviceId) sessionStorage.setItem('yahoo_service_id', serviceId)
 
-      const params = new URLSearchParams({
-        client_id:             import.meta.env.VITE_YAHOO_CLIENT_ID,
-        redirect_uri:          `${window.location.origin}/oauth/yahoo/callback`,
-        response_type:         'code',
-        scope:                 'openid email profile',
-        state,
-        code_challenge:        codeChallenge,
-        code_challenge_method: 'S256',
-      })
-      window.location.href = `https://api.login.yahoo.com/oauth2/request_auth?${params}`
-    } catch {
-      toast.error('Yahoo sign-in failed.')
-      setYahooLoading(false)
-    }
-  }
+  //     const params = new URLSearchParams({
+  //       client_id:             import.meta.env.VITE_YAHOO_CLIENT_ID,
+  //       redirect_uri:          `${window.location.origin}/oauth/yahoo/callback`,
+  //       response_type:         'code',
+  //       scope:                 'openid email profile',
+  //       state,
+  //       code_challenge:        codeChallenge,
+  //       code_challenge_method: 'S256',
+  //     })
+  //     window.location.href = `https://api.login.yahoo.com/oauth2/request_auth?${params}`
+  //   } catch {
+  //     toast.error('Yahoo sign-in failed.')
+  //     setYahooLoading(false)
+  //   }
+  // }
 
   // All hooks have been called above — now safe to do an early redirect.
   if (!isLoggingIn.current && isAuthenticated) {
@@ -185,7 +185,7 @@ function LoginPageInner() {
   }
 
   return (
-    <AuthLayout title="Welcome back" subtitle="Sign in to access your account">
+    <AuthLayout title="Welcome Back" subtitle="Sign in to access your account">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Email */}
         <div>
@@ -268,7 +268,7 @@ function LoginPageInner() {
           </button>
 
           {/* Microsoft */}
-          <button
+          {/* <button
             type="button"
             title="Continue with Microsoft"
             className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
@@ -279,7 +279,7 @@ function LoginPageInner() {
               <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
               <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
             </svg>
-          </button>
+          </button> */}
         </div>
 
         {/* Guest access */}

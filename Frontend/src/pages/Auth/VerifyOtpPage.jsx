@@ -58,7 +58,7 @@ export default function VerifyOtpPage() {
     setLoading(true)
     try {
       await verifyOtp(email, code)
-      toast.success('Email verified! Welcome to Aoqolt.')
+      toast.success('Email verified! Welcome to Aoqolt 🎉')
       navigate(from, { replace: true })
     } catch (err) {
       const msg =

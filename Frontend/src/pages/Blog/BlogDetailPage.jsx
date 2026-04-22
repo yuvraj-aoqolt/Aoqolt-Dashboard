@@ -98,7 +98,7 @@ export default function BlogDetailPage() {
                   {blog.author.avatar ? (
                     <img src={blog.author.avatar} alt="" className="w-5 h-5 rounded-full object-cover" />
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-red-900/40 flex items-center justify-center text-red-400 text-[9px] font-bold">
+                    <div className="w-5 h-5 rounded-full bg-red-900/40 flex items-center justify-center text-red-500 text-[9px] font-bold">
                       {blog.author.full_name[0]}
                     </div>
                   )}
@@ -126,7 +126,7 @@ export default function BlogDetailPage() {
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 text-red-400 transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 text-red-500 transition-all disabled:opacity-50"
                 >
                   <FiTrash2 size={11} />
                   {deleting ? 'Deleting…' : 'Delete'}
@@ -176,7 +176,7 @@ export default function BlogDetailPage() {
         <div className="mt-14 pt-8 border-t border-white/5">
           <Link
             to="/blogs"
-            className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 text-red-500 hover:text-red-300 text-sm font-medium transition-colors"
           >
             <FiArrowLeft size={14} />
             All Articles

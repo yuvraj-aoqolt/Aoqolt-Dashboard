@@ -17,7 +17,7 @@ export default function Footer() {
                 className="h-32 w-32 object-contain"
               />
             </Link>
-            <p className="text-white/40 text-sm leading-relaxed max-w-xs">
+            <p className="text-white text-sm leading-relaxed max-w-xs">
               Unlock the secrets of your energy field. Professional aura readings and
               astrology services for your growth and healing.
             </p>
@@ -35,7 +35,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   aria-label={name}
                   whileHover={{ scale: 1.15 }}
-                  className="w-9 h-9 bg-white/5 hover:bg-red-900/30 border border-white/10 hover:border-red-900/50 rounded-lg flex items-center justify-center text-white/50 hover:text-red-400 transition-all"
+                  className="w-9 h-9 bg-white/5 hover:bg-red-900/30 border border-white/10 hover:border-red-900/50 rounded-lg flex items-center justify-center text-white hover:text-red-500 transition-all"
                 >
                   <Icon size={15} />
                 </motion.a>
@@ -51,7 +51,7 @@ export default function Footer() {
                 <li key={item}>
                   <Link
                     to="/services"
-                    className="text-white/40 hover:text-red-400 text-sm transition-colors"
+                    className="text-white hover:text-red-500 text-sm transition-colors"
                   >
                     {item}
                   </Link>
@@ -64,15 +64,19 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Contact</h3>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-white/40 text-sm">
+              <li className="flex items-center gap-2 text-white text-sm">
                 <FiMail size={14} className="text-red-600" />
                 support@aoqolt.com
               </li>
-              <li className="flex items-center gap-2 text-white/40 text-sm">
-                <FiPhone size={14} className="text-red-600" />
-                +1 (437) 667-1588 
+              <li className="flex items-center gap-2 text-white text-sm">
+                <FiPhone size={14} className="text-red-600 shrink-0" />
+                <span><span className="text-red-500 font-medium">Canada:</span> +1 (437) 667-1588</span>
               </li>
-              <li className="flex items-center gap-2 text-white/40 text-sm">
+              <li className="flex items-center gap-2 text-white text-sm">
+                <FiPhone size={14} className="text-red-600 shrink-0" />
+                <span><span className="text-red-500 font-medium">India:</span> +91 77195 33470</span>
+              </li>
+              <li className="flex items-center gap-2 text-white text-sm">
                 <FiMapPin size={14} className="text-red-600" />
                 Available Worldwide
               </li>
@@ -81,12 +85,12 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-white/25 text-xs">
+          <p className="text-white text-xs">
             © {new Date().getFullYear()} Aoqolt. All rights reserved.
           </p>
           <div className="flex gap-6">
             {['Privacy Policy', 'Terms of Service'].map((item) => (
-              <a key={item} href="#" className="text-white/25 hover:text-white/50 text-xs transition-colors">
+              <a key={item} href="#" className="text-white hover:text-white text-xs transition-colors">
                 {item}
               </a>
             ))}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+﻿import { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -30,7 +30,7 @@ const SERVICES_PREVIEW = [
   {
     service_type: 'single_aura',
     icon: <FiEye size={28} />,
-    title: 'Single Aura Reading',
+    title: 'Single Aura Scan',
     desc: 'Deep personal energy field analysis revealing your unique vibrational signature.',
     color: 'from-red-900/50 to-rose-900/30',
     accent: '#dc2626',
@@ -38,7 +38,7 @@ const SERVICES_PREVIEW = [
   {
     service_type: 'family_aura',
     icon: <FiUsers size={28} />,
-    title: 'Family Aura Reading',
+    title: 'Family Aura Scan',
     desc: 'Comprehensive energetic analysis for your entire family dynamic.',
     color: 'from-orange-900/40 to-red-900/30',
     accent: '#ea580c',
@@ -46,7 +46,7 @@ const SERVICES_PREVIEW = [
   {
     service_type: 'astrology',
     icon: <GiCrystalBall size={28} />,
-    title: 'Astrology Reading',
+    title: 'Astrology Session',
     desc: 'Celestial birth chart analysis unlocking your cosmic blueprint.',
     color: 'from-purple-900/40 to-red-900/30',
     accent: '#9333ea',
@@ -62,10 +62,10 @@ const TESTIMONIALS = [
 ]
 
 const STATS = [
-  { value: '5000', display: '5,000+', label: 'Readings Completed', suffix: '+' },
-  { value: '98', display: '98%', label: 'Satisfaction Rate', suffix: '%' },
+  { value: '2300', display: '2,300+', label: 'Readings Completed', suffix: '+' },
+  { value: '99', display: '99%', label: 'Satisfaction Rate', suffix: '%' },
   { value: '50', display: '50+', label: 'Countries Served', suffix: '+' },
-  { value: '10', display: '10+', label: 'Years Experience', suffix: '+' },
+  { value: '9', display: '9+', label: 'Years Experience', suffix: '+' },
 ]
 
 const FEATURES = [
@@ -158,10 +158,10 @@ function TiltCard({ children, className, onClick }) {
 function StatItem({ stat, delay }) {
   return (
     <Reveal delay={delay} className="text-center group">
-      <p className="font-display text-4xl sm:text-5xl font-black gradient-text mb-1 tabular-nums">
+      <p className="font-display text-4xl sm:text-5xl md:text-5xl font-black gradient-text mb-1 pb-1 pr-2">
         {stat.display}
       </p>
-      <p className="text-white/40 text-sm tracking-wide">{stat.label}</p>
+      <p className="text-whit text-lg tracking-wide">{stat.label}</p>
     </Reveal>
   )
 }
@@ -245,19 +245,19 @@ export default function HomePage() {
         <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-4 py-28 lg:py-20">
 
           {/* ── Left: Text + CTAs ── */}
-          <div className="flex-1 text-center lg:text-left">
+          <div className="flex-1 text-center lg:text-left order-2 lg:order-1">
 
             {/* Headline */}
             <div className="mb-8">
               <h1 className="font-display leading-none">
-                <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black text-white tracking-tight">
-                  Discover
+                <span className="block text-[clamp(3.8rem,7vw,6.5rem)] font-black text-white tracking-tight">
+                  Life
                 </span>
-                <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black text-white/15 tracking-tight -mt-2">
+                {/* <span className="block text-[clamp(2.6rem,6vw,5.5rem)] font-black text-white/15 tracking-tight -mt-2">
                   Your
-                </span>
-                <span className="block text-[clamp(2.2rem,5vw,4.5rem)] font-black gradient-text tracking-tight -mt-1 pb-4">
-                  Energy Field
+                </span> */}
+                <span className="block text-[clamp(3.4rem,6vw,5.5rem)] font-black gradient-text tracking-tight -mt-1 pb-4">
+                  Guidance
                 </span>
               </h1>
             </div>
@@ -266,9 +266,9 @@ export default function HomePage() {
             <div className="h-px w-14 bg-gradient-to-r from-red-600 to-transparent mb-8 mx-auto lg:mx-0" />
 
             {/* Subheading */}
-            <p className="text-white/45 text-base sm:text-lg max-w-md mx-auto lg:mx-0 leading-relaxed mb-10">
-              Professional aura readings and astrology sessions that illuminate your
-              path, heal your energy, and connect you to your higher purpose.
+            <p className="text-white text-xl sm:text-xl max-w-md mx-auto lg:mx-0 leading-relaxed mb-10">
+              Your One-Stop Destination for Life Guidance and Occult Services.
+
             </p>
 
             {/* CTA */}
@@ -277,12 +277,12 @@ export default function HomePage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.96 }}
-                  className="relative flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 text-white font-semibold text-base px-9 py-4 rounded-xl shadow-lg shadow-red-900/40 overflow-hidden group"
+                  className="relative flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 text-white font-semibold text-2xl px-11 py-5 rounded-xl shadow-lg shadow-red-900/40 overflow-hidden group"
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                   Explore Services
                   <motion.span animate={{ x: [0, 4, 0] }} transition={{ duration: 1.4, repeat: Infinity }}>
-                    <FiArrowRight size={18} />
+                    <FiArrowRight size={26} />
                   </motion.span>
                 </motion.button>
               </Link>
@@ -292,14 +292,14 @@ export default function HomePage() {
           </div>
 
           {/* ── Right: Aoqolt Logo ── */}
-          <div className="flex-shrink-0 flex items-center justify-center">
+          <div className="flex-shrink-0 flex items-center justify-center order-1 lg:order-2">
             <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-[440px] lg:h-[440px] flex items-center justify-center">
 
               <img
                 src="/Aoqolt logo 1-01-02.png"
                 alt="Aoqolt"
                 fetchPriority="high"
-                className="relative z-10 w-52 h-52 sm:w-64 sm:h-64 lg:w-[360px] lg:h-[360px] object-contain"
+                className="relative z-10 w-58 h-58 sm:w-64 sm:h-64 lg:w-[360px] lg:h-[360px] object-contain"
               />
             </div>
           </div>
@@ -307,7 +307,7 @@ export default function HomePage() {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-          <span className="text-white/20 text-[10px] tracking-[0.3em] uppercase">Scroll</span>
+          <span className="text-white text-[10px] tracking-[0.3em] uppercase">Scroll</span>
           <div className="scroll-bob w-5 h-9 border border-white/15 rounded-full flex items-start justify-center pt-2">
             <div className="w-1 h-2 bg-red-500 rounded-full" />
           </div>
@@ -317,7 +317,7 @@ export default function HomePage() {
       {/* ── STATS ────────────────────────────────────────────── */}
       <section className="py-20 border-y border-red-900/10 bg-gradient-to-r from-red-950/5 via-transparent to-red-950/5">
         <div className="max-w-4xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
             {STATS.map((stat, i) => (
               <StatItem key={i} stat={stat} delay={i * 0.12} />
             ))}
@@ -329,11 +329,12 @@ export default function HomePage() {
       <section className="py-28 px-4">
         <div className="max-w-7xl mx-auto">
           <Reveal className="text-center mb-16">
-            <span className="text-xs text-red-400 uppercase tracking-[0.2em] font-medium">Our Services</span>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3 mb-4">
-              Choose Your Path
+            <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-4">
+                Our Services
             </h2>
-            <p className="text-white/40 max-w-lg mx-auto">
+            <span className="text-xl text-red-500 uppercase tracking-[0.2em] font-medium">Choose Your Path </span>
+            
+            <p className="text-white max-w-lg mx-auto mt-3">
               Each service is tailored to provide deep insight and transformative guidance for your unique journey.
             </p>
           </Reveal>
@@ -354,12 +355,12 @@ export default function HomePage() {
                   />
 
                   <div className="relative z-10">
-                    <div className="w-14 h-14 bg-red-900/30 border border-red-900/50 rounded-2xl flex items-center justify-center text-red-400 mb-6 group-hover:bg-red-900/50 group-hover:shadow-lg group-hover:shadow-red-900/30 transition-all duration-300">
+                    <div className="w-14 h-14 bg-red-900/30 border border-red-900/50 rounded-2xl flex items-center justify-center text-red-500 mb-6 group-hover:bg-red-900/50 group-hover:shadow-lg group-hover:shadow-red-900/30 transition-all duration-300">
                       {service.icon}
                     </div>
-                    <h3 className="font-display text-xl font-semibold text-white mb-3">{service.title}</h3>
-                    <p className="text-white/50 text-sm leading-relaxed mb-6">{service.desc}</p>
-                    <span className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <h3 className="font-display text-3xl font-semibold text-white mb-3">{service.title}</h3>
+                    <p className="text-white text-lg leading-relaxed mb-6">{service.desc}</p>
+                    <span className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-lg font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
                       Book Now <FiArrowRight size={14} />
                     </span>
                   </div>
@@ -370,7 +371,7 @@ export default function HomePage() {
 
           <div className="text-center">
             <Link to="/services">
-              <button className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4">
+              <button className="btn-primary inline-flex items-center gap-2 text-lg px-10 py-4">
                 View All Services <FiArrowRight size={18} />
               </button>
             </Link>
@@ -382,18 +383,19 @@ export default function HomePage() {
       <section className="py-28 px-4 bg-gradient-to-b from-transparent via-sidebar/40 to-transparent">
         <div className="max-w-6xl mx-auto">
           <Reveal className="text-center mb-16">
-            <span className="text-xs text-red-400 uppercase tracking-[0.2em] font-medium">Process</span>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3">
+            <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-5">
               How It Works
             </h2>
+            <span className="text-xl text-red-500 uppercase tracking-[0.2em] font-medium">Process</span>
+            
           </Reveal>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 ">
             {HOW_IT_WORKS.map((item, i) => (
               <Reveal
                 key={i}
                 delay={i * 0.1}
-                className="relative cursor-default"
+                className="relative cursor-default "
                 onMouseEnter={() => setActiveStep(i)}
                 onMouseLeave={() => setActiveStep(null)}
               >
@@ -410,16 +412,16 @@ export default function HomePage() {
                     }`}
                 >
                   {/* Step circle */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-5 transition-all duration-300 ${activeStep === i
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold mb-5 transition-all duration-300 ${activeStep === i
                     ? 'bg-red-600 text-white shadow-lg shadow-red-900/50'
                     : 'bg-red-950/40 border border-red-900/40 text-red-500'
                     }`}>
                     {item.step}
                   </div>
-                  <h3 className={`font-semibold mb-2 transition-colors duration-300 ${activeStep === i ? 'text-white' : 'text-white/80'}`}>
+                  <h3 className={`font-semibold mb-2 transition-colors duration-300 ${activeStep === i ? 'text-red-500' : 'text-red-500'}`}>
                     {item.title}
                   </h3>
-                  <p className="text-white/40 text-sm leading-relaxed">{item.desc}</p>
+                  <p className="text-white text-lg leading-relaxed">{item.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -431,10 +433,11 @@ export default function HomePage() {
       <section className="py-28 px-4">
         <div className="max-w-6xl mx-auto">
           <Reveal className="text-center mb-16">
-            <span className="text-xs text-red-400 uppercase tracking-[0.2em] font-medium">Why Us</span>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3">
-              Built on Trust &amp; Expertise
+            <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-8">
+              WHY US
             </h2>
+            <span className="text-xl text-red-500 uppercase tracking-[0.2em] font-medium">Built on Trust &amp; Expertise</span>
+            
           </Reveal>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -444,11 +447,11 @@ export default function HomePage() {
                 delay={i * 0.08}
                 className="glass rounded-2xl p-6 group cursor-default border border-transparent hover:border-red-900/30 hover:-translate-y-1 transition-all duration-300"
               >
-                <div className="w-12 h-12 bg-red-950/50 border border-red-900/40 rounded-xl flex items-center justify-center text-red-400 mb-5 group-hover:bg-red-900/40 transition-all duration-300">
+                <div className="w-12 h-12 bg-red-950/50 border border-red-900/40 rounded-xl flex items-center justify-center text-red-500 mb-5 group-hover:bg-red-900/40 transition-all duration-300">
                   {feat.icon}
                 </div>
-                <h3 className="text-white font-semibold mb-2 text-sm">{feat.title}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{feat.desc}</p>
+                <h3 className="text-red-500 font-semibold mb-2 text-lg">{feat.title}</h3>
+                <p className="text-white text-base leading-relaxed">{feat.desc}</p>
               </Reveal>
             ))}
           </div>
@@ -459,10 +462,11 @@ export default function HomePage() {
       <section className="py-28 px-4 bg-gradient-to-b from-transparent via-sidebar/30 to-transparent overflow-hidden">
         <div className="max-w-3xl mx-auto">
           <Reveal className="text-center mb-14">
-            <span className="text-xs text-red-400 uppercase tracking-[0.2em] font-medium">Testimonials</span>
-            <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3">
-              What Clients Say
+            <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-8">
+              Testimonials
             </h2>
+            <span className="text-xl text-red-500 uppercase tracking-[0.2em] font-medium"> What Clients Say </span>
+            
           </Reveal>
           <div className="relative">
             <AnimatePresence mode="wait" custom={tDir}>
@@ -481,7 +485,7 @@ export default function HomePage() {
                     <FiStar key={j} size={16} className="fill-red-500 text-red-500" />
                   ))}
                 </div>
-                <p className="text-white/70 text-base sm:text-lg leading-relaxed italic mb-8">
+                <p className="text-white text-xl sm:text-2xl leading-relaxed italic mb-8">
                   "{TESTIMONIALS[tIdx].text}"
                 </p>
                 <div className="flex items-center justify-center gap-3">
@@ -489,8 +493,8 @@ export default function HomePage() {
                     {TESTIMONIALS[tIdx].name[0]}
                   </div>
                   <div className="text-left">
-                    <p className="text-white font-semibold text-sm">{TESTIMONIALS[tIdx].name}</p>
-                    <p className="text-white/30 text-xs">{TESTIMONIALS[tIdx].role}</p>
+                    <p className="text-white font-semibold text-lg">{TESTIMONIALS[tIdx].name}</p>
+                    <p className="text-white text-base">{TESTIMONIALS[tIdx].role}</p>
                   </div>
                 </div>
               </motion.div>
@@ -500,14 +504,14 @@ export default function HomePage() {
             <button
               onClick={prevT}
               aria-label="Previous Testimonial"
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 sm:-translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white/60 hover:text-white hover:bg-red-900/60 transition-all"
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 sm:-translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white hover:text-white hover:bg-red-900/60 transition-all"
             >
               <FiChevronLeft size={18} />
             </button>
             <button
               onClick={nextT}
               aria-label="Next Testimonial"
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 sm:translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white/60 hover:text-white hover:bg-red-900/60 transition-all"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 sm:translate-x-8 w-9 h-9 rounded-full bg-red-950/60 border border-red-900/40 flex items-center justify-center text-white hover:text-white hover:bg-red-900/60 transition-all"
             >
               <FiChevronRight size={18} />
             </button>
@@ -532,11 +536,11 @@ export default function HomePage() {
         <section className="py-28 px-4">
           <div className="max-w-6xl mx-auto">
             <Reveal className="text-center mb-14">
-              <span className="text-xs text-red-400 uppercase tracking-[0.2em] font-medium">From Our Blog</span>
-              <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3 mb-4">
+              <span className="text-sm text-red-500 uppercase tracking-[0.2em] font-medium">From Our Blog</span>
+              <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mt-3 mb-4">
                 Insights &amp; Wisdom
               </h2>
-              <p className="text-white/40 max-w-lg mx-auto">
+              <p className="text-white max-w-lg mx-auto">
                 Explore articles on aura reading, spiritual growth, and energetic well-being.
               </p>
             </Reveal>
@@ -557,7 +561,7 @@ export default function HomePage() {
                           loading="lazy"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/10">
+                        <div className="w-full h-full flex items-center justify-center text-white">
                           <FiBookOpen size={32} />
                         </div>
                       )}
@@ -566,20 +570,20 @@ export default function HomePage() {
                     </div>
 
                     <div className="flex flex-col flex-1 p-5">
-                      <div className="flex items-center gap-2 text-white/30 text-xs mb-3">
+                      <div className="flex items-center gap-2 text-white text-sm mb-3">
                         <FiCalendar size={11} />
                         <span>{format(new Date(blog.created_at), 'MMM d, yyyy')}</span>
                         {blog.author && (
                           <><span className="mx-1">·</span><span>{blog.author.full_name}</span></>
                         )}
                       </div>
-                      <h3 className="text-white font-semibold text-base leading-snug mb-2 group-hover:text-red-400 transition-colors line-clamp-2">
+                      <h3 className="text-white font-semibold text-lg leading-snug mb-2 group-hover:text-red-500 transition-colors line-clamp-2">
                         {blog.title}
                       </h3>
                       {blog.description && (
-                        <p className="text-white/35 text-sm line-clamp-3 flex-1">{blog.description}</p>
+                        <p className="text-white text-base line-clamp-3 flex-1">{blog.description}</p>
                       )}
-                      <span className="mt-4 text-red-400 text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
+                      <span className="mt-4 text-red-500 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
                         Read More <FiArrowRight size={12} />
                       </span>
                     </div>
@@ -591,7 +595,7 @@ export default function HomePage() {
             <div className="text-center mt-10">
               <Link
                 to="/blogs"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-red-900/40 text-red-400 hover:bg-red-900/10 transition-colors text-sm font-medium"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-red-900/40 text-red-500 hover:bg-red-900/10 transition-colors text-base font-medium"
               >
                 View All Articles <FiArrowRight size={14} />
               </Link>
@@ -610,21 +614,21 @@ export default function HomePage() {
             <div className="ring-3 absolute inset-0 rounded-3xl border border-red-700/20 pointer-events-none" />
 
             <div className="relative z-10">
-              <h2 className="font-display text-4xl sm:text-5xl font-bold text-white mb-4">
+              <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-4">
                 Begin Your Journey Today
               </h2>
-              <p className="text-white/50 max-w-md mx-auto mb-10 leading-relaxed">
+              <p className="text-white max-w-md mx-auto mb-10 leading-relaxed">
                 Take the first step towards understanding your energy and unlocking your spiritual potential.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/services">
-                  <button className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4">
+                  <button className="btn-primary inline-flex items-center gap-2 text-lg px-10 py-4">
                     Explore Services <FiArrowRight />
                   </button>
                 </Link>
                 <Link to="/register">
-                  <button className="inline-flex items-center gap-2 border border-white/20 hover:border-red-600/50 text-white/80 hover:text-white px-10 py-4 rounded-xl font-semibold transition-all">
+                  <button className="inline-flex items-center gap-2 border border-white/20 hover:border-red-600/50 text-white hover:text-white px-10 py-4 rounded-xl font-semibold transition-all">
                     Create Account
                   </button>
                 </Link>

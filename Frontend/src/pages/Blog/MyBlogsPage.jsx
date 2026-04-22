@@ -71,7 +71,7 @@ export default function MyBlogsPage() {
           <div className="text-center py-24 text-white/20">
             <FiBookOpen size={40} className="mx-auto mb-4 opacity-30" />
             <p className="mb-4">No posts yet.</p>
-            <Link to="/blogs/create" className="text-red-400 hover:text-red-300 text-sm underline underline-offset-4">
+            <Link to="/blogs/create" className="text-red-500 hover:text-red-300 text-sm underline underline-offset-4">
               Write your first article →
             </Link>
           </div>
@@ -130,7 +130,7 @@ export default function MyBlogsPage() {
                     onClick={() => handleDelete(blog)}
                     disabled={deleting === blog.id}
                     title="Delete"
-                    className="w-8 h-8 rounded-lg bg-red-900/15 hover:bg-red-900/30 flex items-center justify-center text-red-400/60 hover:text-red-400 transition-all disabled:opacity-40"
+                    className="w-8 h-8 rounded-lg bg-red-900/15 hover:bg-red-900/30 flex items-center justify-center text-red-500/60 hover:text-red-500 transition-all disabled:opacity-40"
                   >
                     <FiTrash2 size={14} />
                   </button>

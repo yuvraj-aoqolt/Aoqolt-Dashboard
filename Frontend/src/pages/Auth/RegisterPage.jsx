@@ -73,7 +73,7 @@ function RegisterPageInner() {
       setGoogleLoading(true)
       try {
         await socialLogin('google', tokenResponse)
-        toast.success('Welcome to Aoqolt.')
+        toast.success('Welcome to Aoqolt! 🎉')
         navigate(from, { replace: true })
       } catch (err) {
         const msg = err.response?.data?.detail || err.response?.data?.error || 'Google sign-up failed.'
@@ -261,7 +261,7 @@ function RegisterPageInner() {
           </button>
 
           {/* Microsoft */}
-          <button
+          {/* <button
             type="button"
             title="Continue with Microsoft"
             className="flex items-center justify-center w-12 h-12 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
@@ -272,7 +272,7 @@ function RegisterPageInner() {
               <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
               <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
             </svg>
-          </button>
+          </button> */}
         </div>
       </form>
     </AuthLayout>

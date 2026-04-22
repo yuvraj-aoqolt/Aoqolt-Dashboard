@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiArrowRight, FiClock, FiCheck, FiLoader } from 'react-icons/fi'
@@ -65,13 +65,13 @@ export default function ServicesPage() {
           transition={{ duration: 0.7 }}
           className="text-center"
         >
-          {/* <span className="relative inline-flex items-center gap-2 text-xs text-red-400 uppercase tracking-widest font-medium bg-red-950/30 border border-red-900/40 rounded-full px-4 py-1.5 mb-6">
+          {/* <span className="relative inline-flex items-center gap-2 text-sm text-red-500 uppercase tracking-widest font-medium bg-red-950/30 border border-red-900/40 rounded-full px-4 py-1.5 mb-6">
             ✦ Our Services
           </span> */}
-          <h1 className="font-display text-5xl sm:text-6xl font-bold text-white mb-5">
+          <h1 className="font-display text-6xl sm:text-7xl font-bold text-white mb-5">
             Our <span className="gradient-text">Services</span>
           </h1>
-          <p className="text-white/45 text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-white text-xl max-w-xl mx-auto leading-relaxed">
             Each reading is performed by experienced
             practitioners dedicated to your growth and healing.
           </p>
@@ -115,9 +115,9 @@ export default function ServicesPage() {
             { icon: '💬', label: 'Direct Chat', desc: 'Communicate directly with your assigned reader' },
           ].map((item, i) => (
             <div key={i}>
-              <div className="text-3xl mb-2">{item.icon}</div>
-              <p className="text-white font-medium text-sm mb-1">{item.label}</p>
-              <p className="text-white/35 text-xs">{item.desc}</p>
+              <div className="text-4xl mb-2">{item.icon}</div>
+              <p className="text-white font-medium text-lg mb-1">{item.label}</p>
+              <p className="text-white text-md">{item.desc}</p>
             </div>
           ))}
         </motion.div>
@@ -131,7 +131,9 @@ function ServiceCard({ service, index, onBook, isLoading }) {
   const borderClass = SERVICE_BORDER[service.service_type] || 'border-red-900/40 hover:border-red-600/50'
   const icon = SERVICE_ICONS[service.service_type] || <GiCrystalBall size={32} />
 
-  const priceDisplay = service.price_display || `$${(service.price / 100).toFixed(2)}`
+  const rawPrice = service.price_display
+    ? service.price_display.replace(/\.00$/, '')
+    : `$${Math.round(service.price / 100)}`
 
   return (
     <motion.div
@@ -146,13 +148,13 @@ function ServiceCard({ service, index, onBook, isLoading }) {
 
       <div className="relative z-10 p-8">
         {/* Icon */}
-        <div className="w-16 h-16 bg-red-950/50 border border-red-900/40 rounded-2xl flex items-center justify-center text-red-400 mb-6 group-hover:shadow-lg group-hover:shadow-red-900/30 group-hover:bg-red-900/40 transition-all duration-300">
+        <div className="w-16 h-16 bg-red-950/50 border border-red-900/40 rounded-2xl flex items-center justify-center text-red-500 mb-6 group-hover:shadow-lg group-hover:shadow-red-900/30 group-hover:bg-red-900/40 transition-all duration-300">
           {icon}
         </div>
 
         {/* Content */}
-        <h3 className="font-display text-xl font-semibold text-white mb-2">{service.name}</h3>
-        <p className="text-white/50 text-sm leading-relaxed mb-6 line-clamp-3">
+        <h3 className="font-display text-2xl font-semibold text-white mb-2">{service.name}</h3>
+        <p className="text-white text-lg leading-relaxed mb-6 line-clamp-3">
           {service.short_description || service.description}
         </p>
 
@@ -160,7 +162,7 @@ function ServiceCard({ service, index, onBook, isLoading }) {
         {service.features && service.features.length > 0 && (
           <ul className="space-y-2 mb-6">
             {service.features.slice(0, 4).map((f, i) => (
-              <li key={i} className="flex items-start gap-2 text-white/50 text-xs">
+              <li key={i} className="flex items-start gap-2 text-white text-sm">
                 <FiCheck size={12} className="text-red-500 mt-0.5 shrink-0" />
                 {f.feature_text}
               </li>
@@ -171,9 +173,10 @@ function ServiceCard({ service, index, onBook, isLoading }) {
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-white/5">
           <div>
-            <p className="text-white font-bold text-2xl">{priceDisplay}</p>
+            <p className="text-white font-bold text-3xl">{rawPrice}</p>
+            <p className="text-white/60 text-xs mt-0.5">US Dollar + 5% GST</p>
             {service.duration_days && (
-              <p className="text-white/30 text-xs flex items-center gap-1 mt-0.5">
+              <p className="text-white text-sm flex items-center gap-1 mt-0.5">
                 <FiClock size={11} />
                 {service.duration_days} day delivery
               </p>
@@ -185,7 +188,7 @@ function ServiceCard({ service, index, onBook, isLoading }) {
             disabled={isLoading}
             whileHover={!isLoading ? { scale: 1.05 } : {}}
             whileTap={!isLoading ? { scale: 0.95 } : {}}
-            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-base font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <><FiLoader size={14} className="animate-spin" /> Preparing...</>
@@ -223,8 +226,8 @@ function EmptyServices() {
   return (
     <div className="text-center py-20">
       <GiCrystalBall size={64} className="text-red-900/40 mx-auto mb-6" />
-      <p className="text-white/40 text-lg">No services available at this time.</p>
-      <p className="text-white/25 text-sm mt-2">Please check back soon.</p>
+      <p className="text-white text-xl">No services available at this time.</p>
+      <p className="text-white text-base mt-2">Please check back soon.</p>
     </div>
   )
 }
@@ -234,10 +237,10 @@ function ErrorServices({ error }) {
   return (
     <div className="text-center py-20">
       <GiCrystalBall size={64} className="text-red-900/40 mx-auto mb-6" />
-      <p className="text-white/40 text-lg">Could not load services.</p>
-      <p className="text-red-500/60 text-xs mt-2 mb-6 font-mono">{error}</p>
+      <p className="text-white text-xl">Could not load services.</p>
+      <p className="text-red-500/60 text-sm mt-2 mb-6 font-mono">{error}</p>
       <button onClick={fetchServices}
-        className="btn-primary px-6 py-2.5 text-sm">
+        className="btn-primary px-6 py-2.5 text-base">
         Retry
       </button>
     </div>

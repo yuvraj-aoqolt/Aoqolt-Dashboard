@@ -22,21 +22,6 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Medium.otf') format('opentype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Satoshi';
-  src: url('/fonts/Satoshi-Bold.otf') format('opentype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 * {
   font-family: 'Satoshi', sans-serif;
 }
@@ -335,7 +320,10 @@ body {
   background: var(--color-input-bg);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: white;
-  padding: 0.65rem 1rem;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
+  padding-left: 2.2rem;
+  padding-right: 1rem;
   border-radius: 0.5rem;
   width: 100%;
   transition: all 0.3s ease;

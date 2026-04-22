@@ -187,20 +187,20 @@ export default function CreateEditBlogPage() {
           {/* Title */}
           <div>
             <label className="block text-white/55 text-xs uppercase tracking-wider mb-2">
-              Title <span className="text-red-400">*</span>
+              Title <span className="text-red-500">*</span>
             </label>
             <input
               {...register('title', { required: 'Title is required' })}
               placeholder="Enter your article title…"
               className="w-full bg-white/5 border border-white/10 focus:border-red-600/30 rounded-xl px-4 py-3 text-white placeholder:text-white/20 outline-none transition-all text-base"
             />
-            {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title.message}</p>}
+            {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
           {/* Description */}
           <div>
             <label className="block text-white/55 text-xs uppercase tracking-wider mb-2">
-              Short Description <span className="text-red-400">*</span>
+              Short Description <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register('description', { required: 'Description is required' })}
@@ -208,7 +208,7 @@ export default function CreateEditBlogPage() {
               placeholder="A brief summary shown on blog cards…"
               className="w-full bg-white/5 border border-white/10 focus:border-red-600/30 rounded-xl px-4 py-3 text-white placeholder:text-white/20 outline-none transition-all text-sm resize-none"
             />
-            {errors.description && <p className="text-red-400 text-xs mt-1">{errors.description.message}</p>}
+            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
           </div>
 
           {/* Poster Image */}
@@ -243,7 +243,7 @@ export default function CreateEditBlogPage() {
           {/* Rich-text editor */}
           <div>
             <label className="block text-white/55 text-xs uppercase tracking-wider mb-2">
-              Content <span className="text-red-400">*</span>
+              Content <span className="text-red-500">*</span>
             </label>
 
             {/* Toolbar */}

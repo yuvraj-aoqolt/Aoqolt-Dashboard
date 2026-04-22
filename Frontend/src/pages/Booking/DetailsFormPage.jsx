@@ -212,7 +212,7 @@ export default function DetailsFormPage() {
                       <input
                         {...register('full_name', { required: 'Full name is required' })}
                         placeholder="Your full name"
-                        className="input-field pl-9"
+                        className="input-field pl-10"
                       />
                     </div>
                   </Field>
@@ -246,7 +246,7 @@ export default function DetailsFormPage() {
                       <input
                         {...register('current_city', { required: 'Current city is required' })}
                         placeholder="City where you currently live"
-                        className="input-field pl-9"
+                        className="input-field pl-10"
                       />
                     </div>
                   </Field>
@@ -302,7 +302,7 @@ export default function DetailsFormPage() {
                         <input
                           {...register('birth_place', { required: 'Place of birth is required' })}
                           placeholder="City, Country"
-                          className="input-field pl-9"
+                          className="input-field pl-10"
                         />
                       </div>
                     </Field>

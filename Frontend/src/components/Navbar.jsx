@@ -79,7 +79,7 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`text-md font-medium transition-colors relative group ${location.pathname === link.to ? 'text-red-400' : 'text-white/70 hover:text-white'
+                className={`text-lg font-medium transition-colors relative group ${location.pathname === link.to ? 'text-red-500' : 'text-white hover:text-white'
                   }`}
               >
                 {link.label}
@@ -102,15 +102,15 @@ export default function Navbar() {
                   <div className="w-7 h-7 bg-gradient-to-br from-red-600 to-red-900 rounded-full flex items-center justify-center text-xs font-bold">
                     {user?.full_name?.[0]?.toUpperCase() || 'U'}
                   </div>
-                  <span className="text-white/80 text-sm max-w-24 truncate">{user?.full_name}</span>
+                  <span className="text-white text-sm max-w-24 truncate">{user?.full_name}</span>
                 </button>
 
                 {dropdownOpen && (
                   <div className="dropdown-enter absolute right-0 mt-2 w-52 glass-dark rounded-xl overflow-hidden z-20 shadow-xl shadow-black/50">
                     <div className="p-3 border-b border-white/5">
-                      <p className="text-xs text-white/40 uppercase tracking-wider">Signed in as</p>
+                      <p className="text-xs text-white uppercase tracking-wider">Signed in as</p>
                       <p className="text-white text-sm font-medium truncate">{isGuest ? 'Guest' : user?.full_name}</p>
-                      <span className="inline-block mt-1 text-xs bg-red-900/40 text-red-400 border border-red-900/50 px-2 py-0.5 rounded-full capitalize">
+                      <span className="inline-block mt-1 text-xs bg-red-900/40 text-red-500 border border-red-900/50 px-2 py-0.5 rounded-full capitalize">
                         {isGuest ? 'guest' : user?.role}
                       </span>
                     </div>
@@ -119,7 +119,7 @@ export default function Navbar() {
                         <Link
                           to={dashboardPath}
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                          className="flex items-center gap-2 px-3 py-2 rounded-lg text-white hover:text-white hover:bg-white/5 text-sm transition-all"
                         >
                           <MdDashboard size={16} />
                           Dashboard
@@ -130,7 +130,7 @@ export default function Navbar() {
                           <Link
                             to="/blogs/my"
                             onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white hover:text-white hover:bg-white/5 text-sm transition-all"
                           >
                             <FiList size={15} />
                             My Blogs
@@ -138,7 +138,7 @@ export default function Navbar() {
                           <Link
                             to="/blogs/create"
                             onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 text-sm transition-all"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-white hover:text-white hover:bg-white/5 text-sm transition-all"
                           >
                             <FiEdit2 size={15} />
                             Write Post
@@ -147,7 +147,7 @@ export default function Navbar() {
                       )}
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/20 text-sm transition-all"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-500 hover:text-red-300 hover:bg-red-900/20 text-sm transition-all"
                       >
                         <FiLogOut size={15} />
                         Sign Out
@@ -161,7 +161,7 @@ export default function Navbar() {
                 <Link
                   to="/login"
                   onMouseEnter={prefetchAuth}
-                  className="text-white/70 hover:text-white text-sm font-medium transition-colors"
+                  className="text-white hover:text-white text-sm font-medium transition-colors"
                 >
                   Sign In
                 </Link>
@@ -179,7 +179,7 @@ export default function Navbar() {
           {/* Mobile Hamburger */}
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden text-white/70 hover:text-white transition-colors"
+            className="md:hidden text-white hover:text-white transition-colors"
             aria-label="Toggle menu"
           >
             {open ? <FiX size={24} /> : <FiMenu size={24} />}
@@ -198,8 +198,8 @@ export default function Navbar() {
               key={link.to}
               to={link.to}
               className={`block px-4 py-3 rounded-xl text-sm font-medium transition-all ${location.pathname === link.to
-                  ? 'bg-red-900/30 text-red-400 border border-red-900/40'
-                  : 'text-white/70 hover:text-white hover:bg-white/5'
+                  ? 'bg-red-900/30 text-red-500 border border-red-900/40'
+                  : 'text-white hover:text-white hover:bg-white/5'
                 }`}
             >
               {link.label}
@@ -211,7 +211,7 @@ export default function Navbar() {
                 {!isGuest && (isAdmin || isSuperAdmin) && (
                   <Link
                     to={dashboardPath}
-                    className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                    className="block px-4 py-3 rounded-xl text-sm text-white hover:text-white hover:bg-white/5 transition-all"
                   >
                     Dashboard
                   </Link>
@@ -220,13 +220,13 @@ export default function Navbar() {
                   <>
                     <Link
                       to="/blogs/my"
-                      className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                      className="block px-4 py-3 rounded-xl text-sm text-white hover:text-white hover:bg-white/5 transition-all"
                     >
                       My Blogs
                     </Link>
                     <Link
                       to="/blogs/create"
-                      className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                      className="block px-4 py-3 rounded-xl text-sm text-white hover:text-white hover:bg-white/5 transition-all"
                     >
                       Write Post
                     </Link>
@@ -234,7 +234,7 @@ export default function Navbar() {
                 )}
                 <button
                   onClick={handleLogout}
-                  className="w-full text-left px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-900/20 transition-all"
+                  className="w-full text-left px-4 py-3 rounded-xl text-sm text-red-500 hover:bg-red-900/20 transition-all"
                 >
                   Sign Out
                 </button>
@@ -243,7 +243,7 @@ export default function Navbar() {
               <>
                 <Link
                   to="/login"
-                  className="block px-4 py-3 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                  className="block px-4 py-3 rounded-xl text-sm text-white hover:text-white hover:bg-white/5 transition-all"
                 >
                   Sign In
                 </Link>

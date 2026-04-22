@@ -268,7 +268,9 @@ export default function BookingPage() {
     }
   }
 
-  const priceDisplay = service?.price_display || `$${((service?.price || 0) / 100).toFixed(2)}`
+  const rawPrice = service?.price_display
+    ? service.price_display.replace(/\.00$/, '')
+    : `$${Math.round((service?.price || 0) / 100)}`
 
   return (
     <div className="min-h-screen bg-dark">
@@ -303,11 +305,11 @@ export default function BookingPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <Field label="Full Name" error={errors.full_name?.message} icon={<FiUser size={15} />}>
-                    <input {...register('full_name', { required: 'Required' })} placeholder="Your full name" className="input-field pl-9" />
+                    <input {...register('full_name', { required: 'Required' })} placeholder="Your full name" className="input-field pl-10" />
                   </Field>
 
                   <Field label="Email" error={errors.email?.message} icon={<FiMail size={15} />}>
-                    <input {...register('email', { required: 'Required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })} type="email" placeholder="you@example.com" className="input-field pl-9" />
+                    <input {...register('email', { required: 'Required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })} type="email" placeholder="you@example.com" className="input-field pl-10" />
                   </Field>
 
                   <div>
@@ -339,19 +341,19 @@ export default function BookingPage() {
                   </div>
 
                   <Field label="Country" error={errors.country?.message} icon={<FiGlobe size={15} />}>
-                    <input {...register('country', { required: 'Required' })} placeholder="Your country" className="input-field pl-9" />
+                    <input {...register('country', { required: 'Required' })} placeholder="Your country" className="input-field pl-10" />
                   </Field>
 
                   <Field label="City" error={errors.city?.message} icon={<FiMapPin size={15} />}>
-                    <input {...register('city', { required: 'Required' })} placeholder="Your city" className="input-field pl-9" />
+                    <input {...register('city', { required: 'Required' })} placeholder="Your city" className="input-field pl-10" />
                   </Field>
 
                   <Field label="State / Province" error={errors.state?.message} icon={<FiMapPin size={15} />}>
-                    <input {...register('state')} placeholder="State or province" className="input-field pl-9" />
+                    <input {...register('state')} placeholder="State or province" className="input-field pl-10" />
                   </Field>
 
                   <Field label="Postal Code" error={errors.postal_code?.message} icon={<FiMapPin size={15} />}>
-                    <input {...register('postal_code', { required: 'Required' })} placeholder="Postal code" className="input-field pl-9" />
+                    <input {...register('postal_code', { required: 'Required' })} placeholder="Postal code" className="input-field pl-10" />
                   </Field>
                 </div>
 
@@ -363,7 +365,7 @@ export default function BookingPage() {
                       {...register('address', { required: 'Address is required' })}
                       rows={2}
                       placeholder="Full street address"
-                      className="input-field pl-9 resize-none"
+                      className="input-field pl-10 resize-none"
                     />
                   </div>
                   {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address.message}</p>}
@@ -380,7 +382,7 @@ export default function BookingPage() {
                       rows={3}
                       maxLength={900}
                       placeholder="Any specific requests or information you'd like us to know..."
-                      className="input-field pl-9 resize-none"
+                      className="input-field pl-10 resize-none"
                     />
                   </div>
                 </div>
@@ -437,7 +439,7 @@ export default function BookingPage() {
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-white/40 text-sm">Service</span>
-                    <span className="text-white text-sm">{priceDisplay}</span>
+                    <span className="text-white text-sm">{rawPrice}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-white/40 text-sm">Tax</span>
@@ -445,7 +447,10 @@ export default function BookingPage() {
                   </div>
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
                     <span className="text-white font-semibold">Total</span>
-                    <span className="text-red-400 font-bold text-xl">{priceDisplay}</span>
+                    <div>
+                      <span className="text-red-400 font-bold text-xl">{rawPrice}</span>
+                      <p className="text-white/50 text-xs mt-0.5">US Dollar + 5% GST</p>
+                    </div>
                   </div>
                 </div>
 

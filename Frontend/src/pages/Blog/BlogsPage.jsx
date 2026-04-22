@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { format } from 'date-fns'
@@ -97,19 +97,19 @@ function BlogCard({ blog, index, user, onDelete }) {
         </div>
 
         {/* Title */}
-        <h3 className="text-white font-semibold text-base leading-snug mb-2 line-clamp-2 group-hover:text-red-300 transition-colors">
+        <h3 className="text-white font-semibold text-lg leading-snug mb-2 line-clamp-2 group-hover:text-red-300 transition-colors">
           {blog.title}
         </h3>
 
         {/* Description */}
-        <p className="text-white/45 text-sm leading-relaxed line-clamp-3 flex-1">
+        <p className="text-white/45 text-base leading-relaxed line-clamp-3 flex-1">
           {blog.description}
         </p>
 
         {/* Read More */}
         <Link
           to={`/blogs/${blog.slug}`}
-          className="mt-4 inline-flex items-center gap-1.5 text-red-400 hover:text-red-300 text-sm font-medium transition-colors group/link"
+          className="mt-4 inline-flex items-center gap-1.5 text-red-500 hover:text-red-300 text-base font-medium transition-colors group/link"
         >
           Read More
           <FiArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
@@ -127,7 +127,7 @@ function Pagination({ page, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(page - 1)}
         disabled={page === 1}
-        className="px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        className="px-3 py-1.5 rounded-lg text-base text-white/40 hover:text-white hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         ← Prev
       </button>
@@ -135,7 +135,7 @@ function Pagination({ page, totalPages, onPageChange }) {
         <button
           key={p}
           onClick={() => onPageChange(p)}
-          className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
+          className={`w-9 h-9 rounded-lg text-base font-medium transition-all ${
             p === page
               ? 'bg-red-600 text-white shadow-lg shadow-red-900/40'
               : 'text-white/40 hover:text-white hover:bg-white/8'
@@ -147,7 +147,7 @@ function Pagination({ page, totalPages, onPageChange }) {
       <button
         onClick={() => onPageChange(page + 1)}
         disabled={page === totalPages}
-        className="px-3 py-1.5 rounded-lg text-sm text-white/40 hover:text-white hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        className="px-3 py-1.5 rounded-lg text-base text-white/40 hover:text-white hover:bg-white/8 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         Next →
       </button>
@@ -198,13 +198,13 @@ export default function BlogsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-14"
         >
-          <span className="text-xs text-red-400 uppercase tracking-widest font-medium">
+          <span className="text-sm text-red-500 uppercase tracking-widest font-medium">
             Insights & Wisdom
           </span>
-          <h1 className="font-display text-4xl sm:text-5xl font-bold text-white mt-3 mb-4">
+          <h1 className="font-display text-5xl sm:text-6xl font-bold text-white mt-3 mb-4">
             Our Blog
           </h1>
-          <p className="text-white/40 max-w-xl mx-auto text-base">
+          <p className="text-white/40 max-w-xl mx-auto text-lg">
             Explore articles on spiritual growth, aura readings, astrology, and inner awakening.
           </p>
         </motion.div>
@@ -217,14 +217,14 @@ export default function BlogsPage() {
           >
             <Link
               to="/blogs/my"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/6 hover:bg-white/10 border border-white/8 text-white/70 hover:text-white text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/6 hover:bg-white/10 border border-white/8 text-white/70 hover:text-white text-base font-medium transition-all"
             >
               <FiList size={14} />
               My Posts
             </Link>
             <Link
               to="/blogs/create"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-red-900/30"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-base font-semibold transition-colors shadow-lg shadow-red-900/30"
             >
               <FiPlus size={14} />
               New Post
@@ -239,13 +239,13 @@ export default function BlogsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search articles…"
-            className="w-full bg-white/5 border border-white/10 focus:border-red-600/30 rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/25 outline-none transition-all text-sm"
+            className="w-full bg-white/5 border border-white/10 focus:border-red-600/30 rounded-xl pl-11 pr-4 py-3 text-white placeholder:text-white/25 outline-none transition-all text-base"
           />
         </div>
 
         {/* Results count */}
         {!loading && (
-          <p className="text-white/25 text-xs mb-6 text-center">
+          <p className="text-white/25 text-sm mb-6 text-center">
             {total} article{total !== 1 ? 's' : ''} found
           </p>
         )}
