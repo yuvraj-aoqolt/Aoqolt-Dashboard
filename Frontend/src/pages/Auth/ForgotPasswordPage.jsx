@@ -32,11 +32,11 @@ export default function ForgotPasswordPage() {
           className="text-center p-8 glass rounded-2xl">
           <div className="text-5xl mb-4">📧</div>
           <h3 className="text-white font-semibold text-xl mb-2">Check Your Email</h3>
-          <p className="text-white/60 text-sm mb-2">
+          <p className="text-white text-sm mb-2">
             If this email belongs to a self-registered account, a reset link has been sent.
           </p>
-          <p className="text-white/40 text-xs mb-6">
-            The link is valid for <span className="text-white/60 font-medium">15 minutes</span>. Check your spam folder if needed.
+          <p className="text-white text-xs mb-6">
+            The link is valid for <span className="text-white font-medium">15 minutes</span>. Check your spam folder if needed.
           </p>
           <Link to="/login" className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors flex items-center gap-1 justify-center">
             <FiArrowLeft size={14} /> Back to Sign In
@@ -45,9 +45,9 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">Email Address</label>
+            <label className="block text-white text-xs uppercase tracking-wider mb-2">Email Address</label>
             <div className="relative">
-              <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+              <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={16} />
               <input
                 {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/, message: 'Invalid email' } })}
                 type="email"
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
             {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
           </div>
 
-          <p className="text-white/40 text-xs">
+          <p className="text-white text-xs">
             Only accounts created via self-registration (manual or Gmail) can reset here.
             If your account was set up by an administrator, contact them for a reset link.
           </p>
@@ -71,7 +71,7 @@ export default function ForgotPasswordPage() {
             ) : 'Send Reset Link'}
           </motion.button>
 
-          <Link to="/login" className="flex items-center justify-center gap-1 text-white/40 hover:text-white/70 text-sm transition-colors">
+          <Link to="/login" className="flex items-center justify-center gap-1 text-white hover:text-white text-sm transition-colors">
             <FiArrowLeft size={14} /> Back to Sign In
           </Link>
         </form>

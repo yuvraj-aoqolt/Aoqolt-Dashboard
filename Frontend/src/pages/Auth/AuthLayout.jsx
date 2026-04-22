@@ -40,7 +40,7 @@ export default function AuthLayout({ children, title, subtitle }) {
             style={{ background: 'rgba(30,30,30,0.95)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             <h1 className="font-display text-3xl font-bold text-white mb-1">{title}</h1>
-            {subtitle && <p className="text-white/50 text-sm mb-6">{subtitle}</p>}
+            {subtitle && <p className="text-white text-sm mb-6">{subtitle}</p>}
             {children}
           </div>
         </div>

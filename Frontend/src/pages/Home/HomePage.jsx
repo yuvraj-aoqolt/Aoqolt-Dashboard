@@ -242,13 +242,13 @@ export default function HomePage() {
         </div>
 
         {/* Hero content — split layout */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex flex-col lg:flex-row items-center gap-12 lg:gap-4 py-28 lg:py-20">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 flex flex-col lg:flex-row items-center gap-4 lg:gap-4 pb-20 lg:py-20">
 
           {/* ── Left: Text + CTAs ── */}
           <div className="flex-1 text-center lg:text-left order-2 lg:order-1">
 
             {/* Headline */}
-            <div className="mb-8">
+            <div className="mb-4 lg:mb-8">
               <h1 className="font-display leading-none">
                 <span className="block text-[clamp(3.8rem,7vw,6.5rem)] font-black text-white tracking-tight">
                   Life
@@ -263,10 +263,10 @@ export default function HomePage() {
             </div>
 
             {/* Divider */}
-            <div className="h-px w-14 bg-gradient-to-r from-red-600 to-transparent mb-8 mx-auto lg:mx-0" />
+            <div className="h-px w-14 bg-gradient-to-r from-red-600 to-transparent mb-4 lg:mb-8 mx-auto lg:mx-0" />
 
             {/* Subheading */}
-            <p className="text-white text-xl sm:text-xl max-w-md mx-auto lg:mx-0 leading-relaxed mb-10">
+            <p className="text-white text-xl sm:text-xl max-w-md mx-auto lg:mx-0 leading-relaxed mb-6 lg:mb-10">
               Your One-Stop Destination for Life Guidance and Occult Services.
 
             </p>
@@ -293,20 +293,20 @@ export default function HomePage() {
 
           {/* ── Right: Aoqolt Logo ── */}
           <div className="flex-shrink-0 flex items-center justify-center order-1 lg:order-2">
-            <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-[440px] lg:h-[440px] flex items-center justify-center">
+            <div className="relative w-64 h-64 sm:w-72 sm:h-72 lg:w-[440px] lg:h-[440px] flex items-center justify-center">
 
               <img
                 src="/Aoqolt logo 1-01-02.png"
                 alt="Aoqolt"
                 fetchPriority="high"
-                className="relative z-10 w-58 h-58 sm:w-64 sm:h-64 lg:w-[360px] lg:h-[360px] object-contain"
+                className="relative z-10 w-56 h-56 sm:w-56 sm:h-56 lg:w-[360px] lg:h-[360px] object-contain"
               />
             </div>
           </div>
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
+        <div className="absolute bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
           <span className="text-white text-[10px] tracking-[0.3em] uppercase">Scroll</span>
           <div className="scroll-bob w-5 h-9 border border-white/15 rounded-full flex items-start justify-center pt-2">
             <div className="w-1 h-2 bg-red-500 rounded-full" />
@@ -371,7 +371,7 @@ export default function HomePage() {
 
           <div className="text-center">
             <Link to="/services">
-              <button className="btn-primary inline-flex items-center gap-2 text-lg px-10 py-4">
+              <button className=" inline-flex items-center gap-2 text-lg px-10  bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white text-lg font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-red-900/40 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed py-4">
                 View All Services <FiArrowRight size={18} />
               </button>
             </Link>

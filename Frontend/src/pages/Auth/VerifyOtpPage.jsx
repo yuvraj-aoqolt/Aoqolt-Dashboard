@@ -138,20 +138,20 @@ export default function VerifyOtpPage() {
         </motion.button>
 
         <div className="text-center">
-          <p className="text-white/40 text-sm">
+          <p className="text-white text-sm">
             Didn't receive the code?{' '}
             <button
               type="button"
               onClick={handleResend}
               disabled={countdown > 0 || resending}
-              className="text-red-400 hover:text-red-300 disabled:text-white/25 disabled:cursor-not-allowed font-medium transition-colors"
+              className="text-red-400 hover:text-red-300 disabled:text-white disabled:cursor-not-allowed font-medium transition-colors"
             >
               {countdown > 0
                 ? `Resend in ${countdown}s`
                 : resending ? 'Sending...' : 'Resend OTP'}
             </button>
           </p>
-          <p className="text-white/30 text-xs mt-2">Check your spam folder if you don't see it.</p>
+          <p className="text-white text-xs mt-2">Check your spam folder if you don't see it.</p>
         </div>
       </form>
     </AuthLayout>

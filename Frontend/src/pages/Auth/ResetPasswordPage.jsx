@@ -41,9 +41,9 @@ export default function ResetPasswordPage() {
     <AuthLayout title="New Password" subtitle="Choose a strong new password">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">New Password</label>
+          <label className="block text-white text-xs uppercase tracking-wider mb-2">New Password</label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={16} />
             <input
               {...register('password', { required: 'Required', minLength: { value: 8, message: 'Min 8 chars' } })}
               type={showPw ? 'text' : 'password'}
@@ -51,7 +51,7 @@ export default function ResetPasswordPage() {
               className="input-field pl-10 pr-10"
             />
             <button type="button" onClick={() => setShowPw(!showPw)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors">
               {showPw ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
           </div>
@@ -59,9 +59,9 @@ export default function ResetPasswordPage() {
         </div>
 
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">Confirm Password</label>
+          <label className="block text-white text-xs uppercase tracking-wider mb-2">Confirm Password</label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={16} />
             <input
               {...register('confirm_password', { required: 'Required', validate: (v) => v === password || 'Passwords do not match' })}
               type={showPw ? 'text' : 'password'}

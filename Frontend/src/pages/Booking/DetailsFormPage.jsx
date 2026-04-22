@@ -164,12 +164,12 @@ export default function DetailsFormPage() {
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mb-2">
               {isFamilyAura ? 'Family Details' : 'Your Details'}
             </h1>
-            <p className="text-white/40">
+            <p className="text-white">
               Please fill in the required information to complete your{' '}
-              <span className="text-white/60">{serviceName}</span> session.
+              <span className="text-white">{serviceName}</span> session.
             </p>
             {bookingRef && (
-              <p className="text-white/25 text-sm mt-2 font-mono">Booking: {bookingRef}</p>
+              <p className="text-white text-sm mt-2 font-mono">Booking: {bookingRef}</p>
             )}
           </motion.div>
 
@@ -208,7 +208,7 @@ export default function DetailsFormPage() {
                   {/* Full Name */}
                   <Field label="Full Name *" error={errors.full_name?.message}>
                     <div className="relative">
-                      <FiUser className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                      <FiUser className="absolute left-3.5 top-3.5 text-white" size={15} />
                       <input
                         {...register('full_name', { required: 'Full name is required' })}
                         placeholder="Your full name"
@@ -219,11 +219,11 @@ export default function DetailsFormPage() {
 
                   {/* Photo Upload */}
                   <div>
-                    <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+                    <label className="block text-white text-xs uppercase tracking-wider mb-2">
                       Your Photo *
                     </label>
                     <ImageUpload value={mainImage} onChange={(f) => { setMainImage(f); setPhotoError(null) }} id="main-photo" />
-                    <p className="text-white/40 text-xs mt-2 flex items-start gap-1.5">
+                    <p className="text-white text-xs mt-2 flex items-start gap-1.5">
                       <FiCamera size={11} className="mt-0.5 shrink-0 text-amber-400/70" />
                       <span>Make sure the photo is <span className="text-amber-400/80">straight</span> and there are <span className="text-amber-400/80">no glasses</span> on your face.</span>
                     </p>
@@ -242,7 +242,7 @@ export default function DetailsFormPage() {
                   {/* Current City */}
                   <Field label="Current City of Residence *" error={errors.current_city?.message}>
                     <div className="relative">
-                      <FiMapPin className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                      <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
                       <input
                         {...register('current_city', { required: 'Current city is required' })}
                         placeholder="City where you currently live"
@@ -298,7 +298,7 @@ export default function DetailsFormPage() {
                   <div className="sm:col-span-2">
                     <Field label="Place of Birth *" error={errors.birth_place?.message}>
                       <div className="relative">
-                        <FiMapPin className="absolute left-3.5 top-3.5 text-white/30" size={15} />
+                        <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
                         <input
                           {...register('birth_place', { required: 'Place of birth is required' })}
                           placeholder="City, Country"
@@ -310,7 +310,7 @@ export default function DetailsFormPage() {
 
                   {/* Photo upload */}
                   <div className="sm:col-span-2 mt-1">
-                    <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+                    <label className="block text-white text-xs uppercase tracking-wider mb-2">
                       Your Photo / Aura Image
                     </label>
                     <ImageUpload value={mainImage} onChange={setMainImage} id="main-photo" />
@@ -331,7 +331,7 @@ export default function DetailsFormPage() {
                   <h2 className="text-white font-semibold text-base flex items-center gap-2">
                     <FiUsers size={16} className="text-red-500" />
                     Family Members
-                    <span className="text-white/30 text-xs font-normal">({fields.length})</span>
+                    <span className="text-white text-xs font-normal">({fields.length})</span>
                   </h2>
                   <motion.button
                     type="button"
@@ -345,7 +345,7 @@ export default function DetailsFormPage() {
                 </div>
 
                 {fields.length === 0 && (
-                  <p className="text-white/30 text-sm text-center py-6 border border-dashed border-white/10 rounded-xl">
+                  <p className="text-white text-sm text-center py-6 border border-dashed border-white/10 rounded-xl">
                     No family members added yet. Click "Add Member" to add one.
                   </p>
                 )}
@@ -361,7 +361,7 @@ export default function DetailsFormPage() {
                       className="border border-white/5 rounded-xl p-5 mb-4 bg-white/[0.02]"
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-white/60 text-sm font-medium">Member {index + 1}</span>
+                        <span className="text-white text-sm font-medium">Member {index + 1}</span>
                         {fields.length > 0 && (
                           <button
                             type="button"
@@ -423,7 +423,7 @@ export default function DetailsFormPage() {
                         </Field>
 
                         <div>
-                          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+                          <label className="block text-white text-xs uppercase tracking-wider mb-2">
                             Member Photo
                           </label>
                           <ImageUpload
@@ -472,7 +472,7 @@ export default function DetailsFormPage() {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-white/60 text-xs uppercase tracking-wider mb-1.5">
+      <label className="block text-white text-xs uppercase tracking-wider mb-1.5">
         {label}
       </label>
       {children}
@@ -506,13 +506,13 @@ function ImageUpload({ value, onChange, id }) {
         {value ? (
           <div className="flex items-center justify-center gap-2">
             <FiCamera size={16} className="text-red-400 shrink-0" />
-            <span className="text-white/70 text-sm truncate max-w-[180px]">{value.name}</span>
+            <span className="text-white text-sm truncate max-w-[180px]">{value.name}</span>
             <FiCheck size={14} className="text-green-400 shrink-0" />
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1.5">
-            <FiCamera size={22} className="text-white/25" />
-            <span className="text-white/35 text-xs">Click to upload photo</span>
+            <FiCamera size={22} className="text-white" />
+            <span className="text-white text-xs">Click to upload photo</span>
           </div>
         )}
       </button>

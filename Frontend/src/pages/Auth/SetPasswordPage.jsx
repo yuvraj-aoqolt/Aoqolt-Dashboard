@@ -45,7 +45,7 @@ function PasswordStrengthBar({ password }) {
           return (
             <li
               key={r.id}
-              className={`flex items-center gap-1 text-[11px] transition-colors ${ok ? 'text-green-400' : 'text-white/30'}`}
+              className={`flex items-center gap-1 text-[11px] transition-colors ${ok ? 'text-green-400' : 'text-white'}`}
             >
               {ok ? <FiCheckCircle size={10} /> : <FiAlertCircle size={10} />}
               {r.label}
@@ -148,8 +148,8 @@ export default function SetPasswordPage() {
           <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
             <FiAlertCircle className="text-red-400" size={28} />
           </div>
-          <p className="text-white/50 text-sm leading-relaxed">{tokenError}</p>
-          <p className="text-white/30 text-xs">
+          <p className="text-white text-sm leading-relaxed">{tokenError}</p>
+          <p className="text-white text-xs">
             Please ask your administrator to generate a new invitation link.
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function SetPasswordPage() {
           </div>
           <div className="min-w-0">
             <p className="text-white text-xs font-medium truncate">{tokenInfo.user_name}</p>
-            <p className="text-white/40 text-[11px] truncate">{tokenInfo.user_email}</p>
+            <p className="text-white text-[11px] truncate">{tokenInfo.user_email}</p>
           </div>
         </div>
       )}
@@ -178,11 +178,11 @@ export default function SetPasswordPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Password */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+          <label className="block text-white text-xs uppercase tracking-wider mb-2">
             New Password
           </label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={16} />
             <input
               {...register('password', {
                 required: 'Password is required',
@@ -196,7 +196,7 @@ export default function SetPasswordPage() {
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
             >
               {showPw ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
@@ -209,11 +209,11 @@ export default function SetPasswordPage() {
 
         {/* Confirm Password */}
         <div>
-          <label className="block text-white/60 text-xs uppercase tracking-wider mb-2">
+          <label className="block text-white text-xs uppercase tracking-wider mb-2">
             Confirm Password
           </label>
           <div className="relative">
-            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={16} />
+            <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" size={16} />
             <input
               {...register('confirm_password', {
                 required: 'Please confirm your password',

@@ -212,7 +212,7 @@ function LoginPageInner() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
             >
               {showPassword ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
@@ -221,7 +221,7 @@ function LoginPageInner() {
         </div>
 
         <div className="flex justify-end">
-          <Link to="/forgot-password" className="text-white/50 hover:text-white/80 text-xs transition-colors">
+          <Link to="/forgot-password" className="text-white hover:text-white text-xs transition-colors">
             Forgot password ?
           </Link>
         </div>
@@ -238,7 +238,7 @@ function LoginPageInner() {
           )}
         </button>
 
-        <p className="text-center text-white/50 text-sm">
+        <p className="text-center text-white text-sm">
           Don't have an account?{' '}
           <Link to="/register" state={{ from: fromState }} className="text-red-400 hover:text-red-300 font-medium transition-colors">
             Create one
@@ -248,7 +248,7 @@ function LoginPageInner() {
         {/* Divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-white/10" />
-          <span className="text-white/30 text-xs">or</span>
+          <span className="text-white text-xs">or</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
@@ -287,7 +287,7 @@ function LoginPageInner() {
           type="button"
           onClick={handleGuestLogin}
           disabled={guestLoading || loading}
-          className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white hover:text-white text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {guestLoading ? (
             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

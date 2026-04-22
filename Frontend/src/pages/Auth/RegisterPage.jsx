@@ -147,7 +147,7 @@ function RegisterPageInner() {
                 <option value="+81">+81</option>
                 <option value="+82">+82</option>
               </select>
-              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/40 w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <svg className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </div>
             <input
               {...register('phone_number', { required: 'Phone is required', pattern: { value: /^\d{7,15}$/, message: 'Invalid phone' } })}
@@ -186,7 +186,7 @@ function RegisterPageInner() {
               style={{ paddingLeft: '1rem' }}
             />
             <button type="button" onClick={() => setShowPw(!showPw)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors">
               {showPw ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
           </div>
@@ -207,7 +207,7 @@ function RegisterPageInner() {
               style={{ paddingLeft: '1rem' }}
             />
             <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors">
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors">
               {showConfirm ? <FiEyeOff size={16} /> : <FiEye size={16} />}
             </button>
           </div>
@@ -228,12 +228,12 @@ function RegisterPageInner() {
 
         <button
           type="button"
-          className="w-full py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm transition-all flex items-center justify-center gap-2"
+          className="w-full py-3 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-white hover:text-white text-sm transition-all flex items-center justify-center gap-2"
         >
           Continue as Guest
         </button>
 
-        <p className="text-center text-white/50 text-sm">
+        <p className="text-center text-white text-sm">
           Already have an account?{' '}
           <Link to="/login" className="text-red-400 hover:text-red-300 font-medium transition-colors">Log in</Link>
         </p>
@@ -241,7 +241,7 @@ function RegisterPageInner() {
         {/* Divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-white/10" />
-          <span className="text-white/30 text-xs">or</span>
+          <span className="text-white text-xs">or</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
