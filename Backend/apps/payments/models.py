@@ -43,7 +43,7 @@ class Payment(models.Model):
 
     # Relations
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
-    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='payment')
+    booking = models.OneToOneField(Booking, on_delete=models.SET_NULL, null=True, blank=True, related_name='payment')
 
     # Payment details
     amount = models.IntegerField(help_text="Amount in cents")

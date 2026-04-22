@@ -6,6 +6,7 @@ import { chatAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { compressImage, validateVideo } from '../../utils/chatMediaUtils'
+import { useChatWebSocket } from '../../hooks/useWebSocket'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
@@ -71,7 +72,6 @@ export default function AdminChatPage() {
   const [convError, setConvError]         = useState(null)
 
   const bottomRef      = useRef(null)
-  const pollRef        = useRef(null)
   const inputRef       = useRef(null)
   const fileInputRef   = useRef(null)
   const mediaRecRef    = useRef(null)
@@ -84,6 +84,66 @@ export default function AdminChatPage() {
   const [activeMenu, setActiveMenu] = useState(null)
   const [editingId, setEditingId]   = useState(null)
   const [editText, setEditText]     = useState('')
+
+  // ── WebSocket connection ──────────────────────────────────────────────────
+  const roomType = selected?.item_type === 'BOOKING' ? 'booking' : 'case'
+  const roomId = selected?.item_type === 'BOOKING' ? selected?.booking_id : selected?.case_id
+
+  const handleWebSocketMessage = useCallback((data) => {
+    console.log('📨 WebSocket message:', data)
+    
+    if (data.type === 'chat_message') {
+      // Add new message to the list
+      setMessages(prev => {
+        // Prevent duplicates
+        const exists = prev.some(m => m.id === data.message.id)
+        if (exists) return prev
+        return [...prev, data.message]
+      })
+      
+      // Update conversation last message
+      setConversations(prev =>
+        prev.map(c => {
+          const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
+          const currentKey = selected?.item_type === 'BOOKING' 
+            ? `B-${selected.booking_id}` 
+            : `C-${selected.case_id}`
+          
+          if (key === currentKey) {
+            return {
+              ...c,
+              last_message: data.message.message,
+              last_message_at: data.message.created_at,
+            }
+          }
+          return c
+        })
+      )
+    }
+    
+    if (data.type === 'message_updated') {
+      // Update existing message
+      setMessages(prev =>
+        prev.map(m => (m.id === data.message.id ? data.message : m))
+      )
+    }
+    
+    if (data.type === 'message_deleted') {
+      // Remove deleted message
+      setMessages(prev => prev.filter(m => m.id !== data.message_id))
+    }
+    
+    if (data.type === 'typing') {
+      // Handle typing indicator (optional)
+      console.log(`User ${data.user} is typing...`)
+    }
+  }, [selected])
+
+  const { isConnected: wsConnected } = useChatWebSocket(
+    selected ? roomType : null,
+    selected ? roomId : null,
+    handleWebSocketMessage
+  )
 
   // ── data fetchers ─────────────────────────────────────────────────────────
   const fetchConvs = useCallback(async (silent = false) => {
@@ -126,7 +186,7 @@ export default function AdminChatPage() {
     }
   }, [conversations, pendingCaseId, pendingBookingId, selected])
 
-  // ── conversation selection & polling ─────────────────────────────────────
+  // ── conversation selection (WebSocket handles real-time updates) ─────────
   const selectedKey = selected
     ? (selected.item_type === 'BOOKING' ? `B-${selected.booking_id}` : `C-${selected.case_id}`)
     : null
@@ -134,25 +194,27 @@ export default function AdminChatPage() {
   useEffect(() => {
     if (!selected) return
     const isBooking = selected.item_type === 'BOOKING'
-    clearInterval(pollRef.current)
+    
+    // Load initial messages
     setLoadingMsgs(true)
     fetchMsgs(selected).finally(() => setLoadingMsgs(false))
+    
+    // Mark conversation as read
     if (isBooking) {
       chatAPI.markConversationRead({ bookingId: selected.booking_id, sourceType: 'BOOKING' }).catch(() => {})
     } else {
       chatAPI.markConversationRead({ caseId: selected.case_id }).catch(() => {})
     }
+    
+    // Reset unread count locally
     setConversations(prev =>
       prev.map(c => {
         const key = c.item_type === 'BOOKING' ? `B-${c.booking_id}` : `C-${c.case_id}`
         return key === selectedKey ? { ...c, unread_count: 0 } : c
       })
     )
-    pollRef.current = setInterval(() => {
-      fetchMsgs(selected)
-      fetchConvs(true)
-    }, 3000)
-    return () => clearInterval(pollRef.current)
+    
+    // WebSocket now handles real-time updates - no polling needed!
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedKey])
 

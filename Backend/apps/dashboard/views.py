@@ -464,3 +464,141 @@ def service_statistics(request):
         'success': True,
         'data': service_stats
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsSuperAdminOrAdmin])
+def global_search(request):
+    """
+    Global search across bookings, cases, and users
+    GET /api/v1/dashboard/search/?q=<query>
+    
+    Searches in:
+    - Bookings: booking_id, full_name, email, phone_number, address, city, state, country, postal_code
+    - Cases: case_number, client name
+    - Users: full_name, email, phone_number
+    """
+    query = request.query_params.get('q', '').strip()
+    
+    if not query or len(query) < 2:
+        return Response({
+            'success': True,
+            'data': {
+                'bookings': [],
+                'cases': [],
+                'users': []
+            }
+        })
+    
+    results = {
+        'bookings': [],
+        'cases': [],
+        'users': []
+    }
+    
+    # Search Bookings
+    booking_query = Q(booking_id__icontains=query) | \
+                    Q(full_name__icontains=query) | \
+                    Q(email__icontains=query) | \
+                    Q(phone_number__icontains=query) | \
+                    Q(phone_country_code__icontains=query) | \
+                    Q(address__icontains=query) | \
+                    Q(city__icontains=query) | \
+                    Q(state__icontains=query) | \
+                    Q(country__icontains=query) | \
+                    Q(postal_code__icontains=query)
+    
+    bookings = Booking.objects.filter(booking_query).select_related('service', 'user')[:20]
+    
+    for booking in bookings:
+        matched_fields = []
+        
+        # Determine which fields matched
+        if query.lower() in (booking.booking_id or '').lower():
+            matched_fields.append({'type': 'booking_id', 'value': booking.booking_id})
+        if query.lower() in (booking.full_name or '').lower():
+            matched_fields.append({'type': 'name', 'value': booking.full_name})
+        if query.lower() in (booking.email or '').lower():
+            matched_fields.append({'type': 'email', 'value': booking.email})
+        if query.lower() in (booking.phone_number or '').lower():
+            matched_fields.append({'type': 'phone', 'value': f"{booking.phone_country_code or ''}{booking.phone_number or ''}"})
+        if query.lower() in (booking.city or '').lower() or query.lower() in (booking.country or '').lower():
+            matched_fields.append({'type': 'location', 'value': f"{booking.city or ''}, {booking.country or ''}"})
+        
+        results['bookings'].append({
+            'id': str(booking.id),
+            'booking_id': booking.booking_id,
+            'full_name': booking.full_name,
+            'email': booking.email,
+            'phone': f"{booking.phone_country_code or ''}{booking.phone_number or ''}",
+            'service_name': booking.service.name if booking.service else None,
+            'status': booking.status,
+            'matched_fields': matched_fields[:3]  # Limit to 3 matched fields
+        })
+    
+    # Search Cases
+    case_query = Q(case_number__icontains=query) | \
+                 Q(client__full_name__icontains=query) | \
+                 Q(client__email__icontains=query) | \
+                 Q(booking__booking_id__icontains=query) | \
+                 Q(booking__phone_number__icontains=query) | \
+                 Q(booking__email__icontains=query)
+    
+    cases = Case.objects.filter(case_query).select_related('client', 'booking', 'booking__service', 'assigned_admin')[:20]
+    
+    for case in cases:
+        matched_fields = []
+        
+        if query.lower() in (case.case_number or '').lower():
+            matched_fields.append({'type': 'case_number', 'value': case.case_number})
+        if query.lower() in (case.client.full_name or '').lower():
+            matched_fields.append({'type': 'name', 'value': case.client.full_name})
+        if case.booking:
+            if query.lower() in (case.booking.booking_id or '').lower():
+                matched_fields.append({'type': 'booking_id', 'value': case.booking.booking_id})
+            if query.lower() in (case.booking.email or '').lower():
+                matched_fields.append({'type': 'email', 'value': case.booking.email})
+            if query.lower() in (case.booking.phone_number or '').lower():
+                matched_fields.append({'type': 'phone', 'value': case.booking.phone_number})
+        
+        results['cases'].append({
+            'id': str(case.id),
+            'case_number': case.case_number,
+            'client_name': case.client.full_name,
+            'booking_id': case.booking.booking_id if case.booking else None,
+            'service_name': case.booking.service.name if case.booking and case.booking.service else None,
+            'status': case.status,
+            'assigned_admin': case.assigned_admin.full_name if case.assigned_admin else None,
+            'matched_fields': matched_fields[:3]
+        })
+    
+    # Search Users (only clients)
+    user_query = Q(full_name__icontains=query) | \
+                 Q(email__icontains=query) | \
+                 Q(phone_number__icontains=query)
+    
+    users = User.objects.filter(user_query, role=User.CLIENT)[:20]
+    
+    for user in users:
+        matched_fields = []
+        
+        if query.lower() in (user.full_name or '').lower():
+            matched_fields.append({'type': 'name', 'value': user.full_name})
+        if query.lower() in (user.email or '').lower():
+            matched_fields.append({'type': 'email', 'value': user.email})
+        if query.lower() in (user.phone_number or '').lower():
+            matched_fields.append({'type': 'phone', 'value': user.phone_number})
+        
+        results['users'].append({
+            'id': str(user.id),
+            'full_name': user.full_name,
+            'email': user.email,
+            'phone_number': user.phone_number,
+            'is_guest': user.is_guest,
+            'matched_fields': matched_fields[:3]
+        })
+    
+    return Response({
+        'success': True,
+        'data': results
+    })

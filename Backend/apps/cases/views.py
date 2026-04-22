@@ -100,24 +100,7 @@ class CaseViewSet(viewsets.ModelViewSet):
         # Assign new admin
         case.assigned_admin = admin
         case.assigned_at = timezone.now()
-        
-        # If case was RECEIVED, move to WORKING
-        if case.status == Case.STATUS_RECEIVED:
-            old_status = case.status
-            case.status = Case.STATUS_WORKING
-            case.started_at = timezone.now()
-            case.save()
-            
-            # Record status change
-            CaseStatusHistory.objects.create(
-                case=case,
-                from_status=old_status,
-                to_status=case.status,
-                changed_by=request.user,
-                notes=f"Status changed automatically on assignment to {admin.full_name}"
-            )
-        else:
-            case.save()
+        case.save()
         
         # Create assignment record
         CaseAssignment.objects.create(

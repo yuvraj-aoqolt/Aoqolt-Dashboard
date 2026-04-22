@@ -1,15 +1,16 @@
 /**
  * NotificationContext
- * Uses TanStack Query with refetchInterval for polling.
- * - New centralized notifications API: every 10s
- * - Chat + payments (legacy): every 15s (backup)
- * - Partial-overdue orders: every 5 min
+ * Real-time notifications using WebSockets with polling fallback
+ * - Primary: WebSocket connection for instant notifications
+ * - Fallback: Polling every 30s if WebSocket disconnected
  * Only active when the logged-in user is superadmin.
  */
 import { createContext, useContext, useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { chatAPI, paymentsAPI, salesAPI, notificationsAPI } from '../api'
 import { useAuth } from './AuthContext'
+import { useNotificationWebSocket } from '../hooks/useWebSocket'
+import toast from 'react-hot-toast'
 
 const NotificationContext = createContext(null)
 
@@ -39,14 +40,69 @@ export function NotificationProvider({ children }) {
 
   const seenPaymentIds = useRef(new Set())
   const [newPayments, setNewPayments] = useState([])
+  const [wsNotifications, setWsNotifications] = useState([])
+  const [wsUnreadCount, setWsUnreadCount] = useState(0)
 
-  // ── NEW: Centralized notifications from backend (poll every 10s) ─────────
+  // ── WebSocket connection for real-time notifications ────────────────────
+  const handleNotificationMessage = (data) => {
+    console.log('📬 Notification received:', data)
+
+    if (data.type === 'connection_established') {
+      console.log('✅ Notification WebSocket connected')
+      setWsUnreadCount(data.unread_count || 0)
+      // Refresh notifications on connection
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
+    } else if (data.type === 'notification') {
+      // New notification received
+      const notification = data.data
+      
+      // Add to notifications list
+      setWsNotifications(prev => [notification, ...prev].slice(0, 50))
+      setWsUnreadCount(prev => prev + 1)
+      
+      // Show toast notification
+      toast(notification.message || notification.title, {
+        icon: getNotificationIcon(notification.notification_type),
+        duration: 5000,
+      })
+      
+      // Refresh notification list
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
+    } else if (data.type === 'notification_read') {
+      setWsUnreadCount(prev => Math.max(0, prev - 1))
+    } else if (data.type === 'all_read') {
+      setWsUnreadCount(0)
+      setWsNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    } else if (data.type === 'unread_count') {
+      setWsUnreadCount(data.count || 0)
+    }
+  }
+
+  const { send: sendWsMessage, isConnected: wsConnected } = useNotificationWebSocket(
+    isSuperAdmin ? handleNotificationMessage : null
+  )
+
+  // Helper to get notification icon for toast
+  const getNotificationIcon = (type) => {
+    const icons = {
+      'CHAT': '💬',
+      'PAYMENT': '💰',
+      'BOOKING': '📅',
+      'CASE_UPDATE': '⚡',
+      'PARTIAL_OVERDUE': '⏰',
+      'ADMIN_ACTION': '👤',
+      'SYSTEM': '🔔',
+    }
+    return icons[type] || '🔔'
+  }
+
+  // ── Fallback: Centralized notifications from backend (poll every 30s when WS disconnected) ──
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications', 'recent'],
     queryFn:  () => notificationsAPI.recent().then(r => r.data || { data: [], total_unread: 0 }),
-    enabled:  isSuperAdmin,
-    refetchInterval: isSuperAdmin ? 10_000 : false,
-    staleTime: 8_000,
+    enabled:  isSuperAdmin && !wsConnected, // Only poll if WebSocket is disconnected
+    refetchInterval: isSuperAdmin && !wsConnected ? 30_000 : false,
+    staleTime: 25_000,
   })
 
   const backendNotifications = notificationsData?.data || []
@@ -126,10 +182,12 @@ export function NotificationProvider({ children }) {
     }
   })
 
-  // Use backend count if available, otherwise fall back to legacy counting
-  const totalUnread = backendTotalUnread > 0 
-    ? backendTotalUnread 
-    : chatNotifs.reduce((s, c) => s + c.unread_count, 0) + newPayments.length + partialNotifs.length
+  // Use WebSocket count when connected, otherwise fall back to backend or legacy counting
+  const totalUnread = wsConnected 
+    ? wsUnreadCount
+    : backendTotalUnread > 0 
+      ? backendTotalUnread 
+      : chatNotifs.reduce((s, c) => s + c.unread_count, 0) + newPayments.length + partialNotifs.length
 
   // ── Unified notification list (prioritize backend, show legacy as backup) ─
   const notifications = convertedNotifications.length > 0 
@@ -170,6 +228,12 @@ export function NotificationProvider({ children }) {
 
   const markAsRead = async (notificationId) => {
     try {
+      // Send via WebSocket for instant update
+      if (wsConnected && sendWsMessage) {
+        sendWsMessage({ action: 'mark_read', notification_id: notificationId })
+      }
+      
+      // Also update via API
       await notificationsAPI.markRead(notificationId)
       queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
     } catch (error) {
@@ -179,6 +243,12 @@ export function NotificationProvider({ children }) {
 
   const markAllAsRead = async () => {
     try {
+      // Send via WebSocket for instant update
+      if (wsConnected && sendWsMessage) {
+        sendWsMessage({ action: 'mark_all_read' })
+      }
+      
+      // Also update via API
       await notificationsAPI.markAllRead()
       queryClient.invalidateQueries({ queryKey: ['notifications', 'recent'] })
     } catch (error) {
@@ -202,6 +272,7 @@ export function NotificationProvider({ children }) {
     newPayments,
     partialNotifs,
     totalUnread,
+    wsConnected,  // WebSocket connection status
     clearNewPayments,
     markAsRead,
     markAllAsRead,
@@ -211,7 +282,7 @@ export function NotificationProvider({ children }) {
     fmtAmount,
     fmtDollar,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [notifications, chatNotifs, paymentNotifs, newPayments, partialNotifs, totalUnread])
+  }), [notifications, chatNotifs, paymentNotifs, newPayments, partialNotifs, totalUnread, wsConnected])
 
   return (
     <NotificationContext.Provider value={val}>

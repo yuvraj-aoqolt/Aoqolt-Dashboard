@@ -20,8 +20,10 @@ DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 CORS_ALLOW_ALL_ORIGINS = True
+
 # Application definition
 INSTALLED_APPS = [
+    'daphne',  # Must be first for WebSocket support
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,6 +41,7 @@ INSTALLED_APPS = [
     'django_filters',
     'drf_yasg',
     'drf_spectacular',
+    'channels',  # WebSocket support
     
     # Authentication
     'allauth',
@@ -96,6 +99,28 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'core.wsgi.application'
+
+# ASGI Application for WebSocket support
+ASGI_APPLICATION = 'core.asgi.application'
+
+# Channel Layers - Use in-memory for development, Redis for production
+if DEBUG:
+    # In-memory channel layer (development only - no Redis required)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer'
+        }
+    }
+else:
+    # Redis channel layer (production)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [(os.getenv('REDIS_HOST', '127.0.0.1'), int(os.getenv('REDIS_PORT', 6379)))],
+            },
+        },
+    }
 
 # Database
 DATABASES = {

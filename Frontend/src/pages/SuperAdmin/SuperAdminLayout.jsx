@@ -10,6 +10,7 @@ import {
 import { GiCrystalBall } from 'react-icons/gi'
 import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
+import GlobalSearch from '../../components/GlobalSearch'
 
 const MAIN_NAV = [
   { to: '/superadmin',                   icon: FiGrid,         label: 'Dashboard',        end: true },
@@ -152,18 +153,8 @@ export default function SuperAdminLayout({ children }) {
             <FiMenu size={21} />
           </button>
 
-          {/* Search */}
-          <div className="flex-1 max-w-sm relative">
-            <FiSearch size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search insights, clients or reports..."
-              className="w-full pl-9 pr-4 py-2 rounded-xl text-[13px] text-white placeholder:text-white/25 outline-none transition-colors"
-              style={{ backgroundColor: 'var(--color-input-bg)', border: '1px solid var(--color-input-border)' }}
-              onFocus={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.18)')}
-              onBlur={(e) => (e.target.style.borderColor = 'var(--color-input-border)')}
-            />
-          </div>
+          {/* Global Search */}
+          <GlobalSearch />
 
           <div className="flex-1" />
 

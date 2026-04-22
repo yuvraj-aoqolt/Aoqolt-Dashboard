@@ -258,6 +258,7 @@ export const dashboardAPI = {
   superAdmin: () => api.get('/dashboard/superadmin/'),
   client: () => api.get('/dashboard/client/'),
   admin: () => api.get('/dashboard/admin/'),
+  globalSearch: (query) => api.get(`/dashboard/search/?q=${encodeURIComponent(query)}`),
 }
 
 // ── Blogs ─────────────────────────────────────────────────────────────────
