@@ -15,7 +15,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security Settings
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
+SECRET_KEY = os.getenv('SECRET_KEY', 'z_6(f4k%==%kja1icpm%g_r#dik+vkyx2xzlex9o0)atl(#bw=')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
@@ -302,9 +302,9 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # Service Pricing (in cents)
 SERVICE_PRICES = {
-    'single_aura': int(os.getenv('SINGLE_AURA_PRICE', '9900')),
-    'family_aura': int(os.getenv('FAMILY_AURA_PRICE', '19900')),
-    'astrology': int(os.getenv('ASTROLOGY_PRICE', '14900')),
+    'single_aura': int(os.getenv('SINGLE_AURA_PRICE', '11100')),
+    'family_aura': int(os.getenv('FAMILY_AURA_PRICE', '22100')),
+    'astrology': int(os.getenv('ASTROLOGY_PRICE', '9100')),
 }
 
 # Cache Configuration
@@ -410,3 +410,4 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
 }
+
