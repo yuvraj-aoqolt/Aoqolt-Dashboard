@@ -66,9 +66,12 @@ export default function SuperAdminAuraAssignmentsPage() {
       if (bookingsRes.status === 'fulfilled') {
         const d = bookingsRes.value.data
         const bookingList = Array.isArray(d) ? d : d.results || []
-        // Only show bookings that are paid (status=completed) AND have Form 2 submitted
+        // Only show bookings that are paid (status=completed), Form 2 submitted, and NOT astrology
         bookingList
-          .filter(b => b.status === 'completed' && b.form2_submitted === true)
+          .filter(b => {
+            const stype = b.service_type || b.service?.service_type || b.selected_service
+            return b.status === 'completed' && b.form2_submitted === true && stype !== 'astrology'
+          })
           .forEach(b => combined.push({
             item_type:    'BOOKING',
             id:           b.id,

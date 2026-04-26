@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import {
   FiSearch, FiChevronDown, FiChevronUp, FiCheck,
   FiEdit2, FiSave, FiUser, FiUsers, FiCalendar, FiClock, FiMapPin, FiImage,
-  FiPhone, FiMail, FiGlobe, FiX, FiExternalLink, FiTrash2
+  FiPhone, FiMail, FiGlobe, FiX, FiExternalLink, FiTrash2, FiPlus
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { bookingsAPI } from '../../api'
@@ -38,6 +38,9 @@ export default function SuperAdminBookingsPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting]     = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [modalAttachments, setModalAttachments] = useState([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [deletingAttachment, setDeletingAttachment] = useState(null)
 
   useEffect(() => {
     bookingsAPI.allBookings()
@@ -91,6 +94,7 @@ export default function SuperAdminBookingsPage() {
 
   const openEditForm2 = (booking) => {
     setEditForm2Modal(booking)
+    setModalAttachments(booking.attachments || [])
     const d = booking.details || {}
     const cd = d.custom_data || {}
     const svcType = booking.service_type || booking.service?.service_type || booking.selected_service
@@ -103,14 +107,25 @@ export default function SuperAdminBookingsPage() {
         scan_focus: cd.scan_focus || '',
         additional_notes: d.additional_notes || '',
       })
+    } else if (svcType === 'family_aura') {
+      setForm2Data({
+        full_name: cd.full_name || '',
+        gotra: cd.gotra || '',
+        father_name: cd.father_name || '',
+        current_address: cd.current_address || '',
+        address_india: cd.address_india || '',
+        additional_notes: d.additional_notes || '',
+        family_members: Array.isArray(d.family_member_details) && d.family_member_details.length > 0
+          ? d.family_member_details.map(m => ({ name: m.name || '', relation: m.relation || '' }))
+          : [{ name: '', relation: '' }],
+      })
     } else {
+      // astrology
       setForm2Data({
         birth_date: d.birth_date || '',
         birth_time: d.birth_time || '',
         birth_place: d.birth_place || '',
         additional_notes: d.additional_notes || '',
-        family_member_count: d.family_member_count ?? '',
-        family_member_details: d.family_member_details ? JSON.stringify(d.family_member_details, null, 2) : '',
         custom_data: d.custom_data ? JSON.stringify(d.custom_data, null, 2) : '',
       })
     }
@@ -146,9 +161,28 @@ export default function SuperAdminBookingsPage() {
           },
           additional_notes: form2Data.additional_notes,
         }
+      } else if (svcType === 'family_aura') {
+        const members = (form2Data.family_members || []).filter(m => m.name || m.relation)
+        payload = {
+          custom_data: {
+            full_name: form2Data.full_name,
+            gotra: form2Data.gotra,
+            father_name: form2Data.father_name,
+            current_address: form2Data.current_address,
+            address_india: form2Data.address_india,
+          },
+          additional_notes: form2Data.additional_notes,
+          family_member_count: members.length,
+          family_member_details: members,
+        }
       } else {
-        payload = { ...form2Data }
-        try { payload.family_member_details = form2Data.family_member_details ? JSON.parse(form2Data.family_member_details) : null } catch { /* keep raw */ }
+        // astrology
+        payload = {
+          birth_date: form2Data.birth_date,
+          birth_time: form2Data.birth_time,
+          birth_place: form2Data.birth_place,
+          additional_notes: form2Data.additional_notes,
+        }
         try { payload.custom_data = form2Data.custom_data ? JSON.parse(form2Data.custom_data) : {} } catch { /* keep raw */ }
       }
       await bookingsAPI.editForm2(editForm2Modal.id, payload)
@@ -159,6 +193,7 @@ export default function SuperAdminBookingsPage() {
       ))
       toast.success('Form 2 updated')
       setEditForm2Modal(null)
+      setModalAttachments([])
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to save changes')
     } finally {
@@ -308,6 +343,18 @@ export default function SuperAdminBookingsPage() {
                                 />
                                 <div className="sm:col-span-2">
                                   <DetailCell icon={<FiSearch size={13} />} label="Main Scan Focus" value={details.custom_data?.scan_focus} />
+                                </div>
+                              </div>
+                            ) : svcType === 'family_aura' ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <DetailCell icon={<FiUser size={13} />} label="Full Name" value={details.custom_data?.full_name} />
+                                <DetailCell icon={<FiUser size={13} />} label="Gotra" value={details.custom_data?.gotra} />
+                                <DetailCell icon={<FiUser size={13} />} label="Father's Name" value={details.custom_data?.father_name} />
+                                <div className="sm:col-span-2">
+                                  <DetailCell icon={<FiMapPin size={13} />} label="Current Address" value={details.custom_data?.current_address} />
+                                </div>
+                                <div className="sm:col-span-2">
+                                  <DetailCell icon={<FiMapPin size={13} />} label="Address in India" value={details.custom_data?.address_india} />
                                 </div>
                               </div>
                             ) : (
@@ -489,6 +536,7 @@ export default function SuperAdminBookingsPage() {
               {(() => {
                 const svcType = editForm2Modal.service_type || editForm2Modal.service?.service_type || editForm2Modal.selected_service
                 const isSingle = svcType === 'single_aura'
+                const isFamilyAura = svcType === 'family_aura'
                 return isSingle ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     <ModalField label="Full Name" icon={<FiUser size={13} />}>
@@ -519,6 +567,82 @@ export default function SuperAdminBookingsPage() {
                       <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
                     </div>
                   </div>
+                ) : isFamilyAura ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <ModalField label="Full Name" icon={<FiUser size={13} />}>
+                      <input value={form2Data.full_name || ''} onChange={e => setForm2Data(p => ({ ...p, full_name: e.target.value }))} className="modal-input" placeholder="Full name" />
+                    </ModalField>
+                    <ModalField label="Gotra / गोत्र / ਗੋਤ" icon={<FiUser size={13} />}>
+                      <input value={form2Data.gotra || ''} onChange={e => setForm2Data(p => ({ ...p, gotra: e.target.value }))} className="modal-input" placeholder="e.g. Kashyap, Bharadwaj…" />
+                    </ModalField>
+                    <ModalField label="Father's Name" icon={<FiUser size={13} />}>
+                      <input value={form2Data.father_name || ''} onChange={e => setForm2Data(p => ({ ...p, father_name: e.target.value }))} className="modal-input" placeholder="Father's full name" />
+                    </ModalField>
+                    <div className="sm:col-span-2">
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Current Address</label>
+                      <textarea value={form2Data.current_address || ''} onChange={e => setForm2Data(p => ({ ...p, current_address: e.target.value }))} className="modal-input resize-none" rows={2} placeholder="Current full address" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Address in India</label>
+                      <textarea value={form2Data.address_india || ''} onChange={e => setForm2Data(p => ({ ...p, address_india: e.target.value }))} className="modal-input resize-none" rows={2} placeholder="Address in India" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
+                      <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="text-white/40 text-xs uppercase tracking-wider flex items-center gap-1">
+                          <FiUsers size={12} /> Family Members ({(form2Data.family_members || []).length})
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setForm2Data(p => ({ ...p, family_members: [...(p.family_members || []), { name: '', relation: '' }] }))}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-700/50 rounded-lg px-3 py-1.5 transition-all"
+                        >
+                          <FiPlus size={12} /> Add Member
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {(form2Data.family_members || []).map((member, idx) => (
+                          <div key={idx} className="border border-white/5 rounded-xl p-4 bg-white/[0.02]">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-white/50 text-xs font-medium">Member {idx + 1}</span>
+                              {(form2Data.family_members || []).length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setForm2Data(p => ({ ...p, family_members: p.family_members.filter((_, i) => i !== idx) }))}
+                                  className="text-red-500/50 hover:text-red-400 transition-colors"
+                                >
+                                  <FiTrash2 size={13} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-white/30 text-xs mb-1">Name</label>
+                                <input
+                                  value={member.name || ''}
+                                  onChange={e => setForm2Data(p => ({ ...p, family_members: p.family_members.map((m, i) => i === idx ? { ...m, name: e.target.value } : m) }))}
+                                  className="modal-input"
+                                  placeholder="Full name"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-white/30 text-xs mb-1">Relation</label>
+                                <input
+                                  value={member.relation || ''}
+                                  onChange={e => setForm2Data(p => ({ ...p, family_members: p.family_members.map((m, i) => i === idx ? { ...m, relation: e.target.value } : m) }))}
+                                  className="modal-input"
+                                  placeholder="e.g. Spouse, Child"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                     <ModalField label="Date of Birth" icon={<FiCalendar size={13} />}>
@@ -534,57 +658,132 @@ export default function SuperAdminBookingsPage() {
                       <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Additional Notes</label>
                       <textarea value={form2Data.additional_notes || ''} onChange={e => setForm2Data(p => ({ ...p, additional_notes: e.target.value }))} className="modal-input resize-none" rows={3} placeholder="Additional notes…" />
                     </div>
-                    {form2Data.family_member_details !== '' && (
-                      <>
-                        <ModalField label="Family Member Count" icon={<FiUsers size={13} />}>
-                          <input type="number" value={form2Data.family_member_count ?? ''} onChange={e => setForm2Data(p => ({ ...p, family_member_count: e.target.value }))} className="modal-input" placeholder="0" />
-                        </ModalField>
-                        <div className="sm:col-span-3">
-                          <label className="block text-white/40 text-xs uppercase tracking-wider mb-1.5">Family Member Details (JSON)</label>
-                          <textarea value={form2Data.family_member_details || ''} onChange={e => setForm2Data(p => ({ ...p, family_member_details: e.target.value }))} className="modal-input resize-none font-mono text-xs" rows={6} placeholder='[{"name":"...","relation":"...","dob":"..."}]' />
-                        </div>
-                      </>
-                    )}
                   </div>
                 )
               })()}
 
-              {/* Uploaded Images */}
-              {editForm2Modal.attachments?.length > 0 && (
-                <div className="mb-6 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
-                  <p className="text-white/40 text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                    <FiImage size={12} /> Uploaded Images ({editForm2Modal.attachments.length})
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {editForm2Modal.attachments.map((att) => (
-                      <a
-                        key={att.id}
-                        href={att.file}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5 hover:border-white/20 transition-all"
-                      >
-                        <img
-                          src={att.file}
-                          alt={att.description || att.file_name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.style.display = 'none'
-                            e.target.parentElement.classList.add('flex', 'items-center', 'justify-center')
-                            e.target.parentElement.innerHTML = `<div class="text-center p-3"><div class="text-white/20 mb-1"><svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div><p class="text-white/30 text-xs truncate">${att.file_name}</p></div>`
-                          }}
+              {/* Photo Management */}
+              {(() => {
+                const svcType2 = editForm2Modal.service_type || editForm2Modal.service?.service_type || editForm2Modal.selected_service
+                const isAuraType = svcType2 === 'single_aura' || svcType2 === 'family_aura'
+                if (!isAuraType) return null
+
+                const handleUploadPhoto = async (file, description) => {
+                  if (!file) return
+                  setUploadingPhoto(true)
+                  try {
+                    const fd = new FormData()
+                    fd.append('file', file)
+                    fd.append('file_type', 'image')
+                    fd.append('description', description || 'main_photo')
+                    const { data } = await bookingsAPI.uploadAttachment(editForm2Modal.id, fd)
+                    const newAtt = data.data || data
+                    setModalAttachments(prev => [...prev, newAtt])
+                    setBookings(prev => prev.map(b =>
+                      b.id === editForm2Modal.id
+                        ? { ...b, attachments: [...(b.attachments || []), newAtt] }
+                        : b
+                    ))
+                    toast.success('Photo uploaded')
+                  } catch {
+                    toast.error('Upload failed')
+                  } finally {
+                    setUploadingPhoto(false)
+                  }
+                }
+
+                const handleDeletePhoto = async (attId) => {
+                  setDeletingAttachment(attId)
+                  try {
+                    await bookingsAPI.deleteAttachment(editForm2Modal.id, attId)
+                    setModalAttachments(prev => prev.filter(a => a.id !== attId))
+                    setBookings(prev => prev.map(b =>
+                      b.id === editForm2Modal.id
+                        ? { ...b, attachments: (b.attachments || []).filter(a => a.id !== attId) }
+                        : b
+                    ))
+                    toast.success('Photo deleted')
+                  } catch {
+                    toast.error('Failed to delete photo')
+                  } finally {
+                    setDeletingAttachment(null)
+                  }
+                }
+
+                const familyMembers = svcType2 === 'family_aura'
+                  ? (form2Data.family_members || [])
+                  : []
+
+                return (
+                  <div className="mb-6 p-4 rounded-xl border border-white/10 bg-white/[0.02]">
+                    <p className="text-white/40 text-xs uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                      <FiImage size={12} /> Photos ({modalAttachments.length})
+                    </p>
+
+                    {/* Existing photos */}
+                    {modalAttachments.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                        {modalAttachments.map((att) => (
+                          <div key={att.id} className="group relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-white/5">
+                            <img
+                              src={att.file}
+                              alt={att.description || att.file_name}
+                              className="w-full h-full object-cover"
+                              onError={e => { e.target.style.display = 'none' }}
+                            />
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-2">
+                              <p className="text-white/60 text-xs truncate">{att.description || att.file_name}</p>
+                            </div>
+                            <div className="absolute top-1.5 right-1.5 flex gap-1">
+                              <a
+                                href={att.file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg bg-black/60 hover:bg-black/80 text-white/70 hover:text-white transition-all"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <FiExternalLink size={11} />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePhoto(att.id)}
+                                disabled={deletingAttachment === att.id}
+                                className="p-1.5 rounded-lg bg-black/60 hover:bg-red-700/80 text-white/70 hover:text-white transition-all disabled:opacity-40"
+                              >
+                                {deletingAttachment === att.id
+                                  ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin block" />
+                                  : <FiTrash2 size={11} />}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Upload new photo */}
+                    <div className="space-y-3">
+                      <p className="text-white/30 text-xs">Upload new photo:</p>
+                      {/* Main person photo */}
+                      <AdminPhotoUpload
+                        label={svcType2 === 'family_aura' ? 'Primary Person Photo' : 'Person Photo'}
+                        description="main_photo"
+                        onUpload={handleUploadPhoto}
+                        uploading={uploadingPhoto}
+                      />
+                      {/* Family member photos */}
+                      {svcType2 === 'family_aura' && familyMembers.map((m, idx) => (
+                        <AdminPhotoUpload
+                          key={idx}
+                          label={`${m.name || `Member ${idx + 1}`} Photo`}
+                          description={`family_member:${idx}`}
+                          onUpload={handleUploadPhoto}
+                          uploading={uploadingPhoto}
                         />
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <FiExternalLink className="text-white" size={20} />
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                          <p className="text-white text-xs truncate">{att.description || att.file_name}</p>
-                        </div>
-                      </a>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )
+              })()}
 
               <button
                 onClick={handleSaveForm2}
@@ -631,6 +830,35 @@ function ModalField({ label, icon, children }) {
         {icon && <span className="text-white/20">{icon}</span>}{label}
       </label>
       {children}
+    </div>
+  )
+}
+
+function AdminPhotoUpload({ label, description, onUpload, uploading }) {
+  const inputRef = useRef(null)
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        ref={inputRef}
+        onChange={e => {
+          const file = e.target.files?.[0]
+          if (file) { onUpload(file, description); e.target.value = '' }
+        }}
+      />
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={() => inputRef.current?.click()}
+        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs border border-dashed border-white/20 hover:border-white/40 bg-white/[0.02] hover:bg-white/[0.05] text-white/50 hover:text-white/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {uploading
+          ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+          : <FiPlus size={12} />}
+        {label}
+      </button>
     </div>
   )
 }

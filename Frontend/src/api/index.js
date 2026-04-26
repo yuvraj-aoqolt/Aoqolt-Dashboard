@@ -162,6 +162,8 @@ export const bookingsAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 60000,
     }),
+  deleteAttachment: (bookingId, attachmentId) =>
+    api.delete(`/bookings/${bookingId}/delete_attachment/${attachmentId}/`),
   requestCorrection: (id, data) => api.post(`/bookings/${id}/request_correction/`, data),
   // SuperAdmin
   allBookings: () => api.get('/bookings/'),
@@ -169,6 +171,8 @@ export const bookingsAPI = {
   assign: (id, data) => api.post(`/bookings/${id}/assign/`, data),
   startWork: (id) => api.post(`/bookings/${id}/start_work/`),
   completeWork: (id) => api.post(`/bookings/${id}/complete_work/`),
+  editForm1: (id, data) => api.patch(`/bookings/${id}/edit_form1/`, data),
+  editForm2: (id, data) => api.patch(`/bookings/${id}/edit_form2/`, data),
 }
 
 // ── Correction (public, token-based) ─────────────────────────────────────

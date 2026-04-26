@@ -298,7 +298,7 @@ export default function BookingPage() {
               className="lg:col-span-2"
             >
               <form onSubmit={handleSubmit(onSubmit)} className="glass rounded-2xl border border-red-900/20 p-8 space-y-6">
-                <h2 className="text-white font-semibold text-lg flex items-center gap-2">
+                <h2 className="text-white font-semibold text-xl flex items-center gap-2">
                   <FiUser size={18} className="text-red-500" />
                   Personal Information
                 </h2>
@@ -313,13 +313,13 @@ export default function BookingPage() {
                   </Field>
 
                   <div>
-                    <label className="block text-white text-xs uppercase tracking-wider mb-1.5">Phone Number</label>
+                    <label className="block text-white text-sm uppercase tracking-wider mb-1.5">Phone Number</label>
                     <div className="flex items-center h-11 rounded-lg border border-[var(--color-input-border-focus)] bg-[var(--color-input-bg)] focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_var(--color-input-glow-focus)] transition-all duration-300 overflow-hidden">
                       <span className="pl-3.5 text-white shrink-0"><FiPhone size={15} /></span>
                       <select
                         {...register('phone_country_code', { required: 'Required' })}
                         defaultValue="+1"
-                        className="h-full bg-transparent text-white text-sm pl-2 pr-1 border-none outline-none appearance-none cursor-pointer shrink-0 w-[2rem]"
+                        className="h-full bg-transparent text-white text-base pl-2 pr-1 border-none outline-none appearance-none cursor-pointer shrink-0 w-[2rem]"
                         style={{ background: 'transparent' }}
                       >
                         {COUNTRY_CODES.map(({ code, label }) => (
@@ -330,11 +330,11 @@ export default function BookingPage() {
                       <input
                         {...register('phone_number', { required: 'Required' })}
                         placeholder="Phone number"
-                        className="flex-1 h-full bg-transparent text-white text-sm px-3 border-none outline-none placeholder:text-white min-w-0"
+                        className="flex-1 h-full bg-transparent text-white text-base px-3 border-none outline-none placeholder:text-white min-w-0"
                       />
                     </div>
                     {(errors.phone_country_code || errors.phone_number) && (
-                      <p className="text-red-400 text-xs mt-1">
+                      <p className="text-red-400 text-sm mt-1">
                         {errors.phone_country_code?.message || errors.phone_number?.message}
                       </p>
                     )}
@@ -358,7 +358,7 @@ export default function BookingPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-white text-xs uppercase tracking-wider mb-1.5">Street Address</label>
+                  <label className="block text-white text-sm uppercase tracking-wider mb-1.5">Street Address</label>
                   <div className="relative">
                     <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
                     <textarea
@@ -368,11 +368,11 @@ export default function BookingPage() {
                       className="input-field pl-10 resize-none"
                     />
                   </div>
-                  {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address.message}</p>}
+                  {errors.address && <p className="text-red-400 text-sm mt-1">{errors.address.message}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-white text-xs uppercase tracking-wider mb-1.5">
+                  <label className="block text-white text-sm uppercase tracking-wider mb-1.5">
                     Special Notes <span className="text-white font-normal normal-case">(optional)</span>
                   </label>
                   <div className="relative">
@@ -392,7 +392,7 @@ export default function BookingPage() {
                   disabled={submitting}
                   whileHover={!submitting ? { scale: 1.02 } : {}}
                   whileTap={!submitting ? { scale: 0.98 } : {}}
-                  className="w-full btn-primary py-4 flex items-center justify-center gap-2 text-base disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full btn-primary py-4 flex items-center justify-center gap-2 text-lg disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <>
@@ -437,18 +437,18 @@ export default function BookingPage() {
                 ))}
 
                 <div className="mt-4 pt-4 border-t border-white/5">
-                  <div className="flex justify-between items-center mb-1">
+                  {/* <div className="flex justify-between items-center mb-1">
                     <span className="text-white text-sm">Service</span>
                     <span className="text-white text-sm">{rawPrice}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-white text-sm">Tax</span>
                     <span className="text-white text-sm">Will be included</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
+                  </div> */}
+                  <div className="flex justify-between items-center   border-white/5">
                     <span className="text-white font-semibold">Total</span>
                     <div>
-                      <span className="text-red-400 font-bold text-xl">{rawPrice}</span>
+                      <span className="text-white font-bold text-xl">{rawPrice}</span>
                       <p className="text-white text-xs mt-0.5">US Dollar + 5% GST</p>
                     </div>
                   </div>
@@ -473,12 +473,12 @@ export default function BookingPage() {
 function Field({ label, error, icon, children }) {
   return (
     <div>
-      <label className="block text-white text-xs uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-white text-sm uppercase tracking-wider mb-1.5">{label}</label>
       <div className="relative">
         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white">{icon}</span>
         {children}
       </div>
-      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
     </div>
   )
 }

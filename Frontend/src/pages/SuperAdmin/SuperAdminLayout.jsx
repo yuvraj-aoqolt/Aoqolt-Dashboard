@@ -16,6 +16,7 @@ const MAIN_NAV = [
   { to: '/superadmin',                   icon: FiGrid,         label: 'Dashboard',        end: true },
   { to: '/superadmin/clients',           icon: FiUsers,        label: 'Clients' },
   { to: '/superadmin/bookings',          icon: FiCalendar,     label: 'Bookings' },
+  { to: '/superadmin/astrology',         icon: GiCrystalBall,  label: 'Astrology' },
   { to: '/superadmin/aura-assignments',  icon: GiCrystalBall,  label: 'Aura Assignments' },
   { to: '/superadmin/chat',              icon: FiMessageSquare,label: 'Chat' },
   { to: '/superadmin/sales-quotes',      icon: FiFileText,     label: 'Sales Quotes' },

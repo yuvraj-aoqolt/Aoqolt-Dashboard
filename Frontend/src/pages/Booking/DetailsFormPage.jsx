@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
   FiMapPin, FiCamera, FiPlus, FiTrash2, FiArrowRight, FiUser, FiUsers,
-  FiCheck
+  FiCheck, FiCalendar, FiClock, FiInfo
 } from 'react-icons/fi'
 import { bookingsAPI } from '../../api'
 import LoadingScreen from '../../components/LoadingScreen'
@@ -22,6 +22,8 @@ export default function DetailsFormPage() {
   const [mainImage, setMainImage] = useState(null)
   const [memberImages, setMemberImages] = useState({})
   const [photoError, setPhotoError] = useState(null)
+  const [sameAddress, setSameAddress] = useState(false)
+  const [birthTimeNotSure, setBirthTimeNotSure] = useState(false)
 
   const {
     register,
@@ -30,7 +32,7 @@ export default function DetailsFormPage() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      family_members: [{ name: '', relation: '', dob: '' }],
+      family_members: [{ name: '', relation: '' }],
     },
   })
 
@@ -66,31 +68,42 @@ export default function DetailsFormPage() {
 
   const serviceType = booking?.service?.service_type || booking?.selected_service
   const isFamilyAura = serviceType === 'family_aura'
+  const isAstrology = serviceType === 'astrology'
   const serviceName = booking?.service?.name || 'Session'
   const bookingRef = booking?.booking_id
 
   const onSubmit = async (values) => {
-    // Validate photo required for single aura
-    if (!isFamilyAura && !mainImage) {
-      setPhotoError('A photo is required for this service')
-      return
-    }
     setPhotoError(null)
     setSubmitting(true)
     try {
       // Build details payload
       let detailsPayload = {}
 
-      if (isFamilyAura) {
+      if (isAstrology) {
         detailsPayload = {
-          birth_date: values.birth_date,
-          birth_time: values.birth_time,
-          birth_place: values.birth_place,
+          birth_date: values.ast_dob,
+          birth_time: birthTimeNotSure ? null : (values.ast_birth_time || null),
+          birth_place: values.ast_birth_place,
+          custom_data: {
+            full_name: values.ast_full_name,
+            birth_time_not_sure: birthTimeNotSure,
+            appointment_date: values.ast_appointment_date,
+            appointment_time: values.ast_appointment_time,
+          },
+        }
+      } else if (isFamilyAura) {
+        detailsPayload = {
+          custom_data: {
+            full_name: values.fa_full_name,
+            gotra: values.fa_gotra,
+            father_name: values.fa_father_name,
+            current_address: values.fa_current_address,
+            address_india: sameAddress ? values.fa_current_address : values.fa_address_india,
+          },
           family_member_count: fields.length,
           family_member_details: values.family_members.map((m) => ({
             name: m.name,
             relation: m.relation,
-            dob: m.dob || null,
           })),
         }
       } else {
@@ -157,19 +170,19 @@ export default function DetailsFormPage() {
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
             <div className="flex items-center gap-2 mb-4">
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-green-900/30 text-green-400 border border-green-800/30 rounded-full px-3 py-1">
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium bg-green-900/30 text-green-400 border border-green-800/30 rounded-full px-3 py-1">
                 <FiCheck size={11} /> Payment Confirmed
               </span>
             </div>
             <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mb-2">
-              {isFamilyAura ? 'Family Details' : 'Your Details'}
+              {isFamilyAura ? 'Family Details' : isAstrology ? 'Astrology Details' : 'Your Details'}
             </h1>
-            <p className="text-white">
+            <p className="text-white text-lg">
               Please fill in the required information to complete your{' '}
               <span className="text-white">{serviceName}</span> session.
             </p>
             {bookingRef && (
-              <p className="text-white text-sm mt-2 font-mono">Booking: {bookingRef}</p>
+              <p className="text-white text-base mt-2 font-mono">Booking: {bookingRef}</p>
             )}
           </motion.div>
 
@@ -177,7 +190,7 @@ export default function DetailsFormPage() {
           <div className="flex items-center gap-3 mb-10">
             {['Booking', 'Payment', 'Details'].map((step, i) => (
               <div key={step} className="flex items-center gap-3">
-                <div className={`flex items-center gap-2 text-xs font-medium ${i === 2 ? 'text-red-400' : 'text-green-400'}`}>
+                <div className={`flex items-center gap-2 text-sm font-medium ${i === 2 ? 'text-red-400' : 'text-green-400'}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs
                     ${i === 2 ? 'border-red-600/50 bg-red-950/50 text-red-400' : 'border-green-700/40 bg-green-900/30 text-green-400'}`}>
                     {i < 2 ? <FiCheck size={10} /> : i + 1}
@@ -198,12 +211,114 @@ export default function DetailsFormPage() {
               transition={{ delay: 0.1 }}
               className="glass rounded-2xl border border-red-900/20 p-8"
             >
-              <h2 className="text-white font-semibold text-base mb-6 flex items-center gap-2">
+              <h2 className="text-white font-semibold text-lg mb-6 flex items-center gap-2">
                 <FiUser size={16} className="text-red-500" />
-                {isFamilyAura ? 'Primary Person Details' : 'Your Personal Details'}
+                {isFamilyAura ? 'Primary Person Details' : isAstrology ? 'Your Astrology Details' : 'Your Personal Details'}
               </h2>
 
-              {!isFamilyAura ? (
+              {isAstrology ? (
+                /* ── Astrology form ───────────────────────────────────── */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Full Name */}
+                  <div className="sm:col-span-2">
+                    <Field label="Full Name *" error={errors.ast_full_name?.message}>
+                      <div className="relative">
+                        <FiUser className="absolute left-3.5 top-3.5 text-white" size={15} />
+                        <input
+                          {...register('ast_full_name', { required: 'Full name is required' })}
+                          placeholder="Your full name"
+                          className="input-field pl-10"
+                        />
+                      </div>
+                    </Field>
+                  </div>
+
+                  {/* Date of Birth */}
+                  <Field label="Date of Birth *" error={errors.ast_dob?.message}>
+                    <div className="relative">
+                      <FiCalendar className="absolute left-3.5 top-3.5 text-white" size={15} />
+                      <input
+                        type="date"
+                        {...register('ast_dob', { required: 'Date of birth is required' })}
+                        className="input-field pl-10"
+                      />
+                    </div>
+                  </Field>
+
+                  {/* Birth Time */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-white text-sm uppercase tracking-wider">
+                        Birth Time *
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={birthTimeNotSure}
+                          onChange={(e) => setBirthTimeNotSure(e.target.checked)}
+                          className="w-4 h-4 rounded border-white/20 bg-white/5 accent-red-500 cursor-pointer"
+                        />
+                        <span className="text-white text-sm">Not sure</span>
+                      </label>
+                    </div>
+                    {!birthTimeNotSure && (
+                      <div className="relative">
+                        <FiClock className="absolute left-3.5 top-3.5 text-white" size={15} />
+                        <input
+                          type="time"
+                          {...register('ast_birth_time', { required: !birthTimeNotSure ? 'Birth time is required' : false })}
+                          className="input-field pl-10"
+                        />
+                        {errors.ast_birth_time && (
+                          <p className="text-red-400 text-sm mt-1">{errors.ast_birth_time.message}</p>
+                        )}
+                      </div>
+                    )}
+                    {birthTimeNotSure && (
+                      <p className="text-white/50 text-sm italic py-2.5 px-3 border border-dashed border-white/10 rounded-lg">
+                        No problem — birth time will be skipped
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Place of Birth */}
+                  <div className="sm:col-span-2">
+                    <Field label="Place of Birth *" error={errors.ast_birth_place?.message}>
+                      <div className="relative">
+                        <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
+                        <input
+                          {...register('ast_birth_place', { required: 'Place of birth is required' })}
+                          placeholder="City, Country"
+                          className="input-field pl-10"
+                        />
+                      </div>
+                    </Field>
+                  </div>
+
+                  {/* Appointment Date & Time */}
+                  <Field label="Appointment Date *" error={errors.ast_appointment_date?.message}>
+                    <div className="relative">
+                      <FiCalendar className="absolute left-3.5 top-3.5 text-white" size={15} />
+                      <input
+                        type="date"
+                        {...register('ast_appointment_date', { required: 'Appointment date is required' })}
+                        className="input-field pl-10"
+                      />
+                    </div>
+                  </Field>
+
+                  <Field label="Appointment Time *" error={errors.ast_appointment_time?.message}>
+                    <div className="relative">
+                      <FiClock className="absolute left-3.5 top-3.5 text-white" size={15} />
+                      <input
+                        type="time"
+                        {...register('ast_appointment_time', { required: 'Appointment time is required' })}
+                        className="input-field pl-10"
+                      />
+                    </div>
+                  </Field>
+                </div>
+              ) : !isFamilyAura ? (
                 <div className="space-y-5">
                   {/* Full Name */}
                   <Field label="Full Name *" error={errors.full_name?.message}>
@@ -219,15 +334,15 @@ export default function DetailsFormPage() {
 
                   {/* Photo Upload */}
                   <div>
-                    <label className="block text-white text-xs uppercase tracking-wider mb-2">
-                      Your Photo *
+                    <label className="block text-white text-sm uppercase tracking-wider mb-2">
+                      Your Photo <span className="text-white/40 normal-case text-xs">(optional)</span>
                     </label>
                     <ImageUpload value={mainImage} onChange={(f) => { setMainImage(f); setPhotoError(null) }} id="main-photo" />
-                    <p className="text-white text-xs mt-2 flex items-start gap-1.5">
+                    <p className="text-white text-sm mt-2 flex items-start gap-1.5">
                       <FiCamera size={11} className="mt-0.5 shrink-0 text-amber-400/70" />
                       <span>Make sure the photo is <span className="text-amber-400/80">straight</span> and there are <span className="text-amber-400/80">no glasses</span> on your face.</span>
                     </p>
-                    {photoError && <p className="text-red-400 text-xs mt-1">{photoError}</p>}
+                    {photoError && <p className="text-red-400 text-sm mt-1">{photoError}</p>}
                   </div>
 
                   {/* Mother's Name */}
@@ -277,43 +392,89 @@ export default function DetailsFormPage() {
                   </div>
                 </div>
               ) : (
-                /* Family Aura — birth details */
+                /* Family Aura — primary person details */
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field label="Date of Birth *" error={errors.birth_date?.message}>
+                  <Field label="Full Name *" error={errors.fa_full_name?.message}>
+                    <div className="relative">
+                      <FiUser className="absolute left-3.5 top-3.5 text-white" size={15} />
+                      <input
+                        {...register('fa_full_name', { required: 'Full name is required' })}
+                        placeholder="Your full name"
+                        className="input-field pl-10"
+                      />
+                    </div>
+                  </Field>
+
+                  <Field label="Gotra * / गोत्र * / ਗੋਤ *" error={errors.fa_gotra?.message}>
                     <input
-                      type="date"
-                      {...register('birth_date', { required: 'Date of birth is required' })}
+                      {...register('fa_gotra', { required: 'Gotra is required' })}
+                      placeholder="e.g. Kashyap, Bharadwaj…"
                       className="input-field"
                     />
                   </Field>
 
-                  <Field label="Time of Birth *" error={errors.birth_time?.message}>
+                  <Field label="Father's Name *" error={errors.fa_father_name?.message}>
                     <input
-                      type="time"
-                      {...register('birth_time', { required: 'Time of birth is required' })}
+                      {...register('fa_father_name', { required: "Father's name is required" })}
+                      placeholder="Father's full name"
                       className="input-field"
                     />
                   </Field>
 
                   <div className="sm:col-span-2">
-                    <Field label="Place of Birth *" error={errors.birth_place?.message}>
+                    <Field label="Current Address *" error={errors.fa_current_address?.message}>
                       <div className="relative">
                         <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
-                        <input
-                          {...register('birth_place', { required: 'Place of birth is required' })}
-                          placeholder="City, Country"
-                          className="input-field pl-10"
+                        <textarea
+                          {...register('fa_current_address', { required: 'Current address is required' })}
+                          rows={2}
+                          placeholder="Your current full address"
+                          className="input-field pl-10 resize-none"
                         />
                       </div>
                     </Field>
                   </div>
 
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-white text-sm uppercase tracking-wider">
+                        Address in India *
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={sameAddress}
+                          onChange={(e) => setSameAddress(e.target.checked)}
+                          className="w-4 h-4 rounded border-white/20 bg-white/5 accent-red-500 cursor-pointer"
+                        />
+                        <span className="text-white text-sm">Same as current address</span>
+                      </label>
+                    </div>
+                    {!sameAddress && (
+                      <Field label="" error={errors.fa_address_india?.message}>
+                        <div className="relative">
+                          <FiMapPin className="absolute left-3.5 top-3.5 text-white" size={15} />
+                          <textarea
+                            {...register('fa_address_india', { required: !sameAddress ? 'Address in India is required' : false })}
+                            rows={2}
+                            placeholder="Your India address"
+                            className="input-field pl-10 resize-none"
+                          />
+                        </div>
+                      </Field>
+                    )}
+                  </div>
+
                   {/* Photo upload */}
                   <div className="sm:col-span-2 mt-1">
-                    <label className="block text-white text-xs uppercase tracking-wider mb-2">
+                    <label className="block text-white text-sm uppercase tracking-wider mb-2">
                       Your Photo / Aura Image
                     </label>
                     <ImageUpload value={mainImage} onChange={setMainImage} id="main-photo" />
+                    <p className="text-white text-sm mt-2 flex items-start gap-1.5">
+                      <FiCamera size={11} className="mt-0.5 shrink-0 text-amber-400/70" />
+                      <span>Make sure the photo is <span className="text-amber-400/80">straight</span> and there are <span className="text-amber-400/80">no glasses</span> on your face.</span>
+                    </p>
                   </div>
                 </div>
               )}
@@ -327,15 +488,15 @@ export default function DetailsFormPage() {
                 transition={{ delay: 0.2 }}
                 className="glass rounded-2xl border border-red-900/20 p-8"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-white font-semibold text-base flex items-center gap-2">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-white font-semibold text-lg flex items-center gap-2">
                     <FiUsers size={16} className="text-red-500" />
                     Family Members
-                    <span className="text-white text-xs font-normal">({fields.length})</span>
+                    <span className="text-white text-sm font-normal">({fields.length})</span>
                   </h2>
                   <motion.button
                     type="button"
-                    onClick={() => append({ name: '', relation: '', dob: '' })}
+                    onClick={() => append({ name: '', relation: '' })}
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.97 }}
                     className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-700/50 rounded-xl px-4 py-2 transition-all"
@@ -344,8 +505,16 @@ export default function DetailsFormPage() {
                   </motion.button>
                 </div>
 
+                {/* Note */}
+                <div className="flex items-start gap-2 mb-5 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
+                  <FiInfo size={14} className="text-amber-400 mt-0.5 shrink-0" />
+                  <p className="text-amber-300/90 text-sm leading-relaxed">
+                    Please make sure that <span className="font-medium text-amber-300">every member belongs to the same household address</span>. Family Aura scanning is done for members living together under one roof.
+                  </p>
+                </div>
+
                 {fields.length === 0 && (
-                  <p className="text-white text-sm text-center py-6 border border-dashed border-white/10 rounded-xl">
+                  <p className="text-white text-base text-center py-6 border border-dashed border-white/10 rounded-xl">
                     No family members added yet. Click "Add Member" to add one.
                   </p>
                 )}
@@ -361,7 +530,7 @@ export default function DetailsFormPage() {
                       className="border border-white/5 rounded-xl p-5 mb-4 bg-white/[0.02]"
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-white text-sm font-medium">Member {index + 1}</span>
+                        <span className="text-white text-base font-medium">Member {index + 1}</span>
                         {fields.length > 0 && (
                           <button
                             type="button"
@@ -411,19 +580,8 @@ export default function DetailsFormPage() {
                           />
                         </Field>
 
-                        <Field
-                          label="Date of Birth"
-                          error={errors.family_members?.[index]?.dob?.message}
-                        >
-                          <input
-                            type="date"
-                            {...register(`family_members.${index}.dob`)}
-                            className="input-field"
-                          />
-                        </Field>
-
                         <div>
-                          <label className="block text-white text-xs uppercase tracking-wider mb-2">
+                          <label className="block text-white text-sm uppercase tracking-wider mb-2">
                             Member Photo
                           </label>
                           <ImageUpload
@@ -433,6 +591,10 @@ export default function DetailsFormPage() {
                             }
                             id={`member-photo-${index}`}
                           />
+                          <p className="text-white text-sm mt-2 flex items-start gap-1.5">
+                            <FiCamera size={11} className="mt-0.5 shrink-0 text-amber-400/70" />
+                            <span>Make sure the photo is <span className="text-amber-400/80">straight</span> and there are <span className="text-amber-400/80">no glasses</span> on your face.</span>
+                          </p>
                         </div>
                       </div>
                     </motion.div>
@@ -472,11 +634,11 @@ export default function DetailsFormPage() {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-white text-xs uppercase tracking-wider mb-1.5">
+      <label className="block text-white text-sm uppercase tracking-wider mb-1.5">
         {label}
       </label>
       {children}
-      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
     </div>
   )
 }
@@ -506,13 +668,13 @@ function ImageUpload({ value, onChange, id }) {
         {value ? (
           <div className="flex items-center justify-center gap-2">
             <FiCamera size={16} className="text-red-400 shrink-0" />
-            <span className="text-white text-sm truncate max-w-[180px]">{value.name}</span>
+            <span className="text-white text-base truncate max-w-[180px]">{value.name}</span>
             <FiCheck size={14} className="text-green-400 shrink-0" />
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1.5">
             <FiCamera size={22} className="text-white" />
-            <span className="text-white text-xs">Click to upload photo</span>
+            <span className="text-white text-sm">Click to upload photo</span>
           </div>
         )}
       </button>

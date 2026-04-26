@@ -40,7 +40,8 @@ const SuperAdminCasesPage           = lazy(() => import('./pages/SuperAdmin/Supe
 const SuperAdminUsersPage           = lazy(() => import('./pages/SuperAdmin/SuperAdminUsersPage'))
 const SuperAdminBookingsPage        = lazy(() => import('./pages/SuperAdmin/SuperAdminBookingsPage'))
 const SuperAdminClientsPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminClientsPage'))
-const SuperAdminAuraAssignmentsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminAuraAssignmentsPage'))
+const SuperAdminAstraAssignmentsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminAuraAssignmentsPage'))
+const SuperAdminAstrologyPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminAstrologyPage'))
 const SuperAdminChatPage            = lazy(() => import('./pages/SuperAdmin/SuperAdminChatPage'))
 const SuperAdminSalesQuotesPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesQuotesPage'))
 const SuperAdminSalesOrdersPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesOrdersPage'))
@@ -165,7 +166,8 @@ export default function App() {
                 <Route path="/superadmin/cases"            element={<S><SuperAdminCasesPage /></S>} />
                 <Route path="/superadmin/users"            element={<S><SuperAdminUsersPage /></S>} />
                 <Route path="/superadmin/clients"          element={<S><SuperAdminClientsPage /></S>} />
-                <Route path="/superadmin/aura-assignments" element={<S><SuperAdminAuraAssignmentsPage /></S>} />
+                <Route path="/superadmin/aura-assignments" element={<S><SuperAdminAstraAssignmentsPage /></S>} />
+                <Route path="/superadmin/astrology"        element={<S><SuperAdminAstrologyPage /></S>} />
                 <Route path="/superadmin/chat"             element={<S><SuperAdminChatPage /></S>} />
                 <Route path="/superadmin/sales-quotes"     element={<S><SuperAdminSalesQuotesPage /></S>} />
                 <Route path="/superadmin/sales-orders"     element={<S><SuperAdminSalesOrdersPage /></S>} />

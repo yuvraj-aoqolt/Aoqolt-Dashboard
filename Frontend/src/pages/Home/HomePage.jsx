@@ -430,7 +430,7 @@ export default function HomePage() {
       </section>
 
       {/* ── WHY CHOOSE US ────────────────────────────────────── */}
-      <section className="py-28 px-4">
+      {/* <section className="py-28 px-4">
         <div className="max-w-6xl mx-auto">
           <Reveal className="text-center mb-16">
             <h2 className="font-display text-5xl sm:text-6xl font-bold text-white mb-8">
@@ -456,7 +456,7 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ── TESTIMONIALS CAROUSEL ────────────────────────────── */}
       <section className="py-28 px-4 bg-gradient-to-b from-transparent via-sidebar/30 to-transparent overflow-hidden">

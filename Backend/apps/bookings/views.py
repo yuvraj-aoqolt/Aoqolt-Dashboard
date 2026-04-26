@@ -63,10 +63,8 @@ class BookingViewSet(viewsets.ModelViewSet):
         if user.is_superadmin:
             return Booking.objects.all()
         elif user.is_admin:
-            # Admins see bookings directly assigned to them
             return Booking.objects.filter(assigned_admin=user)
         else:
-            # Clients see only their own bookings
             return Booking.objects.filter(user=user)
     
     def get_serializer_class(self):
@@ -181,7 +179,24 @@ class BookingViewSet(viewsets.ModelViewSet):
             'message': 'File uploaded successfully',
             'data': serializer.data
         }, status=status.HTTP_201_CREATED)
-    
+
+    @action(detail=True, methods=['delete'], url_path='delete_attachment/(?P<attachment_id>[^/.]+)')
+    def delete_attachment(self, request, pk=None, attachment_id=None):
+        """Delete an attachment from a booking (superadmin only)"""
+        if not request.user.is_superadmin:
+            return Response({
+                'success': False,
+                'error': 'Permission denied',
+            }, status=status.HTTP_403_FORBIDDEN)
+        booking = self.get_object()
+        try:
+            attachment = BookingAttachment.objects.get(id=attachment_id, booking=booking)
+        except BookingAttachment.DoesNotExist:
+            return Response({'success': False, 'error': 'Attachment not found'}, status=status.HTTP_404_NOT_FOUND)
+        attachment.file.delete(save=False)
+        attachment.delete()
+        return Response({'success': True, 'message': 'Attachment deleted'}, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def my_bookings(self, request):
         """Get current user's bookings"""
