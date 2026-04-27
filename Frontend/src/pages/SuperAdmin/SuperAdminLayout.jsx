@@ -5,7 +5,7 @@ import {
   FiMenu, FiX, FiLogOut, FiBell, FiSearch,
   FiGrid, FiUsers, FiCalendar, FiMessageSquare,
   FiFileText, FiShoppingBag, FiDollarSign, FiBarChart2,
-  FiShield, FiSettings, FiChevronDown, FiUser, FiList, FiBookOpen,
+  FiShield, FiSettings, FiChevronDown, FiUser, FiList, FiBookOpen, FiZap,
 } from 'react-icons/fi'
 import { GiCrystalBall } from 'react-icons/gi'
 import { useAuth } from '../../context/AuthContext'
@@ -16,8 +16,8 @@ const MAIN_NAV = [
   { to: '/superadmin',                   icon: FiGrid,         label: 'Dashboard',        end: true },
   { to: '/superadmin/clients',           icon: FiUsers,        label: 'Clients' },
   { to: '/superadmin/bookings',          icon: FiCalendar,     label: 'Bookings' },
-  { to: '/superadmin/astrology',         icon: GiCrystalBall,  label: 'Astrology' },
   { to: '/superadmin/aura-assignments',  icon: GiCrystalBall,  label: 'Aura Assignments' },
+  { to: '/superadmin/sessions',          icon: FiZap,          label: 'Sessions' },
   { to: '/superadmin/chat',              icon: FiMessageSquare,label: 'Chat' },
   { to: '/superadmin/sales-quotes',      icon: FiFileText,     label: 'Sales Quotes' },
   { to: '/superadmin/sales-orders',      icon: FiShoppingBag,  label: 'Sales Orders' },

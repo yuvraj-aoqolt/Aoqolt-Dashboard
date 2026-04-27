@@ -321,6 +321,8 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                 case_obj     = getattr(booking, 'case', None)
                 case_admin   = getattr(case_obj, 'assigned_admin', None) if case_obj else None
                 admin        = booking.assigned_admin if booking.assigned_admin_id else case_admin
+                # Check if an aura session exists for this booking
+                aura_session = getattr(booking, 'aura_session', None)
                 result.append({
                     'item_type':    'BOOKING',
                     'booking_id':   bid,
@@ -329,6 +331,7 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                     'work_started':   booking.work_started,
                     'work_completed': booking.work_completed,
                     'service_name': booking.service.name if booking.service else '',
+                    'service_type': booking.service.service_type if booking.service else '',
                     'client_name':  client_name,
                     'client_email': client_email,
                     'admin_id':     str(booking.assigned_admin_id) if booking.assigned_admin_id else '',
@@ -339,6 +342,8 @@ class CaseMessageViewSet(viewsets.ModelViewSet):
                         'last_message_at': last_msg.created_at.isoformat() if last_msg else fallback,
                         'unread_count':    unread,
                     },
+                    'aura_session_id':     str(aura_session.id) if aura_session else None,
+                    'aura_session_status': aura_session.status if aura_session else None,
                     'last_activity': last_msg.created_at.isoformat() if last_msg else fallback,
                 })
 

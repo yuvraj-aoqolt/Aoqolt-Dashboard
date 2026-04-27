@@ -13,7 +13,7 @@ class Command(BaseCommand):
         services_data = [
             {
                 'service_type': 'single_aura',
-                'name': 'Single Aura Reading',
+                'name': 'Single Aura Scan',
                 'description': 'Comprehensive aura reading for one person. Get insights into your energy field, spiritual state, and life path.',
                 'short_description': 'Personal aura analysis and spiritual guidance',
                 'price': settings.SERVICE_PRICES.get('single_aura', 9900),
@@ -23,7 +23,7 @@ class Command(BaseCommand):
             },
             {
                 'service_type': 'family_aura',
-                'name': 'Family Aura Reading',
+                'name': 'Family Aura Scan',
                 'description': 'Complete aura reading for your entire family. Understand family dynamics, energy connections, and collective spiritual guidance.',
                 'short_description': 'Family energy analysis and harmony guidance',
                 'price': settings.SERVICE_PRICES.get('family_aura', 19900),
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             },
             {
                 'service_type': 'astrology',
-                'name': 'Astrology Reading',
+                'name': 'Astrology Session',
                 'description': 'Detailed astrological chart reading based on your birth details. Discover your life purpose, strengths, and future predictions.',
                 'short_description': 'Personalized birth chart and life path analysis',
                 'price': settings.SERVICE_PRICES.get('astrology', 14900),

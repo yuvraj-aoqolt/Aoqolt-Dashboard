@@ -14,6 +14,8 @@ const ServicesPage       = lazy(() => import('./pages/Services/ServicesPage'))
 const ServiceDetailPage  = lazy(() => import('./pages/Services/ServiceDetailPage'))
 const BookingPage        = lazy(() => import('./pages/Booking/BookingPage'))
 const DetailsFormPage    = lazy(() => import('./pages/Booking/DetailsFormPage'))
+const AstrologySlotPage  = lazy(() => import('./pages/Booking/AstrologySlotPage'))
+const SessionBookingPage = lazy(() => import('./pages/Booking/SessionBookingPage'))
 const BookingSuccessPage = lazy(() => import('./pages/Booking/BookingSuccessPage'))
 const PaymentSuccessPage = lazy(() => import('./pages/Payment/PaymentSuccessPage'))
 const PaymentCancelPage  = lazy(() => import('./pages/Payment/PaymentCancelPage'))
@@ -42,6 +44,7 @@ const SuperAdminBookingsPage        = lazy(() => import('./pages/SuperAdmin/Supe
 const SuperAdminClientsPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminClientsPage'))
 const SuperAdminAstraAssignmentsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminAuraAssignmentsPage'))
 const SuperAdminAstrologyPage         = lazy(() => import('./pages/SuperAdmin/SuperAdminAstrologyPage'))
+const SuperAdminAstrologySchedulePage = lazy(() => import('./pages/SuperAdmin/SuperAdminAstrologySchedulePage'))
 const SuperAdminChatPage            = lazy(() => import('./pages/SuperAdmin/SuperAdminChatPage'))
 const SuperAdminSalesQuotesPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesQuotesPage'))
 const SuperAdminSalesOrdersPage     = lazy(() => import('./pages/SuperAdmin/SuperAdminSalesOrdersPage'))
@@ -52,6 +55,7 @@ const SuperAdminSettingsPage        = lazy(() => import('./pages/SuperAdmin/Supe
 const SuperAdminBlogsPage           = lazy(() => import('./pages/SuperAdmin/SuperAdminBlogsPage'))
 const SuperAdminBlogPermissionsPage = lazy(() => import('./pages/SuperAdmin/SuperAdminBlogPermissionsPage'))
 const SuperAdminNotificationsPage   = lazy(() => import('./pages/SuperAdmin/SuperAdminNotificationsPage'))
+const SuperAdminSessionsPage        = lazy(() => import('./pages/SuperAdmin/SuperAdminSessionsPage'))
 
 // Blog
 const BlogsPage          = lazy(() => import('./pages/Blog/BlogsPage'))
@@ -122,6 +126,8 @@ export default function App() {
             {/* Quote pages */}
             <Route path="/quote/payment/success" element={<S><QuotePaymentSuccessPage /></S>} />
             <Route path="/quote/:token"          element={<S><QuotePage /></S>} />
+            {/* Public session booking — no auth required */}
+            <Route path="/session-booking/:token" element={<S><SessionBookingPage /></S>} />
 
             {/* Protected — requires auth; NotificationProvider only mounts here */}
             <Route element={<ProtectedLayout />}>
@@ -140,6 +146,7 @@ export default function App() {
               <Route path="/payment/success"          element={<S><PaymentSuccessPage /></S>} />
               <Route path="/payment/cancel"           element={<S><PaymentCancelPage /></S>} />
               <Route path="/booking-form/:form2Token" element={<S><DetailsFormPage /></S>} />
+              <Route path="/astrology/schedule/:bookingId" element={<S><AstrologySlotPage /></S>} />
               <Route path="/booking/success"          element={<S><BookingSuccessPage /></S>} />
 
               {/* ── Admin dashboard ── */}
@@ -167,7 +174,8 @@ export default function App() {
                 <Route path="/superadmin/users"            element={<S><SuperAdminUsersPage /></S>} />
                 <Route path="/superadmin/clients"          element={<S><SuperAdminClientsPage /></S>} />
                 <Route path="/superadmin/aura-assignments" element={<S><SuperAdminAstraAssignmentsPage /></S>} />
-                <Route path="/superadmin/astrology"        element={<S><SuperAdminAstrologyPage /></S>} />
+                <Route path="/superadmin/astrology"          element={<S><SuperAdminAstrologyPage /></S>} />
+                <Route path="/superadmin/astrology-schedule"  element={<S><SuperAdminAstrologySchedulePage /></S>} />
                 <Route path="/superadmin/chat"             element={<S><SuperAdminChatPage /></S>} />
                 <Route path="/superadmin/sales-quotes"     element={<S><SuperAdminSalesQuotesPage /></S>} />
                 <Route path="/superadmin/sales-orders"     element={<S><SuperAdminSalesOrdersPage /></S>} />
@@ -178,6 +186,7 @@ export default function App() {
                 <Route path="/superadmin/blogs"            element={<S><SuperAdminBlogsPage /></S>} />
                 <Route path="/superadmin/blog-permissions" element={<S><SuperAdminBlogPermissionsPage /></S>} />
                 <Route path="/superadmin/notifications"    element={<S><SuperAdminNotificationsPage /></S>} />
+                <Route path="/superadmin/sessions"         element={<S><SuperAdminSessionsPage /></S>} />
               </Route>
             </Route>
 

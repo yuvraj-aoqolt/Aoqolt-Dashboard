@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/v1/accounts/', include('apps.accounts.urls')),
     path('api/v1/services/', include('apps.services.urls')),
     path('api/v1/bookings/', include('apps.bookings.urls')),
+    path('api/v1/astrology/', include('apps.astrology.urls')),
     path('api/v1/cases/', include('apps.cases.urls')),
     path('api/v1/chat/', include('apps.chat.urls')),
     path('api/v1/payments/', include('apps.payments.urls')),
@@ -44,6 +45,7 @@ urlpatterns = [
     path('api/v1/dashboard/', include('apps.dashboard.urls')),
     path('api/v1/blogs/', include('apps.blogs.urls')),
     path('api/v1/notifications/', include('apps.notifications.urls')),
+    path('api/v1/sessions/', include('apps.sessions.urls')),
 ]
 
 # Serve media files in development

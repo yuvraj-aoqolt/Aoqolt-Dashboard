@@ -318,6 +318,21 @@ export const salesAPI = {
   partialOverdue: () => api.get('/sales/orders/partial_overdue/'),
 }
 
+// ── Aura Sessions ─────────────────────────────────────────────────────────
+export const sessionsAPI = {
+  // SuperAdmin
+  markAnalysisCompleted: (bookingId) =>
+    api.post('/sessions/analysis-completed/', { booking_id: bookingId }),
+  list: () => api.get('/sessions/'),
+  detail: (id) => api.get(`/sessions/${id}/`),
+  generateLink: (id) => api.post(`/sessions/${id}/generate-link/`),
+  // Public (no auth required)
+  getSlots: (token, date, clientTimezone) =>
+    api.get(`/sessions/public/${token}/slots/`, { params: { date, client_timezone: clientTimezone } }),
+  validateToken: (token) => api.get(`/sessions/public/${token}/`),
+  bookSlot: (token, data) => api.post(`/sessions/public/${token}/book/`, data),
+}
+
 // ── Notifications ─────────────────────────────────────────────────────────
 export const notificationsAPI = {
   // Get all notifications for current user

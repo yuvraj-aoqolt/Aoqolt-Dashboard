@@ -4,9 +4,9 @@ import SuperAdminLayout from './SuperAdminLayout'
 import {
   FiMessageSquare, FiSend, FiSearch, FiPaperclip, FiSmile, FiMic, FiSquare,
   FiMoreVertical, FiEdit2, FiTrash2, FiCheck, FiX, FiCheckCircle,
-  FiUser, FiChevronRight, FiBriefcase, FiCalendar,
+  FiUser, FiChevronRight, FiBriefcase, FiCalendar, FiZap,
 } from 'react-icons/fi'
-import { chatAPI, casesAPI, bookingsAPI } from '../../api'
+import { chatAPI, casesAPI, bookingsAPI, sessionsAPI } from '../../api'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { compressImage, validateVideo } from '../../utils/chatMediaUtils'
@@ -591,6 +591,7 @@ export default function SuperAdminChatPage() {
   const [confirmCompleteBooking, setConfirmCompleteBooking] = useState(false)
   const [confirmDelThread, setConfirmDelThread] = useState(false)
   const [deletingThread, setDeletingThread]     = useState(false)
+  const [markingAnalysis, setMarkingAnalysis]   = useState(false)
 
   // ── data fetching ────────────────────────────────────────────────────
   const fetchConvs = useCallback(async (silent = false) => {
@@ -842,6 +843,26 @@ export default function SuperAdminChatPage() {
     finally { setCompleting(false) }
   }
 
+  const handleAnalysisCompleted = async () => {
+    if (!selected?.booking_id || markingAnalysis) return
+    setMarkingAnalysis(true)
+    try {
+      const { data } = await sessionsAPI.markAnalysisCompleted(selected.booking_id)
+      toast.success(data.created ? 'Session created — go to Sessions to generate a link.' : 'Session already exists for this booking.')
+      // Update the conversation to reflect the session exists
+      setConversations(prev => prev.map(c =>
+        c.booking_id === selected.booking_id
+          ? { ...c, aura_session_id: data.data?.id, aura_session_status: data.data?.status }
+          : c
+      ))
+      setSelected(s => ({ ...s, aura_session_id: data.data?.id, aura_session_status: data.data?.status }))
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to mark analysis completed')
+    } finally {
+      setMarkingAnalysis(false)
+    }
+  }
+
   const handleEditSave = async (id) => {
     if (!editText.trim()) return
     try {
@@ -862,6 +883,9 @@ export default function SuperAdminChatPage() {
   // ── header labels ────────────────────────────────────────────────────
   const isBookingThread = selected?.source_type === 'BOOKING'
   const isClientThread  = selected?.conversation_type === 'CLIENT'
+  const isAuraBooking   = isBookingThread && (
+    selected?.service_type === 'single_aura' || selected?.service_type === 'family_aura'
+  )
   const headerRef = selected
     ? (isBookingThread ? selected.booking_ref : selected.case_number) || '—'
     : '—'
@@ -1036,6 +1060,26 @@ export default function SuperAdminChatPage() {
                     className="flex items-center gap-1.5 text-xs bg-green-900/20 hover:bg-green-900/35 text-green-400 border border-green-900/30 px-3 py-1.5 rounded-full transition-colors flex-shrink-0">
                     <FiCheckCircle size={12} /> Complete
                   </button>
+                )}
+                {/* Analysis Completed — only for aura / family_aura */}
+                {isAuraBooking && (
+                  selected.aura_session_id ? (
+                    <span className="flex items-center gap-1.5 text-xs bg-purple-900/20 text-purple-300 border border-purple-900/30 px-3 py-1.5 rounded-full flex-shrink-0">
+                      <FiZap size={12} /> Session created
+                    </span>
+                  ) : (
+                    <button
+                      onClick={handleAnalysisCompleted}
+                      disabled={markingAnalysis}
+                      className="flex items-center gap-1.5 text-xs bg-purple-900/20 hover:bg-purple-900/35 text-purple-300 border border-purple-900/30 px-3 py-1.5 rounded-full transition-colors flex-shrink-0 disabled:opacity-50"
+                    >
+                      {markingAnalysis
+                        ? <div className="w-3 h-3 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin" />
+                        : <FiZap size={12} />
+                      }
+                      Analysis Completed
+                    </button>
+                  )
                 )}
                 {/* Delete thread */}
                 {confirmDelThread ? (

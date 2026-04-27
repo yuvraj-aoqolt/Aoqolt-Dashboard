@@ -87,8 +87,6 @@ export default function DetailsFormPage() {
           custom_data: {
             full_name: values.ast_full_name,
             birth_time_not_sure: birthTimeNotSure,
-            appointment_date: values.ast_appointment_date,
-            appointment_time: values.ast_appointment_time,
           },
         }
       } else if (isFamilyAura) {
@@ -143,10 +141,14 @@ export default function DetailsFormPage() {
       }
 
       toast.success('Details submitted!')
-      navigate('/booking/success', {
-        replace: true,
-        state: { bookingId, bookingRef },
-      })
+      if (isAstrology) {
+        navigate(`/astrology/schedule/${bookingId}`, { replace: true })
+      } else {
+        navigate('/booking/success', {
+          replace: true,
+          state: { bookingId, bookingRef },
+        })
+      }
     } catch (err) {
       const errData = err.response?.data
       const msg =
@@ -188,18 +190,21 @@ export default function DetailsFormPage() {
 
           {/* Steps indicator */}
           <div className="flex items-center gap-3 mb-10">
-            {['Booking', 'Payment', 'Details'].map((step, i) => (
+            {(isAstrology ? ['Booking', 'Payment', 'Details', 'Schedule'] : ['Booking', 'Payment', 'Details']).map((step, i) => {
+              const totalSteps = isAstrology ? 4 : 3
+              const isActive = i === totalSteps - 1
+              return (
               <div key={step} className="flex items-center gap-3">
-                <div className={`flex items-center gap-2 text-sm font-medium ${i === 2 ? 'text-red-400' : 'text-green-400'}`}>
+                <div className={`flex items-center gap-2 text-sm font-medium ${isActive ? 'text-red-400' : 'text-green-400'}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center border text-xs
-                    ${i === 2 ? 'border-red-600/50 bg-red-950/50 text-red-400' : 'border-green-700/40 bg-green-900/30 text-green-400'}`}>
-                    {i < 2 ? <FiCheck size={10} /> : i + 1}
+                    ${isActive ? 'border-red-600/50 bg-red-950/50 text-red-400' : 'border-green-700/40 bg-green-900/30 text-green-400'}`}>
+                    {i < totalSteps - 1 ? <FiCheck size={10} /> : i + 1}
                   </div>
                   {step}
                 </div>
-                {i < 2 && <div className="w-8 h-px bg-white/10" />}
+                {i < totalSteps - 1 && <div className="w-8 h-px bg-white/10" />}
               </div>
-            ))}
+            )})}
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
@@ -295,28 +300,7 @@ export default function DetailsFormPage() {
                     </Field>
                   </div>
 
-                  {/* Appointment Date & Time */}
-                  <Field label="Appointment Date *" error={errors.ast_appointment_date?.message}>
-                    <div className="relative">
-                      <FiCalendar className="absolute left-3.5 top-3.5 text-white" size={15} />
-                      <input
-                        type="date"
-                        {...register('ast_appointment_date', { required: 'Appointment date is required' })}
-                        className="input-field pl-10"
-                      />
-                    </div>
-                  </Field>
-
-                  <Field label="Appointment Time *" error={errors.ast_appointment_time?.message}>
-                    <div className="relative">
-                      <FiClock className="absolute left-3.5 top-3.5 text-white" size={15} />
-                      <input
-                        type="time"
-                        {...register('ast_appointment_time', { required: 'Appointment time is required' })}
-                        className="input-field pl-10"
-                      />
-                    </div>
-                  </Field>
+                  {/* Appointment Date & Time removed — scheduling handled via slot picker */}
                 </div>
               ) : !isFamilyAura ? (
                 <div className="space-y-5">

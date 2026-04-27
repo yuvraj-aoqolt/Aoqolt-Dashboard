@@ -47,7 +47,7 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold text-sm uppercase tracking-widest mb-4">Services</h3>
             <ul className="space-y-2">
-              {['Single Aura Reading', 'Family Aura Reading', 'Astrology Reading', 'All Services'].map((item) => (
+              {['Single Aura Scan', 'Family Aura Scan', 'Astrology Session', 'All Services'].map((item) => (
                 <li key={item}>
                   <Link
                     to="/services"

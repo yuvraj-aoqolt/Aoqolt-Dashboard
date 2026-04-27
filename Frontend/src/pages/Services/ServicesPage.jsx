@@ -72,8 +72,7 @@ export default function ServicesPage() {
             Our <span className="gradient-text">Services</span>
           </h1>
           <p className="text-white text-xl max-w-xl mx-auto leading-relaxed">
-            Each reading is performed by experienced
-            practitioners dedicated to your growth and healing.
+            Each reading is performed with dedication to your growth and healing.
           </p>
         </motion.div>
       </div>
@@ -102,7 +101,7 @@ export default function ServicesPage() {
       </div>
 
       {/* Info strip */}
-      <div className="max-w-5xl mx-auto px-4 mt-20">
+      {/* <div className="max-w-5xl mx-auto px-4 mt-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -121,7 +120,7 @@ export default function ServicesPage() {
             </div>
           ))}
         </motion.div>
-      </div>
+      </div> */}
     </div>
   )
 }

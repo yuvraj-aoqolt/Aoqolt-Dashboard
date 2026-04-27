@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'apps.authentication',
     'apps.services',
     'apps.bookings',
+    'apps.astrology',
     'apps.cases',
     'apps.chat',
     'apps.payments',
@@ -64,6 +65,7 @@ INSTALLED_APPS = [
     'apps.dashboard',
     'apps.blogs',
     'apps.notifications.apps.NotificationsConfig',
+    'apps.sessions.apps.SessionsConfig',
 ]
 
 MIDDLEWARE = [
